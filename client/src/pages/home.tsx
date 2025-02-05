@@ -1,13 +1,60 @@
 import { useQuery } from "@tanstack/react-query";
+import { useEffect, useRef, useState } from "react";
 import { CategorySection } from "@/components/category-section";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { NavBar } from "@/components/nav-bar";
+import { CategoryNav } from "@/components/category-nav";
 import type { Nominee } from "@shared/schema";
 
 export default function Home() {
   const { data: nominees, isLoading } = useQuery<Nominee[]>({
     queryKey: ["/api/nominees"],
   });
+
+  const [activeCategory, setActiveCategory] = useState<string>("");
+  const categorySectionRefs = useRef<{ [key: string]: HTMLElement }>({});
+
+  const categories = Array.from(new Set(nominees?.map((n) => n.category) || []));
+
+  useEffect(() => {
+    if (categories.length > 0 && !activeCategory) {
+      setActiveCategory(categories[0]);
+    }
+  }, [categories, activeCategory]);
+
+  useEffect(() => {
+    const observers = new Map();
+
+    categories.forEach((category) => {
+      const element = categorySectionRefs.current[category];
+      if (element) {
+        const observer = new IntersectionObserver(
+          (entries) => {
+            entries.forEach((entry) => {
+              if (entry.isIntersecting) {
+                setActiveCategory(category);
+              }
+            });
+          },
+          { threshold: 0.3 }
+        );
+
+        observer.observe(element);
+        observers.set(category, observer);
+      }
+    });
+
+    return () => {
+      observers.forEach((observer) => observer.disconnect());
+    };
+  }, [categories]);
+
+  const scrollToCategory = (category: string) => {
+    const element = categorySectionRefs.current[category];
+    if (element) {
+      element.scrollIntoView({ behavior: "smooth" });
+    }
+  };
 
   if (isLoading) {
     return (
@@ -16,8 +63,6 @@ export default function Home() {
       </div>
     );
   }
-
-  const categories = Array.from(new Set(nominees?.map((n) => n.category) || []));
 
   return (
     <div className="min-h-screen bg-background">
@@ -31,14 +76,26 @@ export default function Home() {
         </p>
       </header>
 
+      <CategoryNav
+        categories={categories}
+        activeCategory={activeCategory}
+        onSelectCategory={scrollToCategory}
+      />
+
       <main className="container mx-auto px-4 py-8">
-        <ScrollArea className="h-[calc(100vh-200px)]">
+        <ScrollArea className="h-[calc(100vh-280px)]">
           {categories.map((category) => (
-            <CategorySection
+            <div
               key={category}
-              category={category}
-              nominees={nominees?.filter((n) => n.category === category) || []}
-            />
+              ref={(el) => {
+                if (el) categorySectionRefs.current[category] = el;
+              }}
+            >
+              <CategorySection
+                category={category}
+                nominees={nominees?.filter((n) => n.category === category) || []}
+              />
+            </div>
           ))}
         </ScrollArea>
       </main>
