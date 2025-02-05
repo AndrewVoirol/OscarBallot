@@ -32,21 +32,27 @@ export function NomineeDetails({ nominee }: NomineeDetailsProps) {
         {nominee.runtime && (
           <div className="flex items-center gap-2">
             <Clock className="h-4 w-4 text-primary" />
-            <span className="text-sm">{nominee.runtime} min</span>
+            <span className="text-sm">
+              {Math.floor(nominee.runtime / 60)}h {nominee.runtime % 60}min
+            </span>
           </div>
         )}
         {nominee.releaseDate && (
           <div className="flex items-center gap-2">
             <Calendar className="h-4 w-4 text-primary" />
             <span className="text-sm">
-              {new Date(nominee.releaseDate).toLocaleDateString()}
+              {new Date(nominee.releaseDate).toLocaleDateString(undefined, {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric'
+              })}
             </span>
           </div>
         )}
         {nominee.voteAverage && (
           <div className="flex items-center gap-2">
             <Star className="h-4 w-4 text-primary" />
-            <span className="text-sm">{nominee.voteAverage / 10}/10</span>
+            <span className="text-sm">{(nominee.voteAverage / 10).toFixed(1)}/10</span>
           </div>
         )}
         {nominee.genres && nominee.genres.length > 0 && (
