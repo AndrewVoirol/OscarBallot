@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { CategorySection } from "@/components/category-section";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { NavBar } from "@/components/nav-bar"; // Added import for NavBar
 import type { Nominee } from "@shared/schema";
 
 export default function Home() {
@@ -20,6 +21,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-background">
+      <NavBar />
       <header className="py-8 px-4 text-center bg-gradient-to-b from-primary/20 to-background">
         <h1 className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary/60">
           Oscar Nominees 2024
