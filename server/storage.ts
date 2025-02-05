@@ -1,5 +1,7 @@
-import { type Nominee, type InsertNominee, type Ballot, type InsertBallot, type User, type InsertUser } from "@shared/schema";
+import { type Nominee, type InsertNominee, type Ballot, type InsertBallot, type User, type InsertUser, nominees, ballots, users } from "@shared/schema";
 import session from "express-session";
+import { db } from "./db";
+import { eq, and } from "drizzle-orm";
 import createMemoryStore from "memorystore";
 
 const MemoryStore = createMemoryStore(session);
@@ -16,86 +18,65 @@ export interface IStorage {
   sessionStore: session.Store;
 }
 
-export class MemStorage implements IStorage {
-  private nominees: Map<number, Nominee>;
-  private ballots: Map<number, Ballot>;
-  private users: Map<number, User>;
-  private currentNomineeId: number;
-  private currentBallotId: number;
-  private currentUserId: number;
+export class DatabaseStorage implements IStorage {
   readonly sessionStore: session.Store;
 
-  constructor(initialNominees: Nominee[] = []) {
-    this.nominees = new Map();
-    this.ballots = new Map();
-    this.users = new Map();
-    this.currentNomineeId = 1;
-    this.currentBallotId = 1;
-    this.currentUserId = 1;
+  constructor() {
     this.sessionStore = new MemoryStore({
       checkPeriod: 86400000, // prune expired entries every 24h
-    });
-
-    // Initialize with mock data
-    initialNominees.forEach(nominee => {
-      this.nominees.set(nominee.id, nominee);
-      this.currentNomineeId = Math.max(this.currentNomineeId, nominee.id + 1);
     });
   }
 
   async getNominees(): Promise<Nominee[]> {
-    return Array.from(this.nominees.values());
+    return await db.select().from(nominees);
   }
 
   async getNomineesByCategory(category: string): Promise<Nominee[]> {
-    return Array.from(this.nominees.values()).filter(
-      (nominee) => nominee.category === category
-    );
+    return await db.select().from(nominees).where(eq(nominees.category, category));
   }
 
   async getNominee(id: number): Promise<Nominee | undefined> {
-    return this.nominees.get(id);
+    const [nominee] = await db.select().from(nominees).where(eq(nominees.id, id));
+    return nominee;
   }
 
   async getBallot(nomineeId: number, userId: number): Promise<Ballot | undefined> {
-    return Array.from(this.ballots.values()).find(
-      (ballot) => ballot.nomineeId === nomineeId && ballot.userId === userId
-    );
+    const [ballot] = await db
+      .select()
+      .from(ballots)
+      .where(and(eq(ballots.nomineeId, nomineeId), eq(ballots.userId, userId)));
+    return ballot;
   }
 
   async updateBallot(insertBallot: InsertBallot & { userId: number }): Promise<Ballot> {
     const existingBallot = await this.getBallot(insertBallot.nomineeId, insertBallot.userId);
-    const id = existingBallot?.id ?? this.currentBallotId++;
-    const ballot: Ballot = {
-      id,
-      userId: insertBallot.userId,
-      nomineeId: insertBallot.nomineeId,
-      hasWatched: insertBallot.hasWatched ?? false,
-      predictedWinner: insertBallot.predictedWinner ?? false,
-      wantToWin: insertBallot.wantToWin ?? false
-    };
-    this.ballots.set(id, ballot);
+    if (existingBallot) {
+      const [ballot] = await db
+        .update(ballots)
+        .set(insertBallot)
+        .where(eq(ballots.id, existingBallot.id))
+        .returning();
+      return ballot;
+    }
+    const [ballot] = await db.insert(ballots).values(insertBallot).returning();
     return ballot;
   }
 
   async getUser(id: number): Promise<User | undefined> {
-    return this.users.get(id);
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user;
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.username === username
-    );
+    const [user] = await db.select().from(users).where(eq(users.username, username));
+    return user;
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
-    const id = this.currentUserId++;
-    const user: User = { id, ...insertUser };
-    this.users.set(id, user);
+    const [user] = await db.insert(users).values(insertUser).returning();
     return user;
   }
 }
 
-// Import mock data and initialize storage with it
-import { mockNominees } from "../client/src/lib/data";
-export const storage = new MemStorage(mockNominees);
+// Initialize storage with database implementation
+export const storage = new DatabaseStorage();
