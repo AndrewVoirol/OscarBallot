@@ -70,11 +70,14 @@ export default function Home() {
     if (element) {
       scrolling.current = true;
       const headerOffset = 120;
-      const elementPosition = element.getBoundingClientRect().top;
-      const offsetPosition = elementPosition + window.scrollY - headerOffset;
+
+      // Get the element's position relative to the document
+      const elementRect = element.getBoundingClientRect();
+      const absoluteElementTop = elementRect.top + window.scrollY;
+      const scrollPosition = absoluteElementTop - headerOffset;
 
       window.scrollTo({
-        top: offsetPosition,
+        top: scrollPosition,
         behavior: "smooth",
       });
 
