@@ -9,9 +9,10 @@ import type { Ballot } from "@shared/schema";
 
 interface VotingControlsProps {
   nomineeId: number;
+  isHistorical?: boolean;
 }
 
-export function VotingControls({ nomineeId }: VotingControlsProps) {
+export function VotingControls({ nomineeId, isHistorical = false }: VotingControlsProps) {
   const { toast } = useToast();
   const { user } = useAuth();
   const [, setLocation] = useLocation();
@@ -24,6 +25,7 @@ export function VotingControls({ nomineeId }: VotingControlsProps) {
   const mutation = useMutation({
     mutationFn: async (newBallot: Partial<Ballot>) => {
       const res = await apiRequest("POST", "/api/ballots", {
+        nomineeId,
         ...ballot,
         ...newBallot,
       });
@@ -38,7 +40,7 @@ export function VotingControls({ nomineeId }: VotingControlsProps) {
     },
   });
 
-  const handleAction = (field: keyof Omit<Ballot, "id" | "nomineeId">) => {
+  const handleAction = (field: keyof Omit<Ballot, "id" | "nomineeId" | "userId">) => {
     if (!user) {
       toast({
         title: "Login required",
@@ -48,34 +50,39 @@ export function VotingControls({ nomineeId }: VotingControlsProps) {
       setLocation("/auth");
       return;
     }
-    if (!ballot) return;
-    mutation.mutate({ [field]: !ballot[field] });
+    mutation.mutate({ [field]: !ballot?.[field] });
   };
-
-  const getButtonProps = (field: keyof Omit<Ballot, "id" | "nomineeId">) => ({
-    variant: ballot?.[field] ? "default" : "outline",
-    size: "lg" as const,
-    className: "h-12 sm:h-9 text-base sm:text-sm w-full justify-center",
-    onClick: () => handleAction(field),
-  });
 
   return (
     <div className="flex flex-col gap-3 sm:gap-2">
       <Button
-        {...getButtonProps("hasWatched")}
+        variant={ballot?.hasWatched ? "default" : "outline"}
+        size="lg"
+        className="h-12 sm:h-9 text-base sm:text-sm w-full justify-center"
+        onClick={() => handleAction("hasWatched")}
       >
         {ballot?.hasWatched ? "Watched" : "Not Watched"}
       </Button>
-      <Button
-        {...getButtonProps("predictedWinner")}
-      >
-        {ballot?.predictedWinner ? "Predicted Winner" : "Predict Winner"}
-      </Button>
-      <Button
-        {...getButtonProps("wantToWin")}
-      >
-        {ballot?.wantToWin ? "Want to Win" : "Pick to Win"}
-      </Button>
+      {!isHistorical && (
+        <>
+          <Button
+            variant={ballot?.predictedWinner ? "default" : "outline"}
+            size="lg"
+            className="h-12 sm:h-9 text-base sm:text-sm w-full justify-center"
+            onClick={() => handleAction("predictedWinner")}
+          >
+            {ballot?.predictedWinner ? "Predicted Winner" : "Predict Winner"}
+          </Button>
+          <Button
+            variant={ballot?.wantToWin ? "default" : "outline"}
+            size="lg"
+            className="h-12 sm:h-9 text-base sm:text-sm w-full justify-center"
+            onClick={() => handleAction("wantToWin")}
+          >
+            {ballot?.wantToWin ? "Want to Win" : "Pick to Win"}
+          </Button>
+        </>
+      )}
     </div>
   );
 }

@@ -7,8 +7,8 @@ import createMemoryStore from "memorystore";
 const MemoryStore = createMemoryStore(session);
 
 export interface IStorage {
-  getNominees(): Promise<Nominee[]>;
-  getNomineesByCategory(category: string): Promise<Nominee[]>;
+  getNominees(year?: number): Promise<Nominee[]>;
+  getNomineesByCategory(category: string, year?: number): Promise<Nominee[]>;
   getNominee(id: number): Promise<Nominee | undefined>;
   getBallot(nomineeId: number, userId: number): Promise<Ballot | undefined>;
   updateBallot(ballot: InsertBallot & { userId: number }): Promise<Ballot>;
@@ -28,16 +28,30 @@ export class DatabaseStorage implements IStorage {
     });
   }
 
-  async getNominees(): Promise<Nominee[]> {
-    return await db.select().from(nominees);
+  async getNominees(year: number = 2025): Promise<Nominee[]> {
+    return await db
+      .select()
+      .from(nominees)
+      .where(eq(nominees.ceremonyYear, year));
   }
 
-  async getNomineesByCategory(category: string): Promise<Nominee[]> {
-    return await db.select().from(nominees).where(eq(nominees.category, category));
+  async getNomineesByCategory(category: string, year: number = 2025): Promise<Nominee[]> {
+    return await db
+      .select()
+      .from(nominees)
+      .where(
+        and(
+          eq(nominees.category, category),
+          eq(nominees.ceremonyYear, year)
+        )
+      );
   }
 
   async getNominee(id: number): Promise<Nominee | undefined> {
-    const [nominee] = await db.select().from(nominees).where(eq(nominees.id, id));
+    const [nominee] = await db
+      .select()
+      .from(nominees)
+      .where(eq(nominees.id, id));
     return nominee;
   }
 
@@ -45,7 +59,12 @@ export class DatabaseStorage implements IStorage {
     const [ballot] = await db
       .select()
       .from(ballots)
-      .where(and(eq(ballots.nomineeId, nomineeId), eq(ballots.userId, userId)));
+      .where(
+        and(
+          eq(ballots.nomineeId, nomineeId),
+          eq(ballots.userId, userId)
+        )
+      );
     return ballot;
   }
 
@@ -59,22 +78,34 @@ export class DatabaseStorage implements IStorage {
         .returning();
       return ballot;
     }
-    const [ballot] = await db.insert(ballots).values(insertBallot).returning();
+    const [ballot] = await db
+      .insert(ballots)
+      .values(insertBallot)
+      .returning();
     return ballot;
   }
 
   async getUser(id: number): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.id, id));
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, id));
     return user;
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.username, username));
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(eq(users.username, username));
     return user;
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
-    const [user] = await db.insert(users).values(insertUser).returning();
+    const [user] = await db
+      .insert(users)
+      .values(insertUser)
+      .returning();
     return user;
   }
 }

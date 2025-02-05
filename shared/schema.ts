@@ -29,7 +29,10 @@ export const nominees = pgTable("nominees", {
   cast: text("cast").array().notNull(),
   crew: text("crew").array().notNull(),
   funFacts: text("fun_facts").array().notNull(),
-  // New TMDB specific fields
+  // New field to track ceremony year
+  ceremonyYear: integer("ceremony_year").notNull().default(2025),
+  isWinner: boolean("is_winner").notNull().default(false),
+  // TMDB specific fields
   tmdbId: integer("tmdb_id"),
   runtime: integer("runtime"),
   releaseDate: text("release_date"),

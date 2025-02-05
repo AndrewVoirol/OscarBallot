@@ -11,12 +11,17 @@ import { Loader2 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export default function Home() {
+  const [selectedYear, setSelectedYear] = useState<number>(2025);
   const { data: nominees, isLoading, error } = useQuery<Nominee[]>({
-    queryKey: ["/api/nominees"],
-    retry: 2,
+    queryKey: ["/api/nominees", selectedYear],
+    queryFn: async () => {
+      const response = await fetch(`/api/nominees?year=${selectedYear}`);
+      if (!response.ok) throw new Error("Failed to fetch nominees");
+      return response.json();
+    },
   });
-  const isRefreshing = usePullToRefresh();
 
+  const isRefreshing = usePullToRefresh();
   const [activeCategory, setActiveCategory] = useState<string>("");
   const categorySectionRefs = useRef<{ [key: string]: HTMLElement }>({});
   const scrolling = useRef(false);
@@ -118,7 +123,7 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-background">
       <ScrollProgress />
-      <NavBar />
+      <NavBar selectedYear={selectedYear} onYearChange={setSelectedYear} />
       <CategoryNav
         categories={categories}
         activeCategory={activeCategory}
@@ -134,11 +139,17 @@ export default function Home() {
           <div className="flex items-center justify-center gap-2">
             <FilmIcon className="h-7 w-7 text-primary" />
             <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary/60">
-              Oscar Nominees 2024
+              {selectedYear === 2025 ? (
+                <>Oscar Nominees {selectedYear}</>
+              ) : (
+                <>Oscar Winners & Nominees {selectedYear}</>
+              )}
             </h1>
           </div>
           <p className="text-sm text-muted-foreground mt-1">
-            Track your picks and predictions for this year's Academy Awards
+            {selectedYear === 2025
+              ? "Track your picks and predictions for this year's Academy Awards"
+              : "Browse past nominees and winners"}
           </p>
         </header>
 
@@ -152,6 +163,7 @@ export default function Home() {
             <CategorySection
               category={category}
               nominees={nominees?.filter((n) => n.category === category) || []}
+              isHistorical={selectedYear !== 2025}
             />
           </div>
         ))}

@@ -1,8 +1,20 @@
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
-export function NavBar() {
+interface NavBarProps {
+  selectedYear?: number;
+  onYearChange?: (year: number) => void;
+}
+
+export function NavBar({ selectedYear = 2025, onYearChange }: NavBarProps) {
   const { user, logoutMutation } = useAuth();
 
   return (
@@ -16,6 +28,18 @@ export function NavBar() {
           </Link>
         </div>
         <div className="flex flex-1 items-center justify-between space-x-2 md:justify-end">
+          <Select
+            value={selectedYear.toString()}
+            onValueChange={(value) => onYearChange?.(parseInt(value))}
+          >
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Select Year" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="2025">2025 (97th Academy Awards)</SelectItem>
+              <SelectItem value="2024">2024 (96th Academy Awards)</SelectItem>
+            </SelectContent>
+          </Select>
           {user ? (
             <div className="flex items-center gap-4">
               <span className="text-sm text-muted-foreground">

@@ -5,15 +5,17 @@ import { NomineeDetails } from "./nominee-details";
 import { AwardsBadge } from "./awards-badge";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Badge } from "@/components/ui/badge";
+import { Trophy } from "lucide-react";
 import type { Nominee } from "@shared/schema";
-import { X } from 'lucide-react';
 
 interface NomineeCardProps {
   nominee: Nominee;
   isLoading?: boolean;
+  isHistorical?: boolean;
 }
 
-export function NomineeCard({ nominee, isLoading }: NomineeCardProps) {
+export function NomineeCard({ nominee, isLoading, isHistorical }: NomineeCardProps) {
   const [isOpen, setIsOpen] = useState(false);
 
   if (isLoading) {
@@ -47,6 +49,14 @@ export function NomineeCard({ nominee, isLoading }: NomineeCardProps) {
           className="w-full h-56 sm:h-48 object-cover"
           loading="lazy"
         />
+        {isHistorical && nominee.isWinner && (
+          <div className="absolute top-2 right-2">
+            <Badge variant="default" className="gap-1">
+              <Trophy className="h-4 w-4" />
+              Winner
+            </Badge>
+          </div>
+        )}
         <AwardsBadge awards={nominee.awards} />
       </CardHeader>
       <CardContent className="p-4 sm:p-6">
@@ -61,7 +71,7 @@ export function NomineeCard({ nominee, isLoading }: NomineeCardProps) {
             </span>
           ))}
         </div>
-        <VotingControls nomineeId={nominee.id} />
+        <VotingControls nomineeId={nominee.id} isHistorical={isHistorical} />
         <button
           onClick={() => setIsOpen(true)}
           className="text-base sm:text-sm text-primary hover:underline mt-6 sm:mt-4 w-full text-left py-2 sm:py-1"
@@ -71,19 +81,7 @@ export function NomineeCard({ nominee, isLoading }: NomineeCardProps) {
         </button>
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto p-0">
-            <div className="sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 p-4 border-b flex items-center justify-between">
-              <h2 className="text-xl font-semibold">{nominee.name}</h2>
-              <button
-                onClick={() => setIsOpen(false)}
-                className="rounded-full hover:bg-muted p-2 transition-colors"
-                aria-label="Close details"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-            <div className="p-4">
-              <NomineeDetails nominee={nominee} />
-            </div>
+            <NomineeDetails nominee={nominee} />
           </DialogContent>
         </Dialog>
       </CardContent>

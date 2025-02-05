@@ -5,6 +5,7 @@ import { insertBallotSchema } from "@shared/schema";
 import { setupAuth, requireAuth } from "./auth";
 import { updateNomineeWithTMDBData } from "./tmdb";
 import rateLimit from 'express-rate-limit';
+import { eq } from "drizzle-orm";
 
 export function registerRoutes(app: Express): Server {
   // Rate limiter for TMDB endpoints
@@ -15,13 +16,15 @@ export function registerRoutes(app: Express): Server {
   });
 
   // Public routes for accessing nominee data
-  app.get("/api/nominees", async (_req, res) => {
-    const nominees = await storage.getNominees();
+  app.get("/api/nominees", async (req, res) => {
+    const year = parseInt(req.query.year as string) || 2025;
+    const nominees = await storage.getNominees(year);
     res.json(nominees);
   });
 
   app.get("/api/nominees/category/:category", async (req, res) => {
-    const nominees = await storage.getNomineesByCategory(req.params.category);
+    const year = parseInt(req.query.year as string) || 2025;
+    const nominees = await storage.getNomineesByCategory(req.params.category, year);
     res.json(nominees);
   });
 
