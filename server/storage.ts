@@ -24,6 +24,7 @@ export class DatabaseStorage implements IStorage {
   constructor() {
     this.sessionStore = new MemoryStore({
       checkPeriod: 86400000, // prune expired entries every 24h
+      stale: false, // Do not serve stale sessions
     });
   }
 
