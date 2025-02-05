@@ -7,6 +7,7 @@ import { setupAuth, requireAuth } from "./auth";
 export function registerRoutes(app: Express): Server {
   setupAuth(app);
 
+  // Public routes for accessing nominee data
   app.get("/api/nominees", async (_req, res) => {
     const nominees = await storage.getNominees();
     res.json(nominees);
@@ -26,6 +27,7 @@ export function registerRoutes(app: Express): Server {
     res.json(nominee);
   });
 
+  // Protected routes for ballot operations
   app.get("/api/ballots/:nomineeId", requireAuth, async (req, res) => {
     const ballot = await storage.getBallot(
       parseInt(req.params.nomineeId),

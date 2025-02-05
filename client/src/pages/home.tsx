@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { CategorySection } from "@/components/category-section";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { NavBar } from "@/components/nav-bar"; // Added import for NavBar
+import { NavBar } from "@/components/nav-bar";
 import type { Nominee } from "@shared/schema";
 
 export default function Home() {
@@ -17,7 +17,7 @@ export default function Home() {
     );
   }
 
-  const categories = [...new Set(nominees?.map((n) => n.category))];
+  const categories = Array.from(new Set(nominees?.map((n) => n.category) || []));
 
   return (
     <div className="min-h-screen bg-background">
