@@ -6,6 +6,7 @@ import { NavBar } from "@/components/nav-bar";
 import { CategoryNav } from "@/components/category-nav";
 import { ScrollProgress } from "@/components/scroll-progress";
 import type { Nominee } from "@shared/schema";
+import { FilmIcon } from "lucide-react";
 
 export default function Home() {
   const { data: nominees, isLoading } = useQuery<Nominee[]>({
@@ -26,7 +27,7 @@ export default function Home() {
 
   useEffect(() => {
     const observers = new Map();
-    const headerOffset = 120; // Account for NavBar + CategoryNav height
+    const headerOffset = 120;
 
     categories.forEach((category) => {
       const element = categorySectionRefs.current[category];
@@ -35,12 +36,10 @@ export default function Home() {
           (entries) => {
             entries.forEach((entry) => {
               if (entry.isIntersecting && !scrolling.current) {
-                // Calculate how far into the section we are
                 const elementTop = entry.boundingClientRect.top;
                 const elementHeight = entry.boundingClientRect.height;
                 const windowHeight = window.innerHeight;
 
-                // Only update active category when the section is properly in view
                 if (elementTop < windowHeight / 2 && elementTop > -elementHeight / 2) {
                   setActiveCategory(category);
                 }
@@ -48,8 +47,8 @@ export default function Home() {
             });
           },
           {
-            threshold: [0, 0.25, 0.5, 0.75, 1], // More thresholds for smoother transitions
-            rootMargin: `-${headerOffset}px 0px -20% 0px` // Adjust observation area
+            threshold: [0, 0.25, 0.5, 0.75, 1],
+            rootMargin: `-${headerOffset}px 0px -20% 0px`
           }
         );
 
@@ -76,7 +75,6 @@ export default function Home() {
         behavior: "smooth",
       });
 
-      // Reset scrolling flag after animation with a delay matching the scroll duration
       setTimeout(() => {
         scrolling.current = false;
       }, 1000);
@@ -102,17 +100,20 @@ export default function Home() {
         activeCategory={activeCategory}
         onSelectCategory={scrollToCategory}
       />
-      <main className="container mx-auto px-4 py-8 mt-[56px]">
-        <header className="py-8 px-4 text-center bg-gradient-to-b from-primary/20 to-background">
-          <h1 className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary/60">
-            Oscar Nominees 2024
-          </h1>
-          <p className="mt-2 text-muted-foreground">
+      <main className="container mx-auto px-4 mt-6">
+        <header className="py-3 mb-4 text-center bg-gradient-to-b from-primary/20 to-background rounded-lg">
+          <div className="flex items-center justify-center gap-2">
+            <FilmIcon className="h-7 w-7 text-primary" />
+            <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary/60">
+              Oscar Nominees 2024
+            </h1>
+          </div>
+          <p className="text-sm text-muted-foreground mt-1">
             Track your picks and predictions for this year's Academy Awards
           </p>
         </header>
 
-        <ScrollArea className="h-[calc(100vh-280px)]">
+        <ScrollArea className="h-[calc(100vh-200px)]">
           {categories.map((category) => (
             <div
               key={category}
