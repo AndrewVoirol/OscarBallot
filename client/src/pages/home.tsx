@@ -7,11 +7,14 @@ import { CategoryNav } from "@/components/category-nav";
 import { ScrollProgress } from "@/components/scroll-progress";
 import type { Nominee } from "@shared/schema";
 import { FilmIcon } from "lucide-react";
+import { usePullToRefresh } from "@/hooks/use-pull-to-refresh";
+import { Loader2 } from "lucide-react";
 
 export default function Home() {
   const { data: nominees, isLoading } = useQuery<Nominee[]>({
     queryKey: ["/api/nominees"],
   });
+  const isRefreshing = usePullToRefresh();
 
   const [activeCategory, setActiveCategory] = useState<string>("");
   const categorySectionRefs = useRef<{ [key: string]: HTMLElement }>({});
@@ -100,6 +103,11 @@ export default function Home() {
         activeCategory={activeCategory}
         onSelectCategory={scrollToCategory}
       />
+      {isRefreshing && (
+        <div className="fixed top-14 left-0 w-full flex justify-center py-2 bg-background/95 backdrop-blur z-50">
+          <Loader2 className="h-6 w-6 animate-spin text-primary" />
+        </div>
+      )}
       <main className="container mx-auto px-4 mt-6">
         <header className="py-3 mb-4 text-center bg-gradient-to-b from-primary/20 to-background rounded-lg">
           <div className="flex items-center justify-center gap-2">

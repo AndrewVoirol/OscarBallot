@@ -43,8 +43,13 @@ export function NomineeCard({ nominee }: NomineeCardProps) {
           View Details
         </button>
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto p-0 sm:p-6">
-            <NomineeDetails nominee={nominee} />
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto p-0">
+            <div className="sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 p-4 border-b">
+              <h2 className="text-xl font-semibold">{nominee.name}</h2>
+            </div>
+            <div className="p-4">
+              <NomineeDetails nominee={nominee} />
+            </div>
           </DialogContent>
         </Dialog>
       </CardContent>
