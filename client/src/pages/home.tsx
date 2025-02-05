@@ -55,7 +55,7 @@ export default function Home() {
     const element = categorySectionRefs.current[category];
     if (element) {
       scrolling.current = true;
-      const headerOffset = 120; // Adjust based on your header height
+      const headerOffset = 120; // Account for NavBar + CategoryNav height
       const elementPosition = element.getBoundingClientRect().top;
       const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
 
@@ -83,22 +83,21 @@ export default function Home() {
     <div className="min-h-screen bg-background">
       <ScrollProgress />
       <NavBar />
-      <header className="py-8 px-4 text-center bg-gradient-to-b from-primary/20 to-background">
-        <h1 className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary/60">
-          Oscar Nominees 2024
-        </h1>
-        <p className="mt-2 text-muted-foreground">
-          Track your picks and predictions for this year's Academy Awards
-        </p>
-      </header>
-
       <CategoryNav
         categories={categories}
         activeCategory={activeCategory}
         onSelectCategory={scrollToCategory}
       />
+      <main className="container mx-auto px-4 py-8 mt-[56px]">
+        <header className="py-8 px-4 text-center bg-gradient-to-b from-primary/20 to-background">
+          <h1 className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary/60">
+            Oscar Nominees 2024
+          </h1>
+          <p className="mt-2 text-muted-foreground">
+            Track your picks and predictions for this year's Academy Awards
+          </p>
+        </header>
 
-      <main className="container mx-auto px-4 py-8">
         <ScrollArea className="h-[calc(100vh-280px)]">
           {categories.map((category) => (
             <div
