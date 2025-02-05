@@ -18,14 +18,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function AuthPage() {
-  const [, setLocation] = useLocation();
+  const [location, setLocation] = useLocation();
   const { user, loginMutation, registerMutation } = useAuth();
+  const redirectTo = new URLSearchParams(window.location.search).get("redirect") || "/";
 
   useEffect(() => {
     if (user) {
-      setLocation("/");
+      setLocation(redirectTo);
     }
-  }, [user, setLocation]);
+  }, [user, setLocation, redirectTo]);
 
   const loginForm = useForm<InsertUser>({
     resolver: zodResolver(insertUserSchema),
@@ -49,10 +50,13 @@ export default function AuthPage() {
         <Card className="w-full max-w-md">
           <CardHeader>
             <CardTitle className="text-2xl text-center bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary/60">
-              Oscar Ballot Tracker
+              Optional Authentication
             </CardTitle>
           </CardHeader>
           <CardContent>
+            <p className="text-muted-foreground mb-6 text-center">
+              Create an account to save your Oscar predictions and track which nominees you've watched
+            </p>
             <Tabs defaultValue="login">
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="login">Login</TabsTrigger>
