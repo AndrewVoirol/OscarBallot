@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertBallotSchema } from "@shared/schema";
+import { insertBallotSchema, type User } from "@shared/schema";
 import { setupAuth, requireAuth } from "./auth";
 import { updateNomineeWithTMDBData } from "./tmdb";
 
@@ -28,9 +28,35 @@ export function registerRoutes(app: Express): Server {
     res.json(nominee);
   });
 
-  // Admin route to update TMDB data
+  // Admin route to update TMDB data for all nominees
+  app.post("/api/nominees/update-all-tmdb", requireAuth, async (req, res) => {
+    const user = req.user as User;
+    if (!user?.isAdmin) {
+      res.status(403).json({ message: "Unauthorized" });
+      return;
+    }
+
+    try {
+      const nominees = await storage.getNominees();
+      const updates = await Promise.all(
+        nominees.map(nominee => updateNomineeWithTMDBData(nominee))
+      );
+
+      const updatedCount = updates.filter(Boolean).length;
+      res.json({ 
+        message: `Updated ${updatedCount} out of ${nominees.length} nominees with TMDB data`,
+        updatedNominees: updates.filter(Boolean)
+      });
+    } catch (error) {
+      console.error('Error updating nominees with TMDB data:', error);
+      res.status(500).json({ message: "Failed to update nominees with TMDB data" });
+    }
+  });
+
+  // Admin route to update single nominee TMDB data
   app.post("/api/nominees/:id/update-tmdb", requireAuth, async (req, res) => {
-    if (!req.user?.isAdmin) {
+    const user = req.user as User;
+    if (!user?.isAdmin) {
       res.status(403).json({ message: "Unauthorized" });
       return;
     }
