@@ -71,13 +71,14 @@ export default function Home() {
       scrolling.current = true;
       const headerOffset = 120;
       const elementPosition = element.getBoundingClientRect().top;
-      const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
+      const offsetPosition = elementPosition + window.scrollY - headerOffset;
 
       window.scrollTo({
         top: offsetPosition,
         behavior: "smooth",
       });
 
+      // Ensure we set scrolling back to false after animation completes
       setTimeout(() => {
         scrolling.current = false;
       }, 1000);

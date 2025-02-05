@@ -5,6 +5,7 @@ import { NomineeDetails } from "./nominee-details";
 import { AwardsBadge } from "./awards-badge";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import type { Nominee } from "@shared/schema";
+import { X } from 'lucide-react'; // Assuming this is where X icon comes from. Adjust if needed.
 
 interface NomineeCardProps {
   nominee: Nominee;
@@ -44,8 +45,14 @@ export function NomineeCard({ nominee }: NomineeCardProps) {
         </button>
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto p-0">
-            <div className="sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 p-4 border-b">
+            <div className="sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 p-4 border-b flex items-center justify-between">
               <h2 className="text-xl font-semibold">{nominee.name}</h2>
+              <button
+                onClick={() => setIsOpen(false)}
+                className="rounded-full hover:bg-muted p-2 transition-colors"
+              >
+                <X className="h-4 w-4" />
+              </button>
             </div>
             <div className="p-4">
               <NomineeDetails nominee={nominee} />
