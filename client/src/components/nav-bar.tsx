@@ -32,12 +32,12 @@ export function NavBar({ selectedYear = 2025, onYearChange }: NavBarProps) {
             value={selectedYear.toString()}
             onValueChange={(value) => onYearChange?.(parseInt(value))}
           >
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Select Year" />
+            <SelectTrigger className="w-24">
+              <SelectValue placeholder="Year" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="2025">2025 (97th Academy Awards)</SelectItem>
-              <SelectItem value="2024">2024 (96th Academy Awards)</SelectItem>
+              <SelectItem value="2025">2025</SelectItem>
+              <SelectItem value="2024">2024</SelectItem>
             </SelectContent>
           </Select>
           {user ? (

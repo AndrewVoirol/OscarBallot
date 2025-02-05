@@ -77,7 +77,6 @@ export default function Home() {
       scrolling.current = true;
       const headerOffset = 120;
 
-      // Get the element's position relative to the document
       const elementRect = element.getBoundingClientRect();
       const absoluteElementTop = elementRect.top + window.scrollY;
       const scrollPosition = absoluteElementTop - headerOffset;
@@ -87,7 +86,6 @@ export default function Home() {
         behavior: "smooth",
       });
 
-      // Ensure we set scrolling back to false after animation completes
       setTimeout(() => {
         scrolling.current = false;
       }, 1000);
@@ -95,6 +93,21 @@ export default function Home() {
       setActiveCategory(category);
     }
   };
+
+  const getAwardsInfo = (year: number) => {
+    if (year === 2025) {
+      return {
+        title: "The 97th Academy Awards",
+        subtitle: "Track your picks and predictions for this year's Academy Awards ceremony, happening March 10, 2025"
+      };
+    }
+    return {
+      title: "The 96th Academy Awards",
+      subtitle: "Browse nominees and winners from March 10, 2024"
+    };
+  };
+
+  const awardsInfo = getAwardsInfo(selectedYear);
 
   if (error) {
     return (
@@ -139,17 +152,11 @@ export default function Home() {
           <div className="flex items-center justify-center gap-2">
             <FilmIcon className="h-7 w-7 text-primary" />
             <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary/60">
-              {selectedYear === 2025 ? (
-                <>Oscar Nominees {selectedYear}</>
-              ) : (
-                <>Oscar Winners & Nominees {selectedYear}</>
-              )}
+              {awardsInfo.title}
             </h1>
           </div>
           <p className="text-sm text-muted-foreground mt-1">
-            {selectedYear === 2025
-              ? "Track your picks and predictions for this year's Academy Awards"
-              : "Browse past nominees and winners"}
+            {awardsInfo.subtitle}
           </p>
         </header>
 
