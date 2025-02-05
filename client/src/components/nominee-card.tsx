@@ -4,15 +4,39 @@ import { VotingControls } from "./voting-controls";
 import { NomineeDetails } from "./nominee-details";
 import { AwardsBadge } from "./awards-badge";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Skeleton } from "@/components/ui/skeleton";
 import type { Nominee } from "@shared/schema";
-import { X } from 'lucide-react'; // Assuming this is where X icon comes from. Adjust if needed.
+import { X } from 'lucide-react';
 
 interface NomineeCardProps {
   nominee: Nominee;
+  isLoading?: boolean;
 }
 
-export function NomineeCard({ nominee }: NomineeCardProps) {
+export function NomineeCard({ nominee, isLoading }: NomineeCardProps) {
   const [isOpen, setIsOpen] = useState(false);
+
+  if (isLoading) {
+    return (
+      <Card className="overflow-hidden">
+        <CardHeader className="p-0">
+          <Skeleton className="w-full h-56 sm:h-48" />
+        </CardHeader>
+        <CardContent className="p-4 sm:p-6">
+          <Skeleton className="h-6 w-3/4 mb-3" />
+          <div className="flex gap-2 mb-6">
+            <Skeleton className="h-6 w-20" />
+            <Skeleton className="h-6 w-20" />
+          </div>
+          <div className="space-y-2">
+            <Skeleton className="h-12 w-full" />
+            <Skeleton className="h-12 w-full" />
+            <Skeleton className="h-12 w-full" />
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card className="overflow-hidden hover:shadow-lg transition-shadow">
@@ -21,6 +45,7 @@ export function NomineeCard({ nominee }: NomineeCardProps) {
           src={nominee.poster}
           alt={nominee.name}
           className="w-full h-56 sm:h-48 object-cover"
+          loading="lazy"
         />
         <AwardsBadge awards={nominee.awards} />
       </CardHeader>
@@ -40,6 +65,7 @@ export function NomineeCard({ nominee }: NomineeCardProps) {
         <button
           onClick={() => setIsOpen(true)}
           className="text-base sm:text-sm text-primary hover:underline mt-6 sm:mt-4 w-full text-left py-2 sm:py-1"
+          aria-label={`View details for ${nominee.name}`}
         >
           View Details
         </button>
@@ -50,6 +76,7 @@ export function NomineeCard({ nominee }: NomineeCardProps) {
               <button
                 onClick={() => setIsOpen(false)}
                 className="rounded-full hover:bg-muted p-2 transition-colors"
+                aria-label="Close details"
               >
                 <X className="h-4 w-4" />
               </button>

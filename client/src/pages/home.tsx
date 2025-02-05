@@ -1,18 +1,19 @@
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { CategorySection } from "@/components/category-section";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { NavBar } from "@/components/nav-bar";
 import { CategoryNav } from "@/components/category-nav";
 import { ScrollProgress } from "@/components/scroll-progress";
 import type { Nominee } from "@shared/schema";
-import { FilmIcon } from "lucide-react";
+import { FilmIcon, AlertCircle } from "lucide-react";
 import { usePullToRefresh } from "@/hooks/use-pull-to-refresh";
 import { Loader2 } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export default function Home() {
-  const { data: nominees, isLoading } = useQuery<Nominee[]>({
+  const { data: nominees, isLoading, error } = useQuery<Nominee[]>({
     queryKey: ["/api/nominees"],
+    retry: 2,
   });
   const isRefreshing = usePullToRefresh();
 
@@ -89,6 +90,22 @@ export default function Home() {
       setActiveCategory(category);
     }
   };
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-background p-4">
+        <NavBar />
+        <div className="container mx-auto mt-8">
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              Failed to load nominees. Please try refreshing the page.
+            </AlertDescription>
+          </Alert>
+        </div>
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (
