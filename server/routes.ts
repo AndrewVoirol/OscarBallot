@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertBallotSchema } from "@shared/schema";
 import { setupAuth, requireAuth } from "./auth";
+import { updateNomineeWithTMDBData } from "./tmdb";
 
 export function registerRoutes(app: Express): Server {
   setupAuth(app);
@@ -25,6 +26,28 @@ export function registerRoutes(app: Express): Server {
       return;
     }
     res.json(nominee);
+  });
+
+  // Admin route to update TMDB data
+  app.post("/api/nominees/:id/update-tmdb", requireAuth, async (req, res) => {
+    if (!req.user?.isAdmin) {
+      res.status(403).json({ message: "Unauthorized" });
+      return;
+    }
+
+    const nominee = await storage.getNominee(parseInt(req.params.id));
+    if (!nominee) {
+      res.status(404).json({ message: "Nominee not found" });
+      return;
+    }
+
+    const updatedNominee = await updateNomineeWithTMDBData(nominee);
+    if (!updatedNominee) {
+      res.status(500).json({ message: "Failed to update TMDB data" });
+      return;
+    }
+
+    res.json(updatedNominee);
   });
 
   // Protected routes for ballot operations

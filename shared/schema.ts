@@ -6,6 +6,7 @@ export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   username: text("username").notNull().unique(),
   password: text("password").notNull(),
+  isAdmin: boolean("is_admin").notNull().default(false),
 });
 
 export const nominees = pgTable("nominees", {
@@ -28,6 +29,34 @@ export const nominees = pgTable("nominees", {
   cast: text("cast").array().notNull(),
   crew: text("crew").array().notNull(),
   funFacts: text("fun_facts").array().notNull(),
+  // New TMDB specific fields
+  tmdbId: integer("tmdb_id"),
+  runtime: integer("runtime"),
+  releaseDate: text("release_date"),
+  voteAverage: integer("vote_average"),
+  backdropPath: text("backdrop_path"),
+  genres: text("genres").array(),
+  productionCompanies: jsonb("production_companies").$type<{
+    id: number;
+    name: string;
+    logo_path: string | null;
+    origin_country: string;
+  }[]>(),
+  extendedCredits: jsonb("extended_credits").$type<{
+    cast: Array<{
+      id: number;
+      name: string;
+      character: string;
+      profile_path: string | null;
+    }>;
+    crew: Array<{
+      id: number;
+      name: string;
+      job: string;
+      department: string;
+      profile_path: string | null;
+    }>;
+  }>(),
 });
 
 export const ballots = pgTable("ballots", {
