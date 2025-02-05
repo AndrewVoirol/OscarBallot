@@ -26,6 +26,7 @@ export default function Home() {
 
   useEffect(() => {
     const observers = new Map();
+    const headerOffset = 120; // Account for NavBar + CategoryNav height
 
     categories.forEach((category) => {
       const element = categorySectionRefs.current[category];
@@ -34,11 +35,22 @@ export default function Home() {
           (entries) => {
             entries.forEach((entry) => {
               if (entry.isIntersecting && !scrolling.current) {
-                setActiveCategory(category);
+                // Calculate how far into the section we are
+                const elementTop = entry.boundingClientRect.top;
+                const elementHeight = entry.boundingClientRect.height;
+                const windowHeight = window.innerHeight;
+
+                // Only update active category when the section is properly in view
+                if (elementTop < windowHeight / 2 && elementTop > -elementHeight / 2) {
+                  setActiveCategory(category);
+                }
               }
             });
           },
-          { threshold: 0.3 }
+          {
+            threshold: [0, 0.25, 0.5, 0.75, 1], // More thresholds for smoother transitions
+            rootMargin: `-${headerOffset}px 0px -20% 0px` // Adjust observation area
+          }
         );
 
         observer.observe(element);
@@ -55,7 +67,7 @@ export default function Home() {
     const element = categorySectionRefs.current[category];
     if (element) {
       scrolling.current = true;
-      const headerOffset = 120; // Account for NavBar + CategoryNav height
+      const headerOffset = 120;
       const elementPosition = element.getBoundingClientRect().top;
       const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
 
@@ -64,10 +76,12 @@ export default function Home() {
         behavior: "smooth",
       });
 
-      // Reset scrolling flag after animation
+      // Reset scrolling flag after animation with a delay matching the scroll duration
       setTimeout(() => {
         scrolling.current = false;
       }, 1000);
+
+      setActiveCategory(category);
     }
   };
 
