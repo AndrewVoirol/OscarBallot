@@ -125,21 +125,19 @@ export default function Home() {
           </p>
         </header>
 
-        <ScrollArea className="h-[calc(100vh-200px)]">
-          {categories.map((category) => (
-            <div
-              key={category}
-              ref={(el) => {
-                if (el) categorySectionRefs.current[category] = el;
-              }}
-            >
-              <CategorySection
-                category={category}
-                nominees={nominees?.filter((n) => n.category === category) || []}
-              />
-            </div>
-          ))}
-        </ScrollArea>
+        {categories.map((category) => (
+          <div
+            key={category}
+            ref={(el) => {
+              if (el) categorySectionRefs.current[category] = el;
+            }}
+          >
+            <CategorySection
+              category={category}
+              nominees={nominees?.filter((n) => n.category === category) || []}
+            />
+          </div>
+        ))}
       </main>
     </div>
   );
