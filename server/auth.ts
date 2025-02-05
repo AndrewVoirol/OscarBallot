@@ -9,10 +9,12 @@ import { type User } from "@shared/schema";
 
 declare global {
   namespace Express {
-    interface User extends Omit<User, keyof User> {
+    // Extend User interface with the schema-defined User type
+    interface User {
       id: number;
       username: string;
       password: string;
+      isAdmin: boolean;
     }
   }
 }
@@ -41,26 +43,6 @@ async function comparePasswords(supplied: string, stored: string) {
 }
 
 export function setupAuth(app: Express) {
-  const sessionSettings: session.SessionOptions = {
-    secret: process.env.REPL_ID!,
-    resave: false,
-    saveUninitialized: false,
-    cookie: {
-      maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
-      secure: app.get("env") === "production",
-      sameSite: "lax"
-    },
-    store: storage.sessionStore,
-  };
-
-  if (app.get("env") === "production") {
-    app.set("trust proxy", 1);
-  }
-
-  app.use(session(sessionSettings));
-  app.use(passport.initialize());
-  app.use(passport.session());
-
   passport.use(
     new LocalStrategy(async (username, password, done) => {
       try {
@@ -88,7 +70,7 @@ export function setupAuth(app: Express) {
     }
   });
 
-  app.post("/api/register", async (req, res, next) => {
+  app.post("/api/auth/register", async (req, res, next) => {
     try {
       const existingUser = await storage.getUserByUsername(req.body.username);
       if (existingUser) {
@@ -109,18 +91,18 @@ export function setupAuth(app: Express) {
     }
   });
 
-  app.post("/api/login", passport.authenticate("local"), (req, res) => {
+  app.post("/api/auth/login", passport.authenticate("local"), (req, res) => {
     res.json(req.user);
   });
 
-  app.post("/api/logout", (req, res, next) => {
+  app.post("/api/auth/logout", (req, res, next) => {
     req.logout((err) => {
       if (err) return next(err);
       res.sendStatus(200);
     });
   });
 
-  app.get("/api/user", (req, res) => {
+  app.get("/api/auth/user", (req, res) => {
     if (!req.isAuthenticated()) {
       return res.sendStatus(401);
     }
