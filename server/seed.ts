@@ -3,12 +3,18 @@ import { db } from "./db";
 import { nominees } from "@shared/schema";
 import { updateNomineeWithTMDBData } from "./tmdb";
 
-// 2024 Oscar nominees
+// 2024 Oscar nominees with their categories
 const nominees2024 = [
-  { name: "Oppenheimer", category: "Best Picture", description: "Epic biographical thriller about J. Robert Oppenheimer", poster: "placeholder", trailerUrl: "placeholder", streamingPlatforms: [], awards: {}, cast: [], crew: [], funFacts: [] },
-  { name: "Barbie", category: "Best Picture", description: "Live-action Barbie adventure", poster: "placeholder", trailerUrl: "placeholder", streamingPlatforms: [], awards: {}, cast: [], crew: [], funFacts: [] },
-  { name: "Killers of the Flower Moon", category: "Best Picture", description: "Historical drama about the Osage murders", poster: "placeholder", trailerUrl: "placeholder", streamingPlatforms: [], awards: {}, cast: [], crew: [], funFacts: [] },
-  // Add more 2024 nominees
+  { name: "American Fiction", category: "Best Picture" },
+  { name: "Anatomy of a Fall", category: "Best Picture" },
+  { name: "Barbie", category: "Best Picture" },
+  { name: "The Holdovers", category: "Best Picture" },
+  { name: "Killers of the Flower Moon", category: "Best Picture" },
+  { name: "Maestro", category: "Best Picture" },
+  { name: "Oppenheimer", category: "Best Picture" },
+  { name: "Past Lives", category: "Best Picture" },
+  { name: "Poor Things", category: "Best Picture" },
+  { name: "The Zone of Interest", category: "Best Picture" }
 ];
 
 async function seed() {
@@ -26,15 +32,21 @@ async function seed() {
     // Update each nominee with TMDB data
     console.log("Fetching TMDB data for each nominee...");
     const updatedNominees = await Promise.all(
-      insertedNominees.map(nominee => updateNomineeWithTMDBData(nominee))
+      insertedNominees.map(async nominee => {
+        const updated = await updateNomineeWithTMDBData(nominee);
+        if (updated) {
+          console.log(`${nominee.name}: Category: ${nominee.category}, Runtime: ${updated.runtime} minutes`);
+        }
+        return updated;
+      })
     );
 
-    console.log(`Successfully updated ${updatedNominees.filter(Boolean).length} nominees with TMDB data`);
+    const successCount = updatedNominees.filter(Boolean).length;
+    console.log(`\nSummary:`);
+    console.log(`Successfully updated ${successCount} nominees with TMDB data`);
     console.log("Database seeding completed");
   } catch (error) {
     console.error("Error seeding database:", error);
-  } finally {
-    process.exit(0);
   }
 }
 
