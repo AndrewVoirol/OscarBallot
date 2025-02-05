@@ -14,11 +14,17 @@ export class MemStorage implements IStorage {
   private currentNomineeId: number;
   private currentBallotId: number;
 
-  constructor() {
+  constructor(initialNominees: Nominee[] = []) {
     this.nominees = new Map();
     this.ballots = new Map();
     this.currentNomineeId = 1;
     this.currentBallotId = 1;
+
+    // Initialize with mock data
+    initialNominees.forEach(nominee => {
+      this.nominees.set(nominee.id, nominee);
+      this.currentNomineeId = Math.max(this.currentNomineeId, nominee.id + 1);
+    });
   }
 
   async getNominees(): Promise<Nominee[]> {
@@ -44,10 +50,18 @@ export class MemStorage implements IStorage {
   async updateBallot(insertBallot: InsertBallot): Promise<Ballot> {
     const existingBallot = await this.getBallot(insertBallot.nomineeId);
     const id = existingBallot?.id ?? this.currentBallotId++;
-    const ballot: Ballot = { ...insertBallot, id };
+    const ballot: Ballot = {
+      id,
+      nomineeId: insertBallot.nomineeId,
+      hasWatched: insertBallot.hasWatched ?? false,
+      predictedWinner: insertBallot.predictedWinner ?? false,
+      wantToWin: insertBallot.wantToWin ?? false
+    };
     this.ballots.set(id, ballot);
     return ballot;
   }
 }
 
-export const storage = new MemStorage();
+// Import mock data and initialize storage with it
+import { mockNominees } from "../client/src/lib/data";
+export const storage = new MemStorage(mockNominees);

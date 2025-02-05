@@ -6,7 +6,7 @@ export const mockNominees: Nominee[] = [
     name: "Oppenheimer",
     category: "Best Picture",
     description: "Epic biographical thriller about J. Robert Oppenheimer and the development of the atomic bomb.",
-    poster: "https://images.unsplash.com/photo-1626814026160-2237a95fc5a0",
+    poster: "https://movies.universalpictures.com/media/opp-tsr1sheet3-0f732347d98f4.jpg",
     streamingPlatforms: ["Prime Video", "Apple TV+"],
     awards: {
       "Golden Globe": true,
@@ -20,5 +20,40 @@ export const mockNominees: Nominee[] = [
       "Used practical effects instead of CGI for nuclear explosion sequences"
     ]
   },
-  // Add more mock nominees here
+  {
+    id: 2,
+    name: "Barbie",
+    category: "Best Picture",
+    description: "A story about self-discovery as Barbie ventures from Barbieland into the real world.",
+    poster: "https://www.warnerbros.com/sites/default/files/media/images/barbie_digital_1400x2100_keyart.jpg",
+    streamingPlatforms: ["Max", "Prime Video"],
+    awards: {
+      "Golden Globe": true,
+      "Critics Choice": true
+    },
+    cast: ["Margot Robbie", "Ryan Gosling", "America Ferrera"],
+    crew: ["Greta Gerwig - Director", "Noah Baumbach - Writer"],
+    funFacts: [
+      "First live-action Barbie movie",
+      "Used 3.5 million crystals in costume design"
+    ]
+  },
+  {
+    id: 3,
+    name: "Poor Things",
+    category: "Best Picture",
+    description: "A young woman brought back to life by an unorthodox scientist embarks on a journey of self-discovery.",
+    poster: "https://www.searchlightpictures.com/media/poster.jpg",
+    streamingPlatforms: ["Hulu", "Prime Video"],
+    awards: {
+      "Golden Globe": true,
+      "Venice Film Festival": true
+    },
+    cast: ["Emma Stone", "Mark Ruffalo", "Willem Dafoe"],
+    crew: ["Yorgos Lanthimos - Director", "Tony McNamara - Writer"],
+    funFacts: [
+      "Based on Alasdair Gray's novel",
+      "Features unique Victorian-era steampunk aesthetics"
+    ]
+  }
 ];
