@@ -17,6 +17,16 @@ export function NomineeDetails({ nominee }: NomineeDetailsProps) {
       <h2 className="text-2xl font-bold text-primary mb-4">{nominee.name}</h2>
       <p className="text-muted-foreground mb-6">{nominee.description}</p>
 
+      <div className="aspect-video w-full mb-6">
+        <iframe
+          src={nominee.trailerUrl}
+          title={`${nominee.name} Trailer`}
+          className="w-full h-full rounded-lg"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+          allowFullScreen
+        />
+      </div>
+
       <AwardsHistory nominee={nominee} />
 
       <Accordion type="single" collapsible className="mt-6">

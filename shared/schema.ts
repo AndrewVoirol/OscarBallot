@@ -14,6 +14,7 @@ export const nominees = pgTable("nominees", {
   category: text("category").notNull(),
   description: text("description").notNull(),
   poster: text("poster").notNull(),
+  trailerUrl: text("trailer_url").notNull(),
   streamingPlatforms: text("streaming_platforms").array().notNull(),
   awards: jsonb("awards").notNull(),
   historicalAwards: jsonb("historical_awards").$type<{

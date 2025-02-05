@@ -7,6 +7,7 @@ export const mockNominees: Nominee[] = [
     category: "Best Picture",
     description: "Epic biographical thriller about J. Robert Oppenheimer and the development of the atomic bomb.",
     poster: "https://image.tmdb.org/t/p/w500/8Gxv8gSFCU0XGDykEGv7zR1n2ua.jpg",
+    trailerUrl: "https://www.youtube.com/embed/uYPbbksJxIg",
     streamingPlatforms: ["Prime Video", "Apple TV+"],
     awards: {
       "Golden Globe": true,
@@ -36,6 +37,7 @@ export const mockNominees: Nominee[] = [
     category: "Best Picture",
     description: "A story about self-discovery as Barbie ventures from Barbieland into the real world.",
     poster: "https://image.tmdb.org/t/p/w500/iuFNMS8U5cb6xfzi51Dbkovj7vM.jpg",
+    trailerUrl: "https://www.youtube.com/embed/pBk4NYhWNMM",
     streamingPlatforms: ["Max", "Prime Video"],
     awards: {
       "Golden Globe": true,
@@ -63,6 +65,7 @@ export const mockNominees: Nominee[] = [
     category: "Best Picture",
     description: "A young woman brought back to life by an unorthodox scientist embarks on a journey of self-discovery.",
     poster: "https://image.tmdb.org/t/p/w500/kCGlIMHnOm8JPXq3rXM6c5wMxcT.jpg",
+    trailerUrl: "https://www.youtube.com/embed/RlbR5N6veqw",
     streamingPlatforms: ["Hulu", "Prime Video"],
     awards: {
       "Golden Globe": true,
