@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
+import { useEffect, useRef } from "react";
 
 interface CategoryNavProps {
   categories: string[];
@@ -13,6 +14,19 @@ export function CategoryNav({
   activeCategory,
   onSelectCategory,
 }: CategoryNavProps) {
+  const buttonRefs = useRef<{ [key: string]: HTMLButtonElement | null }>({});
+
+  useEffect(() => {
+    const activeButton = buttonRefs.current[activeCategory];
+    if (activeButton) {
+      activeButton.scrollIntoView({
+        behavior: "smooth",
+        block: "nearest",
+        inline: "center"
+      });
+    }
+  }, [activeCategory]);
+
   return (
     <div className="sticky top-14 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <ScrollArea className="w-full whitespace-nowrap">
@@ -20,6 +34,7 @@ export function CategoryNav({
           {categories.map((category) => (
             <Button
               key={category}
+              ref={(el) => (buttonRefs.current[category] = el)}
               variant="ghost"
               size="sm"
               onClick={() => onSelectCategory(category)}
