@@ -10,6 +10,14 @@ export const nominees = pgTable("nominees", {
   poster: text("poster").notNull(),
   streamingPlatforms: text("streaming_platforms").array().notNull(),
   awards: jsonb("awards").notNull(),
+  historicalAwards: jsonb("historical_awards").$type<{
+    year: number;
+    awards: Array<{
+      name: string;
+      type: string;
+      result: "Won" | "Nominated";
+    }>;
+  }[]>().notNull().default([]),
   cast: text("cast").array().notNull(),
   crew: text("crew").array().notNull(),
   funFacts: text("fun_facts").array().notNull(),

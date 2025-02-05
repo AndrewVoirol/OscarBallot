@@ -4,6 +4,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import { AwardsHistory } from "./awards-history";
 import type { Nominee } from "@shared/schema";
 
 interface NomineeDetailsProps {
@@ -15,8 +16,10 @@ export function NomineeDetails({ nominee }: NomineeDetailsProps) {
     <div className="p-4">
       <h2 className="text-2xl font-bold text-primary mb-4">{nominee.name}</h2>
       <p className="text-muted-foreground mb-6">{nominee.description}</p>
-      
-      <Accordion type="single" collapsible>
+
+      <AwardsHistory nominee={nominee} />
+
+      <Accordion type="single" collapsible className="mt-6">
         <AccordionItem value="cast">
           <AccordionTrigger>Cast</AccordionTrigger>
           <AccordionContent>

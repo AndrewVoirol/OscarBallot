@@ -13,6 +13,16 @@ export const mockNominees: Nominee[] = [
       "BAFTA": true,
       "Critics Choice": true
     },
+    historicalAwards: [
+      {
+        year: 2024,
+        awards: [
+          { name: "Golden Globe", type: "Best Motion Picture - Drama", result: "Won" },
+          { name: "Critics Choice", type: "Best Picture", result: "Won" },
+          { name: "BAFTA", type: "Best Film", result: "Nominated" }
+        ]
+      }
+    ],
     cast: ["Cillian Murphy", "Emily Blunt", "Robert Downey Jr."],
     crew: ["Christopher Nolan - Director", "Hoyte van Hoytema - Cinematographer"],
     funFacts: [
@@ -31,6 +41,15 @@ export const mockNominees: Nominee[] = [
       "Golden Globe": true,
       "Critics Choice": true
     },
+    historicalAwards: [
+      {
+        year: 2024,
+        awards: [
+          { name: "Golden Globe", type: "Best Motion Picture - Comedy", result: "Won" },
+          { name: "Critics Choice", type: "Best Comedy", result: "Won" }
+        ]
+      }
+    ],
     cast: ["Margot Robbie", "Ryan Gosling", "America Ferrera"],
     crew: ["Greta Gerwig - Director", "Noah Baumbach - Writer"],
     funFacts: [
@@ -49,6 +68,15 @@ export const mockNominees: Nominee[] = [
       "Golden Globe": true,
       "Venice Film Festival": true
     },
+    historicalAwards: [
+      {
+        year: 2024,
+        awards: [
+          { name: "Golden Globe", type: "Best Motion Picture - Comedy", result: "Won" },
+          { name: "Venice Film Festival", type: "Golden Lion", result: "Won" }
+        ]
+      }
+    ],
     cast: ["Emma Stone", "Mark Ruffalo", "Willem Dafoe"],
     crew: ["Yorgos Lanthimos - Director", "Tony McNamara - Writer"],
     funFacts: [
