@@ -38,10 +38,10 @@ export function CategoryNav({
     <div className="sticky top-14 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div 
         ref={scrollContainerRef}
-        className="w-full overflow-x-auto scrollbar-hide py-1"
+        className="w-full overflow-x-auto scrollbar-hide py-2 sm:py-1"
       >
         <div className="flex w-max min-w-full px-4 transition-transform duration-300 ease-out">
-          <div className="flex space-x-1.5 mx-auto">
+          <div className="flex space-x-2 sm:space-x-1.5 mx-auto">
             {categories.map((category) => (
               <Button
                 key={category}
@@ -50,7 +50,7 @@ export function CategoryNav({
                 size="sm"
                 onClick={() => onSelectCategory(category)}
                 className={cn(
-                  "transition-all duration-300 ease-in-out px-3 py-1.5 text-sm",
+                  "transition-all duration-300 ease-in-out min-h-[44px] sm:min-h-[36px] px-4 sm:px-3 py-2 sm:py-1.5 text-base sm:text-sm",
                   activeCategory === category
                     ? "bg-primary text-primary-foreground hover:bg-primary/90"
                     : "hover:bg-transparent hover:text-primary"

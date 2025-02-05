@@ -11,7 +11,7 @@ interface VotingControlsProps {
 
 export function VotingControls({ nomineeId }: VotingControlsProps) {
   const { toast } = useToast();
-  
+
   const { data: ballot } = useQuery<Ballot>({
     queryKey: [`/api/ballots/${nomineeId}`],
   });
@@ -41,24 +41,27 @@ export function VotingControls({ nomineeId }: VotingControlsProps) {
   if (!ballot) return null;
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-col gap-3 sm:gap-2">
       <Button
         variant={ballot.hasWatched ? "default" : "outline"}
-        size="sm"
+        size="lg"
+        className="h-12 sm:h-9 text-base sm:text-sm w-full justify-center"
         onClick={() => toggleVote("hasWatched")}
       >
         {ballot.hasWatched ? "Watched" : "Not Watched"}
       </Button>
       <Button
         variant={ballot.predictedWinner ? "default" : "outline"}
-        size="sm"
+        size="lg"
+        className="h-12 sm:h-9 text-base sm:text-sm w-full justify-center"
         onClick={() => toggleVote("predictedWinner")}
       >
         {ballot.predictedWinner ? "Predicted Winner" : "Predict Winner"}
       </Button>
       <Button
         variant={ballot.wantToWin ? "default" : "outline"}
-        size="sm"
+        size="lg"
+        className="h-12 sm:h-9 text-base sm:text-sm w-full justify-center"
         onClick={() => toggleVote("wantToWin")}
       >
         {ballot.wantToWin ? "Want to Win" : "Pick to Win"}

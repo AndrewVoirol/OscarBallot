@@ -19,17 +19,17 @@ export function NomineeCard({ nominee }: NomineeCardProps) {
         <img
           src={nominee.poster}
           alt={nominee.name}
-          className="w-full h-48 object-cover"
+          className="w-full h-56 sm:h-48 object-cover"
         />
         <AwardsBadge awards={nominee.awards} />
       </CardHeader>
-      <CardContent className="p-4">
-        <h3 className="text-lg font-semibold mb-2">{nominee.name}</h3>
-        <div className="flex flex-wrap gap-2 mb-4">
+      <CardContent className="p-4 sm:p-6">
+        <h3 className="text-xl sm:text-lg font-semibold mb-3 sm:mb-2">{nominee.name}</h3>
+        <div className="flex flex-wrap gap-2 mb-6 sm:mb-4">
           {nominee.streamingPlatforms.map((platform) => (
             <span
               key={platform}
-              className="text-xs px-2 py-1 rounded-full bg-primary/20 text-primary"
+              className="text-sm sm:text-xs px-3 py-1.5 sm:py-1 rounded-full bg-primary/20 text-primary"
             >
               {platform}
             </span>
@@ -38,7 +38,7 @@ export function NomineeCard({ nominee }: NomineeCardProps) {
         <VotingControls nomineeId={nominee.id} />
         <button
           onClick={() => setIsOpen(true)}
-          className="text-sm text-primary hover:underline mt-4 w-full text-left"
+          className="text-base sm:text-sm text-primary hover:underline mt-6 sm:mt-4 w-full text-left py-2 sm:py-1"
         >
           View Details
         </button>
