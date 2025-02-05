@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { VotingControls } from "./voting-controls";
 import { NomineeDetails } from "./nominee-details";
 import { AwardsBadge } from "./awards-badge";
-import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import type { Nominee } from "@shared/schema";
 
 interface NomineeCardProps {
@@ -11,6 +11,8 @@ interface NomineeCardProps {
 }
 
 export function NomineeCard({ nominee }: NomineeCardProps) {
+  const [isOpen, setIsOpen] = useState(false);
+
   return (
     <Card className="overflow-hidden hover:shadow-lg transition-shadow">
       <CardHeader className="relative p-0">
@@ -34,12 +36,15 @@ export function NomineeCard({ nominee }: NomineeCardProps) {
           ))}
         </div>
         <VotingControls nomineeId={nominee.id} />
-        <Dialog>
-          <DialogTrigger className="text-sm text-primary hover:underline mt-4">
-            View Details
-          </DialogTrigger>
-          <DialogContent className="max-w-2xl">
-            <NomineeDetails nominee={nominee} />
+        <button
+          onClick={() => setIsOpen(true)}
+          className="text-sm text-primary hover:underline mt-4 w-full text-left"
+        >
+          View Details
+        </button>
+        <Dialog open={isOpen} onOpenChange={setIsOpen}>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <NomineeDetails nominee={nominee} onClose={() => setIsOpen(false)} />
           </DialogContent>
         </Dialog>
       </CardContent>
