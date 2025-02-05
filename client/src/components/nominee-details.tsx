@@ -4,32 +4,17 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import { Button } from "@/components/ui/button";
-import { X } from "lucide-react";
 import { AwardsHistory } from "./awards-history";
 import type { Nominee } from "@shared/schema";
 
 interface NomineeDetailsProps {
   nominee: Nominee;
-  onClose: () => void;
 }
 
-export function NomineeDetails({ nominee, onClose }: NomineeDetailsProps) {
+export function NomineeDetails({ nominee }: NomineeDetailsProps) {
   return (
-    <div className="relative p-4">
-      <div className="sticky top-0 z-10 flex items-center justify-between bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 pb-4 -mx-4 px-4">
-        <h2 className="text-2xl font-bold text-primary">{nominee.name}</h2>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-10 w-10"
-          onClick={onClose}
-          aria-label="Close details"
-        >
-          <X className="h-6 w-6" />
-        </Button>
-      </div>
-
+    <div className="p-4">
+      <h2 className="text-2xl font-bold text-primary mb-4">{nominee.name}</h2>
       <p className="text-muted-foreground mb-6">{nominee.description}</p>
 
       <div className="aspect-video w-full mb-6">

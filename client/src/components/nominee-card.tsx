@@ -43,8 +43,8 @@ export function NomineeCard({ nominee }: NomineeCardProps) {
           View Details
         </button>
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-            <NomineeDetails nominee={nominee} onClose={() => setIsOpen(false)} />
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto p-0 sm:p-6">
+            <NomineeDetails nominee={nominee} />
           </DialogContent>
         </Dialog>
       </CardContent>
