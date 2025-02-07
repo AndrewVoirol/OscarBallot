@@ -23,7 +23,7 @@ export function NavBar({ selectedYear = 2025, onYearChange }: NavBarProps) {
         <div className="mr-4 md:flex">
           <Link href="/" className="mr-6 flex items-center space-x-2">
             <span className="font-bold sm:inline-block">
-              Oscar Ballot Tracker
+              Awards Insider
             </span>
           </Link>
         </div>

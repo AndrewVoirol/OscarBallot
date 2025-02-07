@@ -5,13 +5,16 @@ import { NavBar } from "@/components/nav-bar";
 import { CategoryNav } from "@/components/category-nav";
 import { ScrollProgress } from "@/components/scroll-progress";
 import type { Nominee } from "@shared/schema";
-import { FilmIcon, AlertCircle } from "lucide-react";
+import { FilmIcon, AlertCircle, Vote } from "lucide-react";
 import { usePullToRefresh } from "@/hooks/use-pull-to-refresh";
 import { Loader2 } from "lucide-react";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { useAuth } from "@/hooks/use-auth";
+import { Link } from "wouter";
 
 export default function Home() {
   const [selectedYear, setSelectedYear] = useState<number>(2025);
+  const { user } = useAuth();
   const { data: nominees, isLoading, error } = useQuery<Nominee[]>({
     queryKey: ["/api/nominees", selectedYear],
     queryFn: async () => {
@@ -98,7 +101,7 @@ export default function Home() {
     if (year === 2025) {
       return {
         title: "The 97th Academy Awards",
-        subtitle: "Track your picks and predictions for this year's Academy Awards ceremony, happening March 10, 2025"
+        subtitle: "Submit your predictions for the upcoming ceremony on March 10, 2025"
       };
     }
     return {
@@ -112,7 +115,7 @@ export default function Home() {
   if (error) {
     return (
       <div className="min-h-screen bg-background p-4">
-        <NavBar />
+        <NavBar selectedYear={selectedYear} onYearChange={setSelectedYear} />
         <div className="container mx-auto mt-8">
           <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />
@@ -127,8 +130,14 @@ export default function Home() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-primary animate-pulse text-2xl">Loading...</div>
+      <div className="min-h-screen bg-background">
+        <NavBar selectedYear={selectedYear} onYearChange={setSelectedYear} />
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <div className="flex items-center gap-2 text-primary">
+            <Loader2 className="h-6 w-6 animate-spin" />
+            <span>Loading nominees...</span>
+          </div>
+        </div>
       </div>
     );
   }
@@ -148,6 +157,19 @@ export default function Home() {
         </div>
       )}
       <main className="container mx-auto px-4 mt-6">
+        {selectedYear === 2025 && !user && (
+          <Alert className="mb-6">
+            <Vote className="h-4 w-4" />
+            <AlertTitle>Submit Your Oscar Predictions!</AlertTitle>
+            <AlertDescription>
+              <Link href="/auth" className="underline text-primary">
+                Sign in or register
+              </Link>{" "}
+              to save your predictions for the 97th Academy Awards.
+            </AlertDescription>
+          </Alert>
+        )}
+
         <header className="py-3 mb-4 text-center bg-gradient-to-b from-primary/20 to-background rounded-lg">
           <div className="flex items-center justify-center gap-2">
             <FilmIcon className="h-7 w-7 text-primary" />
@@ -158,6 +180,11 @@ export default function Home() {
           <p className="text-sm text-muted-foreground mt-1">
             {awardsInfo.subtitle}
           </p>
+          {selectedYear === 2025 && user && (
+            <p className="text-sm text-primary mt-2">
+              Vote for your predictions below to save your ballot
+            </p>
+          )}
         </header>
 
         {categories.map((category) => (
