@@ -5,7 +5,7 @@ import { NavBar } from "@/components/nav-bar";
 import { CategoryNav } from "@/components/category-nav";
 import { ScrollProgress } from "@/components/scroll-progress";
 import type { Nominee } from "@shared/schema";
-import { FilmIcon, AlertCircle, Vote } from "lucide-react";
+import { FilmIcon, AlertCircle, Vote, Save } from "lucide-react";
 import { usePullToRefresh } from "@/hooks/use-pull-to-refresh";
 import { Loader2 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -166,6 +166,16 @@ export default function Home() {
                 Sign in or register
               </Link>{" "}
               to save your predictions for the 97th Academy Awards.
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {selectedYear === 2025 && user && (
+          <Alert className="mb-6 border-primary/50">
+            <Save className="h-4 w-4 text-primary" />
+            <AlertTitle className="text-primary">Your Ballot is Auto-Saving!</AlertTitle>
+            <AlertDescription>
+              Your predictions are automatically saved as you vote. Use the buttons below each nominee to track what you've watched and predict winners.
             </AlertDescription>
           </Alert>
         )}

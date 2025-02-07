@@ -34,8 +34,9 @@ export function VotingControls({ nomineeId, isHistorical = false }: VotingContro
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/ballots/${nomineeId}`] });
       toast({
-        title: "Vote updated",
-        description: "Your ballot has been updated successfully",
+        title: "Ballot Updated",
+        description: "Your prediction has been saved",
+        variant: "default",
       });
     },
   });
@@ -43,8 +44,8 @@ export function VotingControls({ nomineeId, isHistorical = false }: VotingContro
   const handleAction = (field: keyof Omit<Ballot, "id" | "nomineeId" | "userId">) => {
     if (!user) {
       toast({
-        title: "Login required",
-        description: "Please login or register to track your Oscar picks",
+        title: "Login Required",
+        description: "Sign in or register to save your Oscar predictions",
         variant: "default",
       });
       setLocation("/auth");
@@ -61,7 +62,7 @@ export function VotingControls({ nomineeId, isHistorical = false }: VotingContro
         className="h-12 sm:h-9 text-base sm:text-sm w-full justify-center"
         onClick={() => handleAction("hasWatched")}
       >
-        {ballot?.hasWatched ? "Watched" : "Not Watched"}
+        {ballot?.hasWatched ? "✓ Watched" : "Mark as Watched"}
       </Button>
       {!isHistorical && (
         <>
@@ -71,7 +72,7 @@ export function VotingControls({ nomineeId, isHistorical = false }: VotingContro
             className="h-12 sm:h-9 text-base sm:text-sm w-full justify-center"
             onClick={() => handleAction("predictedWinner")}
           >
-            {ballot?.predictedWinner ? "Predicted Winner" : "Predict Winner"}
+            {ballot?.predictedWinner ? "✓ Your Winner Pick" : "Predict Winner"}
           </Button>
           <Button
             variant={ballot?.wantToWin ? "default" : "outline"}
@@ -79,7 +80,7 @@ export function VotingControls({ nomineeId, isHistorical = false }: VotingContro
             className="h-12 sm:h-9 text-base sm:text-sm w-full justify-center"
             onClick={() => handleAction("wantToWin")}
           >
-            {ballot?.wantToWin ? "Want to Win" : "Pick to Win"}
+            {ballot?.wantToWin ? "✓ Your Favorite" : "Mark as Favorite"}
           </Button>
         </>
       )}
