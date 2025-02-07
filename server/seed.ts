@@ -1,20 +1,67 @@
-
 import { db } from "./db";
 import { nominees } from "@shared/schema";
 import { updateNomineeWithTMDBData } from "./tmdb";
 
-// 2024 Oscar nominees with their categories
+// 2024 Oscar nominees with their categories and winners
 const nominees2024 = [
-  { name: "American Fiction", category: "Best Picture" },
-  { name: "Anatomy of a Fall", category: "Best Picture" },
-  { name: "Barbie", category: "Best Picture" },
-  { name: "The Holdovers", category: "Best Picture" },
-  { name: "Killers of the Flower Moon", category: "Best Picture" },
-  { name: "Maestro", category: "Best Picture" },
-  { name: "Oppenheimer", category: "Best Picture" },
-  { name: "Past Lives", category: "Best Picture" },
-  { name: "Poor Things", category: "Best Picture" },
-  { name: "The Zone of Interest", category: "Best Picture" }
+  { 
+    name: "Oppenheimer",
+    category: "Best Picture",
+    isWinner: true,
+    streamingPlatforms: ["Peacock", "Digital Purchase"]
+  },
+  { 
+    name: "Poor Things",
+    category: "Best Picture",
+    isWinner: false,
+    streamingPlatforms: ["Theaters", "Digital Purchase"]
+  },
+  { 
+    name: "Killers of the Flower Moon",
+    category: "Best Picture",
+    isWinner: false,
+    streamingPlatforms: ["Apple TV+", "Digital Purchase"]
+  },
+  { 
+    name: "Barbie",
+    category: "Best Picture",
+    isWinner: false,
+    streamingPlatforms: ["Max", "Digital Purchase"]
+  },
+  { 
+    name: "The Zone of Interest",
+    category: "Best Picture",
+    isWinner: false,
+    streamingPlatforms: ["Theaters", "Digital Purchase"]
+  }
+];
+
+// 2025 Oscar nominees (97th Academy Awards)
+const nominees2025 = [
+  { 
+    name: "American Fiction",
+    category: "Best Picture",
+    isWinner: false,
+    streamingPlatforms: ["Theaters"]
+  },
+  { 
+    name: "Past Lives",
+    category: "Best Picture",
+    isWinner: false,
+    streamingPlatforms: ["Theaters", "Digital Purchase"]
+  },
+  { 
+    name: "Maestro",
+    category: "Best Picture",
+    isWinner: false,
+    streamingPlatforms: ["Netflix"]
+  },
+  { 
+    name: "The Holdovers",
+    category: "Best Picture",
+    isWinner: false,
+    streamingPlatforms: ["Theaters", "Peacock"]
+  }
 ];
 
 async function seed() {
@@ -25,17 +72,53 @@ async function seed() {
     await db.delete(nominees);
     console.log("Cleared existing nominees");
 
-    // Insert basic nominee data
-    const insertedNominees = await db.insert(nominees).values(nominees2024).returning();
-    console.log(`Inserted ${insertedNominees.length} basic nominee records`);
+    // Insert 2024 nominees
+    const inserted2024 = await db.insert(nominees).values(
+      nominees2024.map(n => ({
+        name: n.name,
+        category: n.category,
+        description: "", // Will be populated by TMDB
+        poster: "", // Will be populated by TMDB
+        trailerUrl: "", // Will be populated by TMDB
+        streamingPlatforms: n.streamingPlatforms,
+        awards: [], // Will be populated by TMDB
+        cast: [], // Will be populated by TMDB
+        crew: [], // Will be populated by TMDB
+        funFacts: [],
+        ceremonyYear: 2024,
+        isWinner: n.isWinner
+      }))
+    ).returning();
+    console.log(`Inserted ${inserted2024.length} nominees for 2024`);
 
-    // Update each nominee with TMDB data
+    // Insert 2025 nominees
+    const inserted2025 = await db.insert(nominees).values(
+      nominees2025.map(n => ({
+        name: n.name,
+        category: n.category,
+        description: "", // Will be populated by TMDB
+        poster: "", // Will be populated by TMDB
+        trailerUrl: "", // Will be populated by TMDB
+        streamingPlatforms: n.streamingPlatforms,
+        awards: [], // Will be populated by TMDB
+        cast: [], // Will be populated by TMDB
+        crew: [], // Will be populated by TMDB
+        funFacts: [],
+        ceremonyYear: 2025,
+        isWinner: false // 2025 winners not yet determined
+      }))
+    ).returning();
+    console.log(`Inserted ${inserted2025.length} nominees for 2025`);
+
+    // Update all nominees with TMDB data
+    const allNominees = [...inserted2024, ...inserted2025];
     console.log("Fetching TMDB data for each nominee...");
+
     const updatedNominees = await Promise.all(
-      insertedNominees.map(async nominee => {
+      allNominees.map(async nominee => {
         const updated = await updateNomineeWithTMDBData(nominee);
         if (updated) {
-          console.log(`${nominee.name}: Category: ${nominee.category}, Runtime: ${updated.runtime} minutes`);
+          console.log(`${nominee.name}: Category: ${nominee.category}, Year: ${nominee.ceremonyYear}`);
         }
         return updated;
       })
