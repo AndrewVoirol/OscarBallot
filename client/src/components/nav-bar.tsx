@@ -17,14 +17,12 @@ interface NavBarProps {
 
 export function NavBar({ selectedYear = 2025, onYearChange }: NavBarProps) {
   const { user, logoutMutation } = useAuth();
-  const { data: years } = useQuery<number[]>({
+  const { data: years, isLoading: isLoadingYears } = useQuery<number[]>({
     queryKey: ["/api/nominees/years"],
     queryFn: async () => {
       const response = await fetch("/api/nominees/years");
       if (!response.ok) throw new Error("Failed to fetch years");
-      const allYears = await response.json();
-      // For now, only show 2024 and 2025
-      return allYears.filter((year: number) => year >= 2024 && year <= 2025);
+      return response.json();
     },
   });
 
@@ -39,21 +37,23 @@ export function NavBar({ selectedYear = 2025, onYearChange }: NavBarProps) {
           </Link>
         </div>
         <div className="flex flex-1 items-center justify-between space-x-2 md:justify-end">
-          <Select
-            value={selectedYear.toString()}
-            onValueChange={(value) => onYearChange?.(parseInt(value))}
-          >
-            <SelectTrigger className="w-24">
-              <SelectValue placeholder="Year" />
-            </SelectTrigger>
-            <SelectContent>
-              {years?.map((year) => (
-                <SelectItem key={year} value={year.toString()}>
-                  {year}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          {!isLoadingYears && years && years.length > 0 && (
+            <Select
+              value={selectedYear.toString()}
+              onValueChange={(value) => onYearChange?.(parseInt(value))}
+            >
+              <SelectTrigger className="w-24">
+                <SelectValue placeholder="Select year" />
+              </SelectTrigger>
+              <SelectContent>
+                {years.map((year) => (
+                  <SelectItem key={year} value={year.toString()}>
+                    {year}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
           {user ? (
             <div className="flex items-center gap-4">
               <span className="text-sm text-muted-foreground">
