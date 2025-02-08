@@ -19,12 +19,27 @@ export function registerRoutes(app: Express): Server {
   app.get("/api/nominees", async (req, res) => {
     try {
       const year = parseInt(req.query.year as string);
-      if (isNaN(year)) {
-        // If no year is provided or it's invalid, return nominees from all years
-        const nominees = await storage.getNominees();
-        return res.json(nominees);
+      const category = req.query.category as string;
+
+      let nominees;
+      if (!isNaN(year) && category) {
+        nominees = await storage.getNomineesByCategory(category, year);
+      } else if (!isNaN(year)) {
+        nominees = await storage.getNominees(year);
+      } else if (category) {
+        nominees = await storage.getNomineesByCategory(category);
+      } else {
+        nominees = await storage.getNominees();
       }
-      const nominees = await storage.getNominees(year);
+
+      // Sort nominees by ceremony year (descending) and then by category
+      nominees.sort((a, b) => {
+        if (b.ceremonyYear !== a.ceremonyYear) {
+          return b.ceremonyYear - a.ceremonyYear;
+        }
+        return a.category.localeCompare(b.category);
+      });
+
       res.json(nominees);
     } catch (error) {
       console.error('Error fetching nominees:', error);
@@ -32,19 +47,25 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  app.get("/api/nominees/category/:category", async (req, res) => {
+  app.get("/api/nominees/years", async (_req, res) => {
     try {
-      const year = parseInt(req.query.year as string);
-      if (isNaN(year)) {
-        // If no year is provided or it's invalid, return nominees from all years for this category
-        const nominees = await storage.getNomineesByCategory(req.params.category);
-        return res.json(nominees);
-      }
-      const nominees = await storage.getNomineesByCategory(req.params.category, year);
-      res.json(nominees);
+      const nominees = await storage.getNominees();
+      const years = [...new Set(nominees.map(n => n.ceremonyYear))].sort((a, b) => b - a);
+      res.json(years);
     } catch (error) {
-      console.error('Error fetching nominees by category:', error);
-      res.status(500).json({ message: "Failed to fetch nominees" });
+      console.error('Error fetching nominee years:', error);
+      res.status(500).json({ message: "Failed to fetch nominee years" });
+    }
+  });
+
+  app.get("/api/nominees/categories", async (_req, res) => {
+    try {
+      const nominees = await storage.getNominees();
+      const categories = [...new Set(nominees.map(n => n.category))].sort();
+      res.json(categories);
+    } catch (error) {
+      console.error('Error fetching nominee categories:', error);
+      res.status(500).json({ message: "Failed to fetch nominee categories" });
     }
   });
 
@@ -62,7 +83,6 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // Public endpoint to update TMDB data for all nominees
   app.post("/api/nominees/update-tmdb", tmdbLimiter, async (_req, res) => {
     try {
       const nominees = await storage.getNominees();
@@ -85,7 +105,6 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // Public endpoint to update single nominee TMDB data
   app.post("/api/nominees/:id/update-tmdb", tmdbLimiter, async (req, res) => {
     const nominee = await storage.getNominee(parseInt(req.params.id));
     if (!nominee) {
@@ -102,10 +121,8 @@ export function registerRoutes(app: Express): Server {
     res.json(updatedNominee);
   });
 
-  // Setup auth routes
   setupAuth(app);
 
-  // Protected routes for ballot operations
   app.get("/api/ballots/:nomineeId", requireAuth, async (req, res) => {
     const ballot = await storage.getBallot(
       parseInt(req.params.nomineeId),

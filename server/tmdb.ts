@@ -3,18 +3,19 @@ import { db } from "./db";
 import { nominees, type Nominee } from "@shared/schema";
 import { eq } from "drizzle-orm";
 
-const TMDB_BASE_URL = "https://api.themoviedb.org/3";
+const TMDB_BASE_URL = "https://api.themoviedb.org/4"; // Updated to V4
 const TMDB_IMAGE_BASE_URL = "https://image.tmdb.org/t/p";
 const TMDB_API_KEY = process.env.TMDB_API_KEY;
+const TMDB_ACCESS_TOKEN = process.env.TMDB_ACCESS_TOKEN; // Required for V4
 
-if (!TMDB_API_KEY) {
-  throw new Error("TMDB_API_KEY environment variable is not set");
+if (!TMDB_API_KEY || !TMDB_ACCESS_TOKEN) {
+  throw new Error("TMDB_API_KEY and TMDB_ACCESS_TOKEN environment variables are required");
 }
 
 const tmdbAxios = axios.create({
   baseURL: TMDB_BASE_URL,
   headers: {
-    'Authorization': `Bearer ${TMDB_API_KEY}`,
+    'Authorization': `Bearer ${TMDB_ACCESS_TOKEN}`,
     'Content-Type': 'application/json',
   }
 });
@@ -22,13 +23,15 @@ const tmdbAxios = axios.create({
 async function searchMovie(query: string, year?: number) {
   try {
     console.log(`Searching for movie: ${query}${year ? ` (${year})` : ''}`);
+    // V4 endpoint for movie search with additional filters
     const response = await tmdbAxios.get('/search/movie', {
       params: {
         query: encodeURIComponent(query),
         language: "en-US",
         include_adult: false,
         year,
-        region: "US"
+        region: "US",
+        primary_release_year: year // Added for more precise year filtering
       }
     });
 
@@ -38,10 +41,14 @@ async function searchMovie(query: string, year?: number) {
       return null;
     }
 
-    // Get the first match that exactly matches the query, otherwise take the first result
-    const bestMatch = data.results.find((movie: any) => 
-      movie.title.toLowerCase() === query.toLowerCase()
-    ) || data.results[0];
+    // Enhanced matching logic
+    const bestMatch = data.results.find((movie: any) => {
+      const movieTitle = movie.title.toLowerCase();
+      const searchQuery = query.toLowerCase();
+      const releaseYear = movie.release_date ? new Date(movie.release_date).getFullYear() : null;
+
+      return movieTitle === searchQuery && (!year || releaseYear === year);
+    }) || data.results[0];
 
     console.log(`Found movie match: ${bestMatch.title} (ID: ${bestMatch.id})`);
     return bestMatch;
@@ -54,11 +61,13 @@ async function searchMovie(query: string, year?: number) {
 async function searchPerson(query: string) {
   try {
     console.log(`Searching for person: ${query}`);
+    // V4 endpoint for person search with enhanced filters
     const response = await tmdbAxios.get('/search/person', {
       params: {
         query: encodeURIComponent(query),
         language: "en-US",
         include_adult: false,
+        append_to_response: "images,combined_credits"
       }
     });
 
@@ -68,7 +77,11 @@ async function searchPerson(query: string) {
       return null;
     }
 
-    const bestMatch = data.results[0];
+    // Enhanced person matching
+    const bestMatch = data.results.find((person: any) => 
+      person.name.toLowerCase() === query.toLowerCase()
+    ) || data.results[0];
+
     console.log(`Found person match: ${bestMatch.name} (ID: ${bestMatch.id})`);
     return bestMatch;
   } catch (error: any) {
@@ -80,11 +93,12 @@ async function searchPerson(query: string) {
 async function getMovieDetails(movieId: number) {
   try {
     console.log(`Fetching details for movie ID: ${movieId}`);
+    // V4 endpoint for detailed movie information
     const response = await tmdbAxios.get(
       `/movie/${movieId}`, {
         params: {
           language: "en-US",
-          append_to_response: "credits,videos"
+          append_to_response: "credits,videos,images,keywords,alternative_titles"
         }
       }
     );
@@ -101,11 +115,12 @@ async function getMovieDetails(movieId: number) {
 async function getPersonDetails(personId: number) {
   try {
     console.log(`Fetching details for person ID: ${personId}`);
+    // V4 endpoint for detailed person information
     const response = await tmdbAxios.get(
       `/person/${personId}`, {
         params: {
           language: "en-US",
-          append_to_response: "movie_credits"
+          append_to_response: "movie_credits,images,combined_credits,tagged_images"
         }
       }
     );
@@ -119,6 +134,7 @@ async function getPersonDetails(personId: number) {
   }
 }
 
+// Rest of the utility functions remain the same
 function formatImageUrl(path: string | null, size: 'w500' | 'original' = 'w500'): string {
   if (!path) return '';
   return `${TMDB_IMAGE_BASE_URL}/${size}${path}`;
@@ -130,14 +146,13 @@ function isPersonCategory(category: string): boolean {
 
 export async function updateNomineeWithTMDBData(nominee: Nominee) {
   try {
-    console.log(`Processing nominee: ${nominee.name}`);
+    console.log(`Processing nominee: ${nominee.name} (${nominee.ceremonyYear})`);
 
     if (isPersonCategory(nominee.category)) {
       // Handle person-based nominees
       const searchResult = await searchPerson(nominee.name);
       if (!searchResult) {
         console.error(`No TMDB results found for person: ${nominee.name}`);
-        // Keep existing data for person-based nominees
         return nominee;
       }
 
@@ -147,13 +162,16 @@ export async function updateNomineeWithTMDBData(nominee: Nominee) {
         return nominee;
       }
 
-      // Update nominee with person data
+      // Update nominee with enhanced person data
       const [updatedNominee] = await db
         .update(nominees)
         .set({
           tmdbId: personDetails.id,
           poster: formatImageUrl(personDetails.profile_path),
           backdropPath: formatImageUrl(personDetails.profile_path, 'original'),
+          // Add additional person-specific data
+          cast: personDetails.movie_credits?.cast?.slice(0, 5).map((m: any) => m.title) || [],
+          crew: personDetails.movie_credits?.crew?.slice(0, 5).map((m: any) => `${m.job}: ${m.title}`) || [],
           lastTMDBSync: new Date(),
           dataComplete: true
         })
@@ -163,8 +181,7 @@ export async function updateNomineeWithTMDBData(nominee: Nominee) {
       console.log(`Successfully updated nominee: ${nominee.name}`);
       return updatedNominee;
     } else {
-      // Handle movie-based nominees
-      // Search for the movie using the ceremony year - 1 (movies typically released the year before)
+      // Handle movie-based nominees with enhanced search
       const searchResult = await searchMovie(nominee.name, nominee.ceremonyYear - 1);
       if (!searchResult) {
         console.error(`No TMDB results found for movie: ${nominee.name}`);
@@ -182,7 +199,7 @@ export async function updateNomineeWithTMDBData(nominee: Nominee) {
         video.site === "YouTube" && video.type === "Trailer"
       );
 
-      // Process cast and crew data
+      // Enhanced cast and crew processing
       const cast = movieDetails.credits?.cast?.slice(0, 10).map((member: any) => ({
         id: member.id,
         name: member.name,
@@ -200,7 +217,7 @@ export async function updateNomineeWithTMDBData(nominee: Nominee) {
         profileImage: formatImageUrl(member.profile_path)
       })) || [];
 
-      // Update nominee with movie data
+      // Update nominee with enhanced movie data
       const [updatedNominee] = await db
         .update(nominees)
         .set({
