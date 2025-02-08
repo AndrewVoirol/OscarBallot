@@ -1,6 +1,7 @@
 import axios from "axios";
 
 const TMDB_BASE_URL = "https://api.themoviedb.org/3";
+const TMDB_IMAGE_BASE_URL = "https://image.tmdb.org/t/p";
 const TMDB_API_KEY = import.meta.env.VITE_TMDB_API_KEY;
 
 interface TMDBMovie {
@@ -68,6 +69,19 @@ export async function getMovieDetails(movieId: number): Promise<TMDBMovie> {
   return response.data;
 }
 
-export function getTMDBImageUrl(path: string, size: "original" | "w500" = "w500"): string {
-  return `https://image.tmdb.org/t/p/${size}${path}`;
+export function getTMDBImageUrl(path: string | null, size: "original" | "w500" = "w500"): string {
+  if (!path) return '';
+  return `${TMDB_IMAGE_BASE_URL}/${size}${path}`;
+}
+
+export function formatTMDBPosterUrl(path: string | null): string {
+  return getTMDBImageUrl(path, 'w500');
+}
+
+export function formatTMDBBackdropUrl(path: string | null): string {
+  return getTMDBImageUrl(path, 'original');
+}
+
+export function formatTMDBProfileUrl(path: string | null): string {
+  return getTMDBImageUrl(path, 'w500');
 }
