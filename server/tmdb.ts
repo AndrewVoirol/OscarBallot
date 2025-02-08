@@ -1,3 +1,4 @@
+import axios from "axios";
 import { db } from "./db";
 import { nominees, type Nominee } from "@shared/schema";
 import { eq } from "drizzle-orm";
@@ -10,16 +11,28 @@ if (!TMDB_API_KEY) {
   throw new Error("TMDB_API_KEY environment variable is not set");
 }
 
+const tmdbAxios = axios.create({
+  baseURL: TMDB_BASE_URL,
+  headers: {
+    'Authorization': `Bearer ${TMDB_API_KEY}`,
+    'Content-Type': 'application/json',
+  }
+});
+
 async function searchMovie(query: string, year?: number) {
   try {
     console.log(`Searching for movie: ${query}${year ? ` (${year})` : ''}`);
-    const response = await fetch(`${TMDB_BASE_URL}/search/movie?api_key=${TMDB_API_KEY}&query=${encodeURIComponent(query)}&language=en-US&include_adult=false${year ? `&year=${year}` : ''}&region=US`);
+    const response = await tmdbAxios.get('/search/movie', {
+      params: {
+        query: encodeURIComponent(query),
+        language: "en-US",
+        include_adult: false,
+        year,
+        region: "US"
+      }
+    });
 
-    if (!response.ok) {
-      throw new Error(`TMDB API error: ${response.status} ${response.statusText}`);
-    }
-
-    const data = await response.json();
+    const data = await response.data;
     if (!data.results?.length) {
       console.log(`No results found for: ${query}`);
       return null;
@@ -41,15 +54,16 @@ async function searchMovie(query: string, year?: number) {
 async function getMovieDetails(movieId: number) {
   try {
     console.log(`Fetching details for movie ID: ${movieId}`);
-    const response = await fetch(
-      `${TMDB_BASE_URL}/movie/${movieId}?api_key=${TMDB_API_KEY}&language=en-US&append_to_response=credits,videos,images`
+    const response = await tmdbAxios.get(
+      `/movie/${movieId}`, {
+        params: {
+          language: "en-US",
+          append_to_response: "credits,videos,images"
+        }
+      }
     );
 
-    if (!response.ok) {
-      throw new Error(`TMDB API error: ${response.status} ${response.statusText}`);
-    }
-
-    const movieData = await response.json();
+    const movieData = await response.data;
     console.log(`Successfully retrieved details for movie ID ${movieId}`);
     return movieData;
   } catch (error: any) {
@@ -113,7 +127,7 @@ export async function updateNomineeWithTMDBData(nominee: Nominee) {
         releaseDate: movieDetails.release_date || null,
         voteAverage: movieDetails.vote_average ? Math.round(movieDetails.vote_average * 10) : null,
         poster: formatImageUrl(movieDetails.poster_path),
-        backdrop_path: formatImageUrl(movieDetails.backdrop_path, 'original'),
+        backdropPath: formatImageUrl(movieDetails.backdrop_path, 'original'),
         genres: movieDetails.genres?.map((g: { name: string }) => g.name) || [],
         productionCompanies: movieDetails.production_companies?.map((company: any) => ({
           id: company.id,
@@ -127,7 +141,9 @@ export async function updateNomineeWithTMDBData(nominee: Nominee) {
         },
         ...(trailer && {
           trailerUrl: `https://www.youtube.com/embed/${trailer.key}`
-        })
+        }),
+        lastTMDBSync: new Date(),
+        dataComplete: true
       })
       .where(eq(nominees.id, nominee.id))
       .returning();
