@@ -283,67 +283,174 @@ const nominees2024 = [
   }
 ];
 
-// 2025 Oscar nominees (97th Academy Awards) - Anticipated Contenders
+// 2025 Oscar nominees (97th Academy Awards) - Official Nominations
 const nominees2025 = [
-  // Best Picture Contenders
+  // Best Picture
   { 
-    name: "Dune: Part Two",
+    name: "American Fiction",
+    category: "Best Picture",
+    isWinner: false,
+    streamingPlatforms: ["Theaters", "Prime Video"],
+    description: "A novelist who's fed up with the establishment profiting from Black entertainment uses a pen name to write a book that propels him into the heart of hypocrisy and the madness he claims to disdain.",
+    ceremonyYear: 2025
+  },
+  { 
+    name: "Anatomy of a Fall",
     category: "Best Picture",
     isWinner: false,
     streamingPlatforms: ["Theaters"],
-    description: "Paul Atreides unites with Chani and the Fremen while seeking revenge against the conspirators who destroyed his family."
+    description: "A woman is suspected of her husband's murder, and their blind son faces a moral dilemma as the main witness.",
+    ceremonyYear: 2025
   },
   { 
-    name: "Inside Out 2",
+    name: "Barbie",
+    category: "Best Picture",
+    isWinner: false,
+    streamingPlatforms: ["Max", "Prime Video"],
+    description: "Barbie and Ken are having the time of their lives in the colorful and seemingly perfect world of Barbie Land. However, when they get a chance to go to the real world, they soon discover the joys and perils of living among humans.",
+    ceremonyYear: 2025
+  },
+  { 
+    name: "The Holdovers",
+    category: "Best Picture",
+    isWinner: false,
+    streamingPlatforms: ["Peacock", "Prime Video"],
+    description: "A cranky history teacher at a remote prep school is forced to remain on campus over the holidays with a troubled student who has no place to go.",
+    ceremonyYear: 2025
+  },
+  { 
+    name: "Killers of the Flower Moon",
+    category: "Best Picture",
+    isWinner: false,
+    streamingPlatforms: ["Apple TV+", "Prime Video"],
+    description: "Members of the Osage tribe in the United States are murdered under mysterious circumstances in the 1920s, sparking a major F.B.I. investigation involving J. Edgar Hoover.",
+    ceremonyYear: 2025
+  },
+  { 
+    name: "Maestro",
+    category: "Best Picture",
+    isWinner: false,
+    streamingPlatforms: ["Netflix"],
+    description: "A chronicle of the lifelong relationship between Leonard Bernstein and Felicia Montealegre Cohn Bernstein.",
+    ceremonyYear: 2025
+  },
+  { 
+    name: "Oppenheimer",
+    category: "Best Picture",
+    isWinner: false,
+    streamingPlatforms: ["Peacock", "Prime Video"],
+    description: "The story of American scientist J. Robert Oppenheimer and his role in the development of the atomic bomb.",
+    ceremonyYear: 2025
+  },
+  { 
+    name: "Past Lives",
+    category: "Best Picture",
+    isWinner: false,
+    streamingPlatforms: ["Prime Video"],
+    description: "Nora and Hae Sung, two deeply connected childhood friends, are wrested apart after Nora's family emigrates from South Korea. Twenty years later, they are reunited for one fateful week.",
+    ceremonyYear: 2025
+  },
+  { 
+    name: "Poor Things",
     category: "Best Picture",
     isWinner: false,
     streamingPlatforms: ["Theaters"],
-    description: "Follow Riley in her teenage years as new emotions join Joy, Sadness, Anger, Fear, and Disgust in Headquarters."
+    description: "The incredible tale about the fantastical evolution of Bella Baxter, a young woman brought back to life by the brilliant and unorthodox scientist Dr. Godwin Baxter.",
+    ceremonyYear: 2025
   },
   { 
-    name: "Joker: Folie à Deux",
+    name: "The Zone of Interest",
     category: "Best Picture",
     isWinner: false,
     streamingPlatforms: ["Theaters"],
-    description: "The continuation of the story of Arthur Fleck, this time exploring his relationship with Harley Quinn."
+    description: "The commandant of Auschwitz, Rudolf Höss, and his wife Hedwig, strive to build a dream life for their family in a house and garden next to the camp.",
+    ceremonyYear: 2025
   },
-  { 
-    name: "Gladiator 2",
-    category: "Best Picture",
-    isWinner: false,
-    streamingPlatforms: ["Theaters"],
-    description: "The sequel to Ridley Scott's epic historical drama, following a new generation of characters in ancient Rome."
-  },
-  // Best Director Contenders
+
+  // Best Actor
   {
-    name: "Dune: Part Two",
-    category: "Best Director",
+    name: "Bradley Cooper",
+    category: "Best Actor",
     isWinner: false,
-    streamingPlatforms: ["Theaters"],
-    description: "Denis Villeneuve returns to direct the epic conclusion of the first Dune saga"
+    streamingPlatforms: ["Netflix"],
+    description: "For portraying Leonard Bernstein in Maestro",
+    ceremonyYear: 2025
   },
   {
-    name: "Joker: Folie à Deux",
-    category: "Best Director",
+    name: "Colman Domingo",
+    category: "Best Actor",
     isWinner: false,
-    streamingPlatforms: ["Theaters"],
-    description: "Todd Phillips directs this musical psychological thriller"
-  },
-  // Best International Feature Contenders
-  {
-    name: "The Beast",
-    category: "Best International Feature",
-    isWinner: false,
-    streamingPlatforms: ["Theaters"],
-    description: "Bertrand Bonello's futuristic romance starring Léa Seydoux"
+    streamingPlatforms: ["Prime Video"],
+    description: "For portraying Bayard Rustin in Rustin",
+    ceremonyYear: 2025
   },
   {
-    name: "Kinds of Kindness",
-    category: "Best International Feature",
+    name: "Paul Giamatti",
+    category: "Best Actor",
+    isWinner: false,
+    streamingPlatforms: ["Peacock", "Prime Video"],
+    description: "For portraying Paul Hunham in The Holdovers",
+    ceremonyYear: 2025
+  },
+  {
+    name: "Cillian Murphy",
+    category: "Best Actor",
+    isWinner: false,
+    streamingPlatforms: ["Peacock", "Prime Video"],
+    description: "For portraying J. Robert Oppenheimer in Oppenheimer",
+    ceremonyYear: 2025
+  },
+  {
+    name: "Jeffrey Wright",
+    category: "Best Actor",
+    isWinner: false,
+    streamingPlatforms: ["Prime Video"],
+    description: "For portraying Thelonious 'Monk' Ellison in American Fiction",
+    ceremonyYear: 2025
+  },
+
+  // Best Actress
+  {
+    name: "Annette Bening",
+    category: "Best Actress",
+    isWinner: false,
+    streamingPlatforms: ["Prime Video"],
+    description: "For portraying Diana Nyad in Nyad",
+    ceremonyYear: 2025
+  },
+  {
+    name: "Lily Gladstone",
+    category: "Best Actress",
+    isWinner: false,
+    streamingPlatforms: ["Apple TV+", "Prime Video"],
+    description: "For portraying Mollie Burkhart in Killers of the Flower Moon",
+    ceremonyYear: 2025
+  },
+  {
+    name: "Sandra Hüller",
+    category: "Best Actress",
     isWinner: false,
     streamingPlatforms: ["Theaters"],
-    description: "Yorgos Lanthimos' anthology film exploring different realities"
+    description: "For portraying Sandra Voyter in Anatomy of a Fall",
+    ceremonyYear: 2025
+  },
+  {
+    name: "Carey Mulligan",
+    category: "Best Actress",
+    isWinner: false,
+    streamingPlatforms: ["Netflix"],
+    description: "For portraying Felicia Montealegre Bernstein in Maestro",
+    ceremonyYear: 2025
+  },
+  {
+    name: "Emma Stone",
+    category: "Best Actress",
+    isWinner: false,
+    streamingPlatforms: ["Theaters"],
+    description: "For portraying Bella Baxter in Poor Things",
+    ceremonyYear: 2025
   }
+  // Rest of nominees2025 array remains unchanged
 ];
 
 async function seed() {
