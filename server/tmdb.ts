@@ -17,30 +17,38 @@ const tmdbAxios = axios.create({
     'Authorization': `Bearer ${TMDB_ACCESS_TOKEN}`,
     'Content-Type': 'application/json;charset=utf-8'
   },
-  timeout: 10000 // 10 second timeout
+  timeout: 15000 // Increased timeout to 15 seconds for better reliability
 });
 
-// Add retry logic
-const withRetry = async (fn: () => Promise<any>, retries = 3, delay = 1000) => {
-  try {
-    return await fn();
-  } catch (error: any) {
-    if (retries > 0 && error.response?.status === 429) {
-      await new Promise(resolve => setTimeout(resolve, delay));
-      return withRetry(fn, retries - 1, delay * 2);
+// Enhanced retry logic with exponential backoff
+const withRetry = async (fn: () => Promise<any>, retries = 3, initialDelay = 1000) => {
+  let lastError;
+  for (let i = 0; i < retries; i++) {
+    try {
+      return await fn();
+    } catch (error: any) {
+      lastError = error;
+      if (error.response?.status === 429 || error.response?.status >= 500) {
+        const delay = initialDelay * Math.pow(2, i);
+        console.log(`Attempt ${i + 1} failed, retrying in ${delay}ms...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+        continue;
+      }
+      throw error;
     }
-    throw error;
   }
+  throw lastError;
 };
 
+// Improved search functions with better matching logic
 async function searchMovie(query: string, year?: number) {
   try {
-    console.log(`Searching for movie: ${query}${year ? ` (${year})` : ''}`);
+    console.log(`Searching for movie: "${query}"${year ? ` (${year})` : ''}`);
     const response = await withRetry(() => 
       tmdbAxios.get('/search/movie', {
         params: {
           query,
-          year,
+          year: year ? year - 1 : undefined, // Search previous year for Oscar nominees
           language: "en-US",
           include_adult: false
         }
@@ -48,38 +56,64 @@ async function searchMovie(query: string, year?: number) {
     );
 
     if (!response.data.results?.length) {
-      console.log(`No results found for: ${query}`);
+      console.log(`No results found for movie: "${query}"`);
       return null;
     }
 
-    // Enhanced matching logic
-    const bestMatch = response.data.results.find((movie: any) => {
-      const movieTitle = movie.title.toLowerCase();
-      const searchQuery = query.toLowerCase();
-      const releaseYear = movie.release_date ? new Date(movie.release_date).getFullYear() : null;
+    const results = response.data.results;
+    const searchYear = year ? year - 1 : undefined;
 
-      // Try exact match first
-      if (movieTitle === searchQuery && (!year || releaseYear === year)) {
-        return true;
-      }
+    // Enhanced matching algorithm
+    const bestMatch = results.reduce((best: any, current: any) => {
+      const releaseYear = current.release_date ? new Date(current.release_date).getFullYear() : null;
+      const currentScore = calculateMatchScore(current, query, releaseYear, searchYear);
+      const bestScore = best ? calculateMatchScore(best, query, 
+        best.release_date ? new Date(best.release_date).getFullYear() : null, 
+        searchYear) : -1;
 
-      // Then try removing special characters and comparing
-      const cleanMovieTitle = movieTitle.replace(/[^a-z0-9\s]/g, '');
-      const cleanSearchQuery = searchQuery.replace(/[^a-z0-9\s]/g, '');
-      return cleanMovieTitle === cleanSearchQuery && (!year || releaseYear === year);
-    }) || response.data.results[0];
+      return currentScore > bestScore ? current : best;
+    }, null);
 
-    console.log(`Found movie match: ${bestMatch.title} (ID: ${bestMatch.id})`);
-    return bestMatch;
+    if (bestMatch) {
+      console.log(`Found movie match: "${bestMatch.title}" (ID: ${bestMatch.id}, Release: ${bestMatch.release_date})`);
+      return bestMatch;
+    }
+
+    return null;
   } catch (error: any) {
-    console.error(`Error searching for movie ${query}:`, error.response?.data || error.message);
+    console.error(`Error searching for movie "${query}":`, error.response?.data || error.message);
     return null;
   }
 }
 
+function calculateMatchScore(movie: any, query: string, movieYear: number | null, searchYear: number | undefined): number {
+  const normalizedQuery = query.toLowerCase().replace(/[^a-z0-9\s]/g, '');
+  const normalizedTitle = movie.title.toLowerCase().replace(/[^a-z0-9\s]/g, '');
+
+  let score = 0;
+
+  // Exact match gives highest score
+  if (normalizedTitle === normalizedQuery) {
+    score += 100;
+  } else if (normalizedTitle.includes(normalizedQuery) || normalizedQuery.includes(normalizedTitle)) {
+    score += 50;
+  }
+
+  // Year matching
+  if (searchYear && movieYear === searchYear) {
+    score += 30;
+  }
+
+  // Popularity and vote count as tiebreakers
+  score += (movie.popularity || 0) / 100;
+  score += Math.min((movie.vote_count || 0) / 1000, 10);
+
+  return score;
+}
+
 async function searchPerson(query: string) {
   try {
-    console.log(`Searching for person: ${query}`);
+    console.log(`Searching for person: "${query}"`);
     const response = await withRetry(() => tmdbAxios.get('/search/person', {
       params: {
         query,
@@ -89,21 +123,53 @@ async function searchPerson(query: string) {
     }));
 
     if (!response.data.results?.length) {
-      console.log(`No results found for person: ${query}`);
+      console.log(`No results found for person: "${query}"`);
       return null;
     }
 
     // Enhanced person matching
-    const bestMatch = response.data.results.find((person: any) =>
-      person.name.toLowerCase() === query.toLowerCase()
-    ) || response.data.results[0];
+    const results = response.data.results;
+    const bestMatch = results.reduce((best: any, current: any) => {
+      const currentScore = calculatePersonMatchScore(current, query);
+      const bestScore = best ? calculatePersonMatchScore(best, query) : -1;
+      return currentScore > bestScore ? current : best;
+    }, null);
 
-    console.log(`Found person match: ${bestMatch.name} (ID: ${bestMatch.id})`);
-    return bestMatch;
+    if (bestMatch) {
+      console.log(`Found person match: "${bestMatch.name}" (ID: ${bestMatch.id})`);
+      return bestMatch;
+    }
+
+    return null;
   } catch (error: any) {
-    console.error(`Error searching for person ${query}:`, error.response?.data || error.message);
+    console.error(`Error searching for person "${query}":`, error.response?.data || error.message);
     return null;
   }
+}
+
+function calculatePersonMatchScore(person: any, query: string): number {
+  const normalizedQuery = query.toLowerCase().replace(/[^a-z0-9\s]/g, '');
+  const normalizedName = person.name.toLowerCase().replace(/[^a-z0-9\s]/g, '');
+
+  let score = 0;
+
+  // Exact match gives highest score
+  if (normalizedName === normalizedQuery) {
+    score += 100;
+  } else if (normalizedName.includes(normalizedQuery) || normalizedQuery.includes(normalizedName)) {
+    score += 50;
+  }
+
+  // Known for department bonus
+  if (person.known_for_department === "Acting" || person.known_for_department === "Directing") {
+    score += 20;
+  }
+
+  // Popularity and known credits as tiebreakers
+  score += (person.popularity || 0) / 100;
+  score += Math.min((person.known_for?.length || 0) * 5, 20);
+
+  return score;
 }
 
 async function getMovieDetails(movieId: number) {
@@ -113,7 +179,7 @@ async function getMovieDetails(movieId: number) {
       `/movie/${movieId}`,
       {
         params: {
-          append_to_response: "credits,videos",
+          append_to_response: "credits,videos,images",
           language: "en-US"
         }
       }
@@ -168,22 +234,28 @@ function isPersonCategory(category: string): boolean {
 
 export async function updateNomineeWithTMDBData(nominee: Nominee) {
   try {
-    console.log(`Processing nominee: ${nominee.name} (${nominee.ceremonyYear})`);
+    console.log(`Processing nominee: "${nominee.name}" (${nominee.ceremonyYear})`);
 
     // Set default images
     const defaultPoster = '/placeholder-poster.jpg';
     const defaultBackdrop = '/placeholder-backdrop.jpg';
 
+    // Common update fields
+    const baseUpdateFields = {
+      lastTMDBSync: new Date(),
+      dataComplete: false // Will be set to true only after successful data fetch
+    };
+
     if (isPersonCategory(nominee.category)) {
       const searchResult = await searchPerson(nominee.name);
       if (!searchResult) {
-        console.log(`No TMDB results found for person: ${nominee.name}`);
+        console.log(`No TMDB results found for person: "${nominee.name}"`);
         const [updatedNominee] = await db
           .update(nominees)
           .set({
+            ...baseUpdateFields,
             poster: defaultPoster,
-            backdropPath: defaultBackdrop,
-            lastTMDBSync: new Date()
+            backdropPath: defaultBackdrop
           })
           .where(eq(nominees.id, nominee.id))
           .returning();
@@ -191,15 +263,20 @@ export async function updateNomineeWithTMDBData(nominee: Nominee) {
       }
 
       const personDetails = await getPersonDetails(searchResult.id);
+      if (!personDetails) {
+        return nominee;
+      }
+
       const [updatedNominee] = await db
         .update(nominees)
         .set({
+          ...baseUpdateFields,
           tmdbId: searchResult.id,
-          poster: personDetails?.profile_path ? formatImageUrl(personDetails.profile_path) : defaultPoster,
-          backdropPath: personDetails?.profile_path ? formatImageUrl(personDetails.profile_path, 'original') : defaultBackdrop,
-          cast: personDetails?.movie_credits?.cast?.slice(0, 5).map((m: any) => m.title) || [],
-          crew: personDetails?.movie_credits?.crew?.slice(0, 5).map((m: any) => `${m.job}: ${m.title}`) || [],
-          lastTMDBSync: new Date(),
+          poster: personDetails.profile_path ? formatImageUrl(personDetails.profile_path) : defaultPoster,
+          backdropPath: personDetails.profile_path ? formatImageUrl(personDetails.profile_path, 'original') : defaultBackdrop,
+          biography: personDetails.biography || '',
+          cast: personDetails.movie_credits?.cast?.slice(0, 5).map((m: any) => m.title) || [],
+          crew: personDetails.movie_credits?.crew?.slice(0, 5).map((m: any) => `${m.job}: ${m.title}`) || [],
           dataComplete: true
         })
         .where(eq(nominees.id, nominee.id))
@@ -207,15 +284,15 @@ export async function updateNomineeWithTMDBData(nominee: Nominee) {
 
       return updatedNominee;
     } else {
-      const searchResult = await searchMovie(nominee.name, nominee.ceremonyYear - 1);
+      const searchResult = await searchMovie(nominee.name, nominee.ceremonyYear);
       if (!searchResult) {
-        console.log(`No TMDB results found for movie: ${nominee.name}`);
+        console.log(`No TMDB results found for movie: "${nominee.name}"`);
         const [updatedNominee] = await db
           .update(nominees)
           .set({
+            ...baseUpdateFields,
             poster: defaultPoster,
-            backdropPath: defaultBackdrop,
-            lastTMDBSync: new Date()
+            backdropPath: defaultBackdrop
           })
           .where(eq(nominees.id, nominee.id))
           .returning();
@@ -228,18 +305,21 @@ export async function updateNomineeWithTMDBData(nominee: Nominee) {
       }
 
       const trailer = movieDetails.videos?.results?.find((video: any) =>
-        video.site === "YouTube" && video.type === "Trailer"
+        video.site === "YouTube" && 
+        (video.type === "Trailer" || video.type === "Teaser")
       );
 
       const [updatedNominee] = await db
         .update(nominees)
         .set({
+          ...baseUpdateFields,
           tmdbId: movieDetails.id,
           runtime: movieDetails.runtime || null,
           releaseDate: movieDetails.release_date || null,
           voteAverage: movieDetails.vote_average ? Math.round(movieDetails.vote_average * 10) : null,
           poster: movieDetails.poster_path ? formatImageUrl(movieDetails.poster_path) : defaultPoster,
           backdropPath: movieDetails.backdrop_path ? formatImageUrl(movieDetails.backdrop_path, 'original') : defaultBackdrop,
+          overview: movieDetails.overview || '',
           genres: movieDetails.genres?.map((g: { name: string }) => g.name) || [],
           productionCompanies: movieDetails.production_companies?.map((company: any) => ({
             id: company.id,
@@ -267,7 +347,6 @@ export async function updateNomineeWithTMDBData(nominee: Nominee) {
           ...(trailer && {
             trailerUrl: `https://www.youtube.com/embed/${trailer.key}`
           }),
-          lastTMDBSync: new Date(),
           dataComplete: true
         })
         .where(eq(nominees.id, nominee.id))
@@ -276,7 +355,7 @@ export async function updateNomineeWithTMDBData(nominee: Nominee) {
       return updatedNominee;
     }
   } catch (error: any) {
-    console.error(`Error updating TMDB data for ${nominee.name}:`, error.message);
+    console.error(`Error updating TMDB data for "${nominee.name}":`, error.message);
     return nominee;
   }
 }
