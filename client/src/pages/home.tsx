@@ -65,7 +65,7 @@ export default function Home() {
 
   useEffect(() => {
     const observers = new Map();
-    const headerOffset = 120;
+    const headerOffset = 150; // Increased offset to account for fixed header + category nav
 
     sortedCategories.forEach((category) => {
       const element = categorySectionRefs.current[category];
@@ -75,12 +75,14 @@ export default function Home() {
             entries.forEach((entry) => {
               if (entry.isIntersecting && !scrolling.current) {
                 const now = Date.now();
-                if (now - lastScrollTime.current > 100) { // Debounce category updates
+                if (now - lastScrollTime.current > 200) { // Increased debounce time
+                  // Calculate if the section is effectively in view
                   const elementTop = entry.boundingClientRect.top;
-                  const elementHeight = entry.boundingClientRect.height;
+                  const elementBottom = entry.boundingClientRect.bottom;
                   const windowHeight = window.innerHeight;
 
-                  if (elementTop < windowHeight / 2 && elementTop > -elementHeight / 2) {
+                  // Only update if the section is substantially in view
+                  if (elementTop < windowHeight / 2 && elementBottom > windowHeight / 3) {
                     setActiveCategory(category);
                     lastScrollTime.current = now;
                   }
@@ -89,8 +91,8 @@ export default function Home() {
             });
           },
           {
-            threshold: [0, 0.25, 0.5, 0.75, 1],
-            rootMargin: `-${headerOffset}px 0px -20% 0px`
+            threshold: [0, 0.3, 0.7], // Reduced number of thresholds
+            rootMargin: `-${headerOffset}px 0px -30% 0px` // Adjusted rootMargin
           }
         );
 
@@ -108,7 +110,7 @@ export default function Home() {
     const element = categorySectionRefs.current[category];
     if (element) {
       scrolling.current = true;
-      const headerOffset = 120;
+      const headerOffset = 150; // Match the offset from the observer
 
       const elementRect = element.getBoundingClientRect();
       const absoluteElementTop = elementRect.top + window.scrollY;
@@ -123,9 +125,10 @@ export default function Home() {
       setActiveCategory(category);
       lastScrollTime.current = Date.now();
 
+      // Allow for longer scroll animation before re-enabling intersection observer
       setTimeout(() => {
         scrolling.current = false;
-      }, 1000);
+      }, 1200); // Increased timeout to match scroll animation
     }
   };
 
