@@ -95,7 +95,7 @@ const nominees2024 = [
     category: "Best Picture",
     isWinner: false,
     streamingPlatforms: ["Theaters"],
-    description: "The incredible tale about the fantastical evolution of Bella Baxter, a young woman brought back to life by the brilliant and unorthodox scientist Dr. Godwin Baxter.",
+    description: "The incredible tale about the fantastical evolution of Bella Baxter.",
     ceremonyYear: 2024
   },
   { 
@@ -103,7 +103,149 @@ const nominees2024 = [
     category: "Best Picture",
     isWinner: false,
     streamingPlatforms: ["Apple TV+"],
-    description: "Members of the Osage tribe in the United States are murdered under mysterious circumstances in the 1920s, sparking a major F.B.I. investigation.",
+    description: "Members of the Osage tribe in the United States are murdered under mysterious circumstances in the 1920s.",
+    ceremonyYear: 2024
+  },
+  // Best Actor
+  {
+    name: "Cillian Murphy",
+    category: "Best Actor",
+    isWinner: true,
+    streamingPlatforms: ["Peacock"],
+    description: "For the role of J. Robert Oppenheimer in Oppenheimer",
+    ceremonyYear: 2024
+  },
+  {
+    name: "Paul Giamatti",
+    category: "Best Actor",
+    isWinner: false,
+    streamingPlatforms: ["Theaters"],
+    description: "For the role of Paul Hunham in The Holdovers",
+    ceremonyYear: 2024
+  },
+  {
+    name: "Bradley Cooper",
+    category: "Best Actor",
+    isWinner: false,
+    streamingPlatforms: ["Netflix"],
+    description: "For the role of Leonard Bernstein in Maestro",
+    ceremonyYear: 2024
+  },
+  // Best Actress
+  {
+    name: "Emma Stone",
+    category: "Best Actress",
+    isWinner: true,
+    streamingPlatforms: ["Theaters"],
+    description: "For the role of Bella Baxter in Poor Things",
+    ceremonyYear: 2024
+  },
+  {
+    name: "Lily Gladstone",
+    category: "Best Actress",
+    isWinner: false,
+    streamingPlatforms: ["Apple TV+"],
+    description: "For the role of Mollie Burkhart in Killers of the Flower Moon",
+    ceremonyYear: 2024
+  },
+  {
+    name: "Sandra Hüller",
+    category: "Best Actress",
+    isWinner: false,
+    streamingPlatforms: ["Theaters"],
+    description: "For the role of Hedwig Höss in The Zone of Interest",
+    ceremonyYear: 2024
+  },
+  // Best Supporting Actor
+  {
+    name: "Robert Downey Jr.",
+    category: "Best Supporting Actor",
+    isWinner: true,
+    streamingPlatforms: ["Peacock"],
+    description: "For the role of Lewis Strauss in Oppenheimer",
+    ceremonyYear: 2024
+  },
+  {
+    name: "Ryan Gosling",
+    category: "Best Supporting Actor",
+    isWinner: false,
+    streamingPlatforms: ["Max"],
+    description: "For the role of Ken in Barbie",
+    ceremonyYear: 2024
+  },
+  {
+    name: "Robert De Niro",
+    category: "Best Supporting Actor",
+    isWinner: false,
+    streamingPlatforms: ["Apple TV+"],
+    description: "For the role of William Hale in Killers of the Flower Moon",
+    ceremonyYear: 2024
+  },
+  // Best Supporting Actress
+  {
+    name: "Da'Vine Joy Randolph",
+    category: "Best Supporting Actress",
+    isWinner: true,
+    streamingPlatforms: ["Theaters"],
+    description: "For the role of Mary Lamb in The Holdovers",
+    ceremonyYear: 2024
+  },
+  {
+    name: "Emily Blunt",
+    category: "Best Supporting Actress",
+    isWinner: false,
+    streamingPlatforms: ["Peacock"],
+    description: "For the role of Kitty Oppenheimer in Oppenheimer",
+    ceremonyYear: 2024
+  },
+  {
+    name: "America Ferrera",
+    category: "Best Supporting Actress",
+    isWinner: false,
+    streamingPlatforms: ["Max"],
+    description: "For the role of Gloria in Barbie",
+    ceremonyYear: 2024
+  },
+  // Best Director
+  {
+    name: "Christopher Nolan",
+    category: "Best Director",
+    isWinner: true,
+    streamingPlatforms: ["Peacock"],
+    description: "For directing Oppenheimer",
+    ceremonyYear: 2024
+  },
+  {
+    name: "Martin Scorsese",
+    category: "Best Director",
+    isWinner: false,
+    streamingPlatforms: ["Apple TV+"],
+    description: "For directing Killers of the Flower Moon",
+    ceremonyYear: 2024
+  },
+  {
+    name: "Yorgos Lanthimos",
+    category: "Best Director",
+    isWinner: false,
+    streamingPlatforms: ["Theaters"],
+    description: "For directing Poor Things",
+    ceremonyYear: 2024
+  },
+  // Best Animated Feature
+  {
+    name: "The Boy and the Heron",
+    category: "Best Animated Feature",
+    isWinner: true,
+    streamingPlatforms: ["Theaters"],
+    description: "Hayao Miyazaki's semi-autobiographical fantasy about loss, grief and hope",
+    ceremonyYear: 2024
+  },
+  {
+    name: "Spider-Man: Across the Spider-Verse",
+    category: "Best Animated Feature",
+    isWinner: false,
+    streamingPlatforms: ["Netflix"],
+    description: "Miles Morales catapults across the Multiverse, where he encounters a team of Spider-People",
     ceremonyYear: 2024
   },
   { 
@@ -120,23 +262,6 @@ const nominees2024 = [
     isWinner: false,
     streamingPlatforms: ["Theaters"],
     description: "The commandant of Auschwitz, Rudolf Höss, and his wife Hedwig, strive to build a dream life for their family in a house and garden next to the camp.",
-    ceremonyYear: 2024
-  },
-  // Best Director
-  {
-    name: "Oppenheimer",
-    category: "Best Director",
-    isWinner: true,
-    streamingPlatforms: ["Peacock", "Digital Purchase"],
-    description: "Christopher Nolan for his visionary direction of Oppenheimer",
-    ceremonyYear: 2024
-  },
-  {
-    name: "Poor Things",
-    category: "Best Director",
-    isWinner: false,
-    streamingPlatforms: ["Theaters"],
-    description: "Yorgos Lanthimos for his innovative direction of Poor Things",
     ceremonyYear: 2024
   },
   // Best International Feature
