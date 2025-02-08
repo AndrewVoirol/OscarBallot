@@ -20,9 +20,11 @@ export function NomineeCard({ nominee, isLoading, isHistorical }: NomineeCardPro
 
   if (isLoading) {
     return (
-      <Card className="overflow-hidden">
+      <Card className="overflow-hidden h-full">
         <CardHeader className="p-0">
-          <Skeleton className="w-full h-56 sm:h-48" />
+          <div className="relative aspect-[2/3] bg-muted">
+            <Skeleton className="absolute inset-0" />
+          </div>
         </CardHeader>
         <CardContent className="p-4 sm:p-6">
           <Skeleton className="h-6 w-3/4 mb-3" />
@@ -41,31 +43,33 @@ export function NomineeCard({ nominee, isLoading, isHistorical }: NomineeCardPro
   }
 
   return (
-    <Card className="overflow-hidden hover:shadow-lg transition-shadow">
+    <Card className="overflow-hidden h-full hover:shadow-lg transition-shadow">
       <CardHeader className="relative p-0">
-        <img
-          src={nominee.poster}
-          alt={nominee.name}
-          className="w-full h-56 sm:h-48 object-cover"
-          loading="lazy"
-        />
-        {isHistorical && nominee.isWinner && (
-          <div className="absolute top-2 right-2">
-            <Badge variant="default" className="gap-1">
-              <Trophy className="h-4 w-4" />
-              Winner
-            </Badge>
-          </div>
-        )}
-        <AwardsBadge awards={nominee.awards} />
+        <div className="relative aspect-[2/3] bg-muted">
+          <img
+            src={nominee.poster}
+            alt={nominee.name}
+            className="absolute inset-0 w-full h-full object-cover"
+            loading="lazy"
+          />
+          {isHistorical && nominee.isWinner && (
+            <div className="absolute top-2 right-2">
+              <Badge variant="default" className="gap-1">
+                <Trophy className="h-4 w-4" />
+                Winner
+              </Badge>
+            </div>
+          )}
+          <AwardsBadge awards={nominee.awards} />
+        </div>
       </CardHeader>
       <CardContent className="p-4 sm:p-6">
-        <h3 className="text-xl sm:text-lg font-semibold mb-3 sm:mb-2">{nominee.name}</h3>
+        <h3 className="text-xl sm:text-lg font-semibold mb-3 sm:mb-2 line-clamp-2">{nominee.name}</h3>
         <div className="flex flex-wrap gap-2 mb-6 sm:mb-4">
           {nominee.streamingPlatforms.map((platform) => (
             <span
               key={platform}
-              className="text-sm sm:text-xs px-3 py-1.5 sm:py-1 rounded-full bg-primary/20 text-primary"
+              className="text-sm sm:text-xs px-3 py-1.5 sm:py-1 rounded-full bg-primary/10 text-primary"
             >
               {platform}
             </span>
@@ -80,7 +84,7 @@ export function NomineeCard({ nominee, isLoading, isHistorical }: NomineeCardPro
           View Details
         </button>
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto p-0">
+          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto p-0">
             <NomineeDetails nominee={nominee} />
           </DialogContent>
         </Dialog>
