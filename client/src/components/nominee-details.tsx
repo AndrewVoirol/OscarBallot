@@ -21,7 +21,7 @@ export function NomineeDetails({ nominee }: NomineeDetailsProps) {
         <div className="relative h-64 md:h-80">
           <div className="absolute inset-0 bg-gradient-to-b from-transparent to-background z-10" />
           <img
-            src={`https://image.tmdb.org/t/p/original${nominee.backdrop_path}`}
+            src={nominee.backdrop_path}
             alt={`${nominee.name} backdrop`}
             className="absolute inset-0 w-full h-full object-cover"
           />
@@ -121,9 +121,9 @@ export function NomineeDetails({ nominee }: NomineeDetailsProps) {
                   {nominee.extendedCredits.cast.slice(0, 12).map((member) => (
                     <div key={member.id} className="flex items-center gap-3">
                       <Avatar className="h-12 w-12">
-                        {member.profile_path ? (
+                        {member.profileImage ? (
                           <AvatarImage
-                            src={`https://image.tmdb.org/t/p/w185${member.profile_path}`}
+                            src={member.profileImage}
                             alt={member.name}
                           />
                         ) : (
@@ -155,9 +155,9 @@ export function NomineeDetails({ nominee }: NomineeDetailsProps) {
                     .map((member) => (
                       <div key={member.id} className="flex items-center gap-3">
                         <Avatar className="h-12 w-12">
-                          {member.profile_path ? (
+                          {member.profileImage ? (
                             <AvatarImage
-                              src={`https://image.tmdb.org/t/p/w185${member.profile_path}`}
+                              src={member.profileImage}
                               alt={member.name}
                             />
                           ) : (
@@ -183,9 +183,9 @@ export function NomineeDetails({ nominee }: NomineeDetailsProps) {
                   <div className="grid grid-cols-2 gap-4">
                     {nominee.productionCompanies.map((company) => (
                       <div key={company.id} className="flex items-center gap-3">
-                        {company.logo_path ? (
+                        {company.logoPath ? (
                           <img
-                            src={`https://image.tmdb.org/t/p/w92${company.logo_path}`}
+                            src={company.logoPath}
                             alt={company.name}
                             className="h-8 object-contain"
                           />
