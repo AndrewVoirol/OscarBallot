@@ -16,20 +16,36 @@ const tmdbAxios = axios.create({
   headers: {
     'Authorization': `Bearer ${TMDB_ACCESS_TOKEN}`,
     'Content-Type': 'application/json;charset=utf-8'
-  }
+  },
+  timeout: 10000 // 10 second timeout
 });
+
+// Add retry logic
+const withRetry = async (fn: () => Promise<any>, retries = 3, delay = 1000) => {
+  try {
+    return await fn();
+  } catch (error: any) {
+    if (retries > 0 && error.response?.status === 429) {
+      await new Promise(resolve => setTimeout(resolve, delay));
+      return withRetry(fn, retries - 1, delay * 2);
+    }
+    throw error;
+  }
+};
 
 async function searchMovie(query: string, year?: number) {
   try {
     console.log(`Searching for movie: ${query}${year ? ` (${year})` : ''}`);
-    const response = await tmdbAxios.get('/search/movie', {
-      params: {
-        query,
-        year,
-        language: "en-US",
-        include_adult: false
-      }
-    });
+    const response = await withRetry(() => 
+      tmdbAxios.get('/search/movie', {
+        params: {
+          query,
+          year,
+          language: "en-US",
+          include_adult: false
+        }
+      })
+    );
 
     if (!response.data.results?.length) {
       console.log(`No results found for: ${query}`);
@@ -42,7 +58,15 @@ async function searchMovie(query: string, year?: number) {
       const searchQuery = query.toLowerCase();
       const releaseYear = movie.release_date ? new Date(movie.release_date).getFullYear() : null;
 
-      return movieTitle === searchQuery && (!year || releaseYear === year);
+      // Try exact match first
+      if (movieTitle === searchQuery && (!year || releaseYear === year)) {
+        return true;
+      }
+
+      // Then try removing special characters and comparing
+      const cleanMovieTitle = movieTitle.replace(/[^a-z0-9\s]/g, '');
+      const cleanSearchQuery = searchQuery.replace(/[^a-z0-9\s]/g, '');
+      return cleanMovieTitle === cleanSearchQuery && (!year || releaseYear === year);
     }) || response.data.results[0];
 
     console.log(`Found movie match: ${bestMatch.title} (ID: ${bestMatch.id})`);
@@ -56,13 +80,13 @@ async function searchMovie(query: string, year?: number) {
 async function searchPerson(query: string) {
   try {
     console.log(`Searching for person: ${query}`);
-    const response = await tmdbAxios.get('/search/person', {
+    const response = await withRetry(() => tmdbAxios.get('/search/person', {
       params: {
         query,
         language: "en-US",
         include_adult: false
       }
-    });
+    }));
 
     if (!response.data.results?.length) {
       console.log(`No results found for person: ${query}`);
@@ -85,7 +109,7 @@ async function searchPerson(query: string) {
 async function getMovieDetails(movieId: number) {
   try {
     console.log(`Fetching details for movie ID: ${movieId}`);
-    const response = await tmdbAxios.get(
+    const response = await withRetry(() => tmdbAxios.get(
       `/movie/${movieId}`,
       {
         params: {
@@ -93,7 +117,7 @@ async function getMovieDetails(movieId: number) {
           language: "en-US"
         }
       }
-    );
+    ));
 
     console.log(`Successfully retrieved details for movie ID ${movieId}`);
     return response.data;
@@ -106,7 +130,7 @@ async function getMovieDetails(movieId: number) {
 async function getPersonDetails(personId: number) {
   try {
     console.log(`Fetching details for person ID: ${personId}`);
-    const response = await tmdbAxios.get(
+    const response = await withRetry(() => tmdbAxios.get(
       `/person/${personId}`,
       {
         params: {
@@ -114,7 +138,7 @@ async function getPersonDetails(personId: number) {
           language: "en-US"
         }
       }
-    );
+    ));
 
     console.log(`Successfully retrieved details for person ID ${personId}`);
     return response.data;
