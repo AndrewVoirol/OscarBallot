@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useMemo } from "react";
 import { CategorySection } from "@/components/category-section";
 import { NavBar } from "@/components/nav-bar";
 import { CategoryNav } from "@/components/category-nav";
@@ -28,32 +28,62 @@ export default function Home() {
   const [activeCategory, setActiveCategory] = useState<string>("");
   const categorySectionRefs = useRef<{ [key: string]: HTMLElement }>({});
   const scrolling = useRef(false);
+  const lastScrollTime = useRef<number>(0);
 
-  const categories = Array.from(new Set(nominees?.map((n) => n.category) || []));
+  // Ensure categories are sorted in a specific order (major categories first)
+  const sortedCategories = useMemo(() => {
+    const categoryOrder = [
+      "Best Picture",
+      "Best Director",
+      "Best Actor",
+      "Best Actress",
+      "Best Supporting Actor",
+      "Best Supporting Actress",
+      "Best Original Screenplay",
+      "Best Adapted Screenplay",
+      "Best Animated Feature",
+      "Best International Feature",
+      "Best Documentary Feature",
+    ];
+
+    const categories = Array.from(new Set(nominees?.map((n) => n.category) || []));
+    return categories.sort((a, b) => {
+      const indexA = categoryOrder.indexOf(a);
+      const indexB = categoryOrder.indexOf(b);
+      if (indexA === -1 && indexB === -1) return a.localeCompare(b);
+      if (indexA === -1) return 1;
+      if (indexB === -1) return -1;
+      return indexA - indexB;
+    });
+  }, [nominees]);
 
   useEffect(() => {
-    if (categories.length > 0 && !activeCategory) {
-      setActiveCategory(categories[0]);
+    if (sortedCategories.length > 0 && !activeCategory) {
+      setActiveCategory(sortedCategories[0]);
     }
-  }, [categories, activeCategory]);
+  }, [sortedCategories, activeCategory]);
 
   useEffect(() => {
     const observers = new Map();
     const headerOffset = 120;
 
-    categories.forEach((category) => {
+    sortedCategories.forEach((category) => {
       const element = categorySectionRefs.current[category];
       if (element) {
         const observer = new IntersectionObserver(
           (entries) => {
             entries.forEach((entry) => {
               if (entry.isIntersecting && !scrolling.current) {
-                const elementTop = entry.boundingClientRect.top;
-                const elementHeight = entry.boundingClientRect.height;
-                const windowHeight = window.innerHeight;
+                const now = Date.now();
+                if (now - lastScrollTime.current > 100) { // Debounce category updates
+                  const elementTop = entry.boundingClientRect.top;
+                  const elementHeight = entry.boundingClientRect.height;
+                  const windowHeight = window.innerHeight;
 
-                if (elementTop < windowHeight / 2 && elementTop > -elementHeight / 2) {
-                  setActiveCategory(category);
+                  if (elementTop < windowHeight / 2 && elementTop > -elementHeight / 2) {
+                    setActiveCategory(category);
+                    lastScrollTime.current = now;
+                  }
                 }
               }
             });
@@ -72,7 +102,7 @@ export default function Home() {
     return () => {
       observers.forEach((observer) => observer.disconnect());
     };
-  }, [categories]);
+  }, [sortedCategories]);
 
   const scrollToCategory = (category: string) => {
     const element = categorySectionRefs.current[category];
@@ -89,11 +119,13 @@ export default function Home() {
         behavior: "smooth",
       });
 
+      // Update the active category immediately for better UX
+      setActiveCategory(category);
+      lastScrollTime.current = Date.now();
+
       setTimeout(() => {
         scrolling.current = false;
       }, 1000);
-
-      setActiveCategory(category);
     }
   };
 
@@ -147,7 +179,7 @@ export default function Home() {
       <ScrollProgress />
       <NavBar selectedYear={selectedYear} onYearChange={setSelectedYear} />
       <CategoryNav
-        categories={categories}
+        categories={sortedCategories}
         activeCategory={activeCategory}
         onSelectCategory={scrollToCategory}
       />
@@ -197,7 +229,7 @@ export default function Home() {
           )}
         </header>
 
-        {categories.map((category) => (
+        {sortedCategories.map((category) => (
           <div
             key={category}
             ref={(el) => {
