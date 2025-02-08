@@ -121,9 +121,9 @@ export function NomineeDetails({ nominee }: NomineeDetailsProps) {
                   {nominee.extendedCredits.cast.slice(0, 12).map((member) => (
                     <div key={member.id} className="flex items-center gap-3">
                       <Avatar className="h-14 w-14 rounded-full overflow-hidden border-2 border-muted">
-                        {member.profile_path ? (
+                        {member.profileImage ? (
                           <AvatarImage
-                            src={`https://image.tmdb.org/t/p/w185${member.profile_path}`}
+                            src={member.profileImage}
                             alt={member.name}
                             className="object-cover w-full h-full"
                           />
@@ -156,9 +156,9 @@ export function NomineeDetails({ nominee }: NomineeDetailsProps) {
                     .map((member) => (
                       <div key={member.id} className="flex items-center gap-3">
                         <Avatar className="h-14 w-14 rounded-full overflow-hidden border-2 border-muted">
-                          {member.profile_path ? (
+                          {member.profileImage ? (
                             <AvatarImage
-                              src={`https://image.tmdb.org/t/p/w185${member.profile_path}`}
+                              src={member.profileImage}
                               alt={member.name}
                               className="object-cover w-full h-full"
                             />
@@ -185,10 +185,10 @@ export function NomineeDetails({ nominee }: NomineeDetailsProps) {
                   <div className="grid grid-cols-2 gap-6">
                     {nominee.productionCompanies.map((company) => (
                       <div key={company.id} className="flex items-center gap-3">
-                        {company.logo_path ? (
+                        {company.logoPath ? (
                           <div className="h-12 w-24 relative bg-white/5 rounded-lg p-2 flex items-center justify-center">
                             <img
-                              src={`https://image.tmdb.org/t/p/w92${company.logo_path}`}
+                              src={company.logoPath}
                               alt={company.name}
                               className="max-h-full max-w-full object-contain"
                             />
