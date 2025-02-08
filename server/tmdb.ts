@@ -231,63 +231,111 @@ function isPersonCategory(category: string): boolean {
   ].includes(category);
 }
 
-// Image validation function
+// Enhanced image validation with size and format checks
 async function validateImageUrl(url: string): Promise<boolean> {
   if (!url || url === '/placeholder-poster.jpg' || url === '/placeholder-backdrop.jpg') {
     return false;
   }
 
   try {
-    const response = await axios.head(url);
+    const response = await axios.head(url, {
+      timeout: 5000,
+      validateStatus: (status) => status === 200
+    });
+
     const contentType = response.headers['content-type'];
-    return contentType?.startsWith('image/');
+    const contentLength = parseInt(response.headers['content-length'] || '0');
+
+    // Verify it's an image and has reasonable size (> 5KB)
+    return contentType?.startsWith('image/') && contentLength > 5000;
   } catch (error) {
     console.error(`Failed to validate image URL: ${url}`, error);
     return false;
   }
 }
 
+// Enhanced validation report interface
 export interface ValidationReport {
   nomineeId: number;
   name: string;
   category: string;
   ceremonyYear: number;
   issues: string[];
+  severity: 'high' | 'medium' | 'low';
 }
 
+// Enhanced data validation with more detailed checks
 export async function validateNomineeData(nominee: Nominee): Promise<ValidationReport> {
   const issues: string[] = [];
+  let severity: 'high' | 'medium' | 'low' = 'low';
 
-  // Basic data validation
-  if (!nominee.name) issues.push("Missing name");
-  if (!nominee.category) issues.push("Missing category");
-  if (!nominee.ceremonyYear) issues.push("Missing ceremony year");
+  // Critical data validation
+  if (!nominee.name) {
+    issues.push("Missing name");
+    severity = 'high';
+  }
+  if (!nominee.category) {
+    issues.push("Missing category");
+    severity = 'high';
+  }
+  if (!nominee.ceremonyYear) {
+    issues.push("Missing ceremony year");
+    severity = 'high';
+  }
 
-  // Image validation
+  // Image validation with improved error messages
   const posterValid = await validateImageUrl(nominee.poster);
   if (!posterValid) {
     issues.push("Invalid or missing poster image");
+    severity = 'high';
   }
 
   const backdropValid = nominee.backdropPath ? await validateImageUrl(nominee.backdropPath) : false;
   if (!backdropValid) {
     issues.push("Invalid or missing backdrop image");
+    severity = 'medium';
   }
 
   // TMDB data validation
   if (!nominee.tmdbId) {
     issues.push("Missing TMDB ID");
+    severity = 'high';
   }
 
   if (isPersonCategory(nominee.category)) {
-    if (!nominee.biography) issues.push("Missing biography");
+    // Person-specific validations
+    if (!nominee.biography) {
+      issues.push("Missing biography");
+      severity = 'medium';
+    }
     if (!nominee.cast?.length && !nominee.crew?.length) {
       issues.push("Missing filmography (cast/crew information)");
+      severity = 'medium';
     }
   } else {
-    if (!nominee.overview) issues.push("Missing overview");
-    if (!nominee.genres?.length) issues.push("Missing genres");
-    if (!nominee.releaseDate) issues.push("Missing release date");
+    // Movie-specific validations
+    if (!nominee.overview) {
+      issues.push("Missing overview");
+      severity = 'medium';
+    }
+    if (!nominee.genres?.length) {
+      issues.push("Missing genres");
+      severity = 'low';
+    }
+    if (!nominee.releaseDate) {
+      issues.push("Missing release date");
+      severity = 'medium';
+    }
+    if (!nominee.runtime) {
+      issues.push("Missing runtime");
+      severity = 'low';
+    }
+  }
+
+  // Enhanced streaming platform validation
+  if (!nominee.streamingPlatforms || nominee.streamingPlatforms.length === 0) {
+    issues.push("Missing streaming platforms");
+    severity = 'medium';
   }
 
   return {
@@ -295,7 +343,8 @@ export async function validateNomineeData(nominee: Nominee): Promise<ValidationR
     name: nominee.name,
     category: nominee.category,
     ceremonyYear: nominee.ceremonyYear,
-    issues
+    issues,
+    severity
   };
 }
 

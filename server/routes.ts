@@ -89,18 +89,27 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // Enhanced validation report endpoint
   app.get("/api/nominees/validation-report", async (_req, res) => {
     try {
       const nominees = await storage.getNominees();
       const validationPromises = nominees.map(nominee => validateNomineeData(nominee));
       const validationReports = await Promise.all(validationPromises);
 
+      // Group issues by severity
+      const issuesBySeverity = {
+        high: validationReports.filter(r => r.severity === 'high'),
+        medium: validationReports.filter(r => r.severity === 'medium'),
+        low: validationReports.filter(r => r.severity === 'low')
+      };
+
       // Filter to only show nominees with issues
-      const problemNominees = validationReports.filter((report: ValidationReport) => report.issues.length > 0);
+      const problemNominees = validationReports.filter(report => report.issues.length > 0);
 
       res.json({
         totalNominees: nominees.length,
         nomineesWithIssues: problemNominees.length,
+        issuesBySeverity,
         reports: problemNominees
       });
     } catch (error) {
@@ -109,30 +118,44 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // Enhanced TMDB update endpoint with validation
   app.post("/api/nominees/update-tmdb", tmdbLimiter, async (_req, res) => {
     try {
       const nominees = await storage.getNominees();
       console.log('Starting TMDB update for all nominees:', nominees.map(n => n.name).join(', '));
 
       const updates = await Promise.all(
-        nominees.map(nominee => updateNomineeWithTMDBData(nominee))
+        nominees.map(async nominee => {
+          try {
+            const updated = await updateNomineeWithTMDBData(nominee);
+            const validation = await validateNomineeData(updated);
+            return { nominee: updated, validation };
+          } catch (error) {
+            console.error(`Failed to update ${nominee.name}:`, error);
+            return { nominee, error: error.message };
+          }
+        })
       );
 
-      const updatedCount = updates.filter(Boolean).length;
-      console.log(`Successfully updated ${updatedCount} out of ${nominees.length} nominees`);
+      const successful = updates.filter(u => !u.error);
+      const failed = updates.filter(u => u.error);
+      const withIssues = successful.filter(u => u.validation.issues.length > 0);
 
-      // Generate validation report for updated nominees
-      const validationReports = await Promise.all(updates.map(nominee => validateNomineeData(nominee)));
-      const nomineesWithIssues = validationReports.filter((report: ValidationReport) => report.issues.length > 0);
+      console.log(`Updated ${successful.length} out of ${nominees.length} nominees`);
 
       res.json({ 
-        message: `Updated ${updatedCount} out of ${nominees.length} nominees with TMDB data`,
-        updatedNominees: updates.filter(Boolean),
-        validationReport: {
-          totalNominees: nominees.length,
-          nomineesWithIssues: nomineesWithIssues.length,
-          problemNominees: nomineesWithIssues
-        }
+        message: `Updated ${successful.length} out of ${nominees.length} nominees with TMDB data`,
+        summary: {
+          total: nominees.length,
+          successful: successful.length,
+          failed: failed.length,
+          withIssues: withIssues.length
+        },
+        failed: failed.map(f => ({
+          name: f.nominee.name,
+          error: f.error
+        })),
+        withIssues: withIssues.map(n => n.validation)
       });
     } catch (error: any) {
       console.error('Error updating nominees with TMDB data:', error);
