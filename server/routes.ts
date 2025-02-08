@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertBallotSchema } from "@shared/schema";
 import { setupAuth, requireAuth } from "./auth";
-import { updateNomineeWithTMDBData } from "./tmdb";
+import { updateNomineeWithTMDBData, validateNomineeData, type ValidationReport } from "./tmdb";
 import rateLimit from 'express-rate-limit';
 import { eq } from "drizzle-orm";
 
@@ -50,7 +50,7 @@ export function registerRoutes(app: Express): Server {
   app.get("/api/nominees/years", async (_req, res) => {
     try {
       const nominees = await storage.getNominees();
-      const years = [...new Set(nominees.map(n => n.ceremonyYear))].sort((a, b) => b - a);
+      const years = Array.from(new Set(nominees.map(n => n.ceremonyYear))).sort((a, b) => b - a);
       res.json(years);
     } catch (error) {
       console.error('Error fetching nominee years:', error);
@@ -61,7 +61,7 @@ export function registerRoutes(app: Express): Server {
   app.get("/api/nominees/categories", async (_req, res) => {
     try {
       const nominees = await storage.getNominees();
-      const categories = [...new Set(nominees.map(n => n.category))].sort();
+      const categories = Array.from(new Set(nominees.map(n => n.category))).sort();
       res.json(categories);
     } catch (error) {
       console.error('Error fetching nominee categories:', error);
@@ -71,7 +71,13 @@ export function registerRoutes(app: Express): Server {
 
   app.get("/api/nominees/:id", async (req, res) => {
     try {
-      const nominee = await storage.getNominee(parseInt(req.params.id));
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        res.status(400).json({ message: "Invalid nominee ID" });
+        return;
+      }
+
+      const nominee = await storage.getNominee(id);
       if (!nominee) {
         res.status(404).json({ message: "Nominee not found" });
         return;
@@ -80,6 +86,26 @@ export function registerRoutes(app: Express): Server {
     } catch (error) {
       console.error('Error fetching nominee:', error);
       res.status(500).json({ message: "Failed to fetch nominee" });
+    }
+  });
+
+  app.get("/api/nominees/validation-report", async (_req, res) => {
+    try {
+      const nominees = await storage.getNominees();
+      const validationPromises = nominees.map(nominee => validateNomineeData(nominee));
+      const validationReports = await Promise.all(validationPromises);
+
+      // Filter to only show nominees with issues
+      const problemNominees = validationReports.filter((report: ValidationReport) => report.issues.length > 0);
+
+      res.json({
+        totalNominees: nominees.length,
+        nomineesWithIssues: problemNominees.length,
+        reports: problemNominees
+      });
+    } catch (error) {
+      console.error('Error generating validation report:', error);
+      res.status(500).json({ message: "Failed to generate validation report" });
     }
   });
 
@@ -95,9 +121,18 @@ export function registerRoutes(app: Express): Server {
       const updatedCount = updates.filter(Boolean).length;
       console.log(`Successfully updated ${updatedCount} out of ${nominees.length} nominees`);
 
+      // Generate validation report for updated nominees
+      const validationReports = await Promise.all(updates.map(nominee => validateNomineeData(nominee)));
+      const nomineesWithIssues = validationReports.filter((report: ValidationReport) => report.issues.length > 0);
+
       res.json({ 
         message: `Updated ${updatedCount} out of ${nominees.length} nominees with TMDB data`,
-        updatedNominees: updates.filter(Boolean)
+        updatedNominees: updates.filter(Boolean),
+        validationReport: {
+          totalNominees: nominees.length,
+          nomineesWithIssues: nomineesWithIssues.length,
+          problemNominees: nomineesWithIssues
+        }
       });
     } catch (error: any) {
       console.error('Error updating nominees with TMDB data:', error);
@@ -106,19 +141,36 @@ export function registerRoutes(app: Express): Server {
   });
 
   app.post("/api/nominees/:id/update-tmdb", tmdbLimiter, async (req, res) => {
-    const nominee = await storage.getNominee(parseInt(req.params.id));
-    if (!nominee) {
-      res.status(404).json({ message: "Nominee not found" });
-      return;
-    }
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        res.status(400).json({ message: "Invalid nominee ID" });
+        return;
+      }
 
-    const updatedNominee = await updateNomineeWithTMDBData(nominee);
-    if (!updatedNominee) {
-      res.status(500).json({ message: "Failed to update TMDB data" });
-      return;
-    }
+      const nominee = await storage.getNominee(id);
+      if (!nominee) {
+        res.status(404).json({ message: "Nominee not found" });
+        return;
+      }
 
-    res.json(updatedNominee);
+      const updatedNominee = await updateNomineeWithTMDBData(nominee);
+      if (!updatedNominee) {
+        res.status(500).json({ message: "Failed to update TMDB data" });
+        return;
+      }
+
+      // Generate validation report for the updated nominee
+      const validationReport = await validateNomineeData(updatedNominee);
+
+      res.json({
+        nominee: updatedNominee,
+        validation: validationReport
+      });
+    } catch (error: any) {
+      console.error('Error updating nominee TMDB data:', error);
+      res.status(500).json({ message: "Failed to update nominee TMDB data" });
+    }
   });
 
   setupAuth(app);

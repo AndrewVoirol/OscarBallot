@@ -17,7 +17,7 @@ const tmdbAxios = axios.create({
     'Authorization': `Bearer ${TMDB_ACCESS_TOKEN}`,
     'Content-Type': 'application/json;charset=utf-8'
   },
-  timeout: 15000 // Increased timeout to 15 seconds for better reliability
+  timeout: 15000 
 });
 
 // Enhanced retry logic with exponential backoff
@@ -40,7 +40,6 @@ const withRetry = async (fn: () => Promise<any>, retries = 3, initialDelay = 100
   throw lastError;
 };
 
-// Improved search functions with better matching logic
 async function searchMovie(query: string, year?: number) {
   try {
     console.log(`Searching for movie: "${query}"${year ? ` (${year})` : ''}`);
@@ -48,7 +47,7 @@ async function searchMovie(query: string, year?: number) {
       tmdbAxios.get('/search/movie', {
         params: {
           query,
-          year: year ? year - 1 : undefined, // Search previous year for Oscar nominees
+          year: year ? year - 1 : undefined,
           language: "en-US",
           include_adult: false
         }
@@ -232,128 +231,242 @@ function isPersonCategory(category: string): boolean {
   ].includes(category);
 }
 
-export async function updateNomineeWithTMDBData(nominee: Nominee) {
+// Image validation function
+async function validateImageUrl(url: string): Promise<boolean> {
+  if (!url || url === '/placeholder-poster.jpg' || url === '/placeholder-backdrop.jpg') {
+    return false;
+  }
+
+  try {
+    const response = await axios.head(url);
+    const contentType = response.headers['content-type'];
+    return contentType?.startsWith('image/');
+  } catch (error) {
+    console.error(`Failed to validate image URL: ${url}`, error);
+    return false;
+  }
+}
+
+export interface ValidationReport {
+  nomineeId: number;
+  name: string;
+  category: string;
+  ceremonyYear: number;
+  issues: string[];
+}
+
+export async function validateNomineeData(nominee: Nominee): Promise<ValidationReport> {
+  const issues: string[] = [];
+
+  // Basic data validation
+  if (!nominee.name) issues.push("Missing name");
+  if (!nominee.category) issues.push("Missing category");
+  if (!nominee.ceremonyYear) issues.push("Missing ceremony year");
+
+  // Image validation
+  const posterValid = await validateImageUrl(nominee.poster);
+  if (!posterValid) {
+    issues.push("Invalid or missing poster image");
+  }
+
+  const backdropValid = nominee.backdropPath ? await validateImageUrl(nominee.backdropPath) : false;
+  if (!backdropValid) {
+    issues.push("Invalid or missing backdrop image");
+  }
+
+  // TMDB data validation
+  if (!nominee.tmdbId) {
+    issues.push("Missing TMDB ID");
+  }
+
+  if (isPersonCategory(nominee.category)) {
+    if (!nominee.biography) issues.push("Missing biography");
+    if (!nominee.cast?.length && !nominee.crew?.length) {
+      issues.push("Missing filmography (cast/crew information)");
+    }
+  } else {
+    if (!nominee.overview) issues.push("Missing overview");
+    if (!nominee.genres?.length) issues.push("Missing genres");
+    if (!nominee.releaseDate) issues.push("Missing release date");
+  }
+
+  return {
+    nomineeId: nominee.id,
+    name: nominee.name,
+    category: nominee.category,
+    ceremonyYear: nominee.ceremonyYear,
+    issues
+  };
+}
+
+export async function updateNomineeWithTMDBData(nominee: Nominee): Promise<Nominee> {
   try {
     console.log(`Processing nominee: "${nominee.name}" (${nominee.ceremonyYear})`);
-
-    // Set default images
-    const defaultPoster = '/placeholder-poster.jpg';
-    const defaultBackdrop = '/placeholder-backdrop.jpg';
+    let retryCount = 0;
+    const maxRetries = 3;
 
     // Common update fields
     const baseUpdateFields = {
       lastTMDBSync: new Date(),
-      dataComplete: false // Will be set to true only after successful data fetch
+      dataComplete: false
     };
 
-    if (isPersonCategory(nominee.category)) {
-      const searchResult = await searchPerson(nominee.name);
-      if (!searchResult) {
-        console.log(`No TMDB results found for person: "${nominee.name}"`);
-        const [updatedNominee] = await db
-          .update(nominees)
-          .set({
-            ...baseUpdateFields,
-            poster: defaultPoster,
-            backdropPath: defaultBackdrop
-          })
-          .where(eq(nominees.id, nominee.id))
-          .returning();
-        return updatedNominee;
+    while (retryCount < maxRetries) {
+      try {
+        if (isPersonCategory(nominee.category)) {
+          const searchResult = await searchPerson(nominee.name);
+          if (!searchResult) {
+            console.log(`No TMDB results found for person: "${nominee.name}"`);
+            const [updatedNominee] = await db
+              .update(nominees)
+              .set({
+                ...baseUpdateFields,
+                poster: '/placeholder-poster.jpg',
+                backdropPath: '/placeholder-backdrop.jpg'
+              })
+              .where(eq(nominees.id, nominee.id))
+              .returning();
+            return updatedNominee;
+          }
+
+          const personDetails = await getPersonDetails(searchResult.id);
+          if (!personDetails) {
+            throw new Error("Failed to fetch person details");
+          }
+
+          // Validate images before updating
+          const posterUrl = personDetails.profile_path ? formatImageUrl(personDetails.profile_path) : '/placeholder-poster.jpg';
+          const posterValid = await validateImageUrl(posterUrl);
+
+          if (!posterValid && retryCount < maxRetries - 1) {
+            console.log(`Invalid poster image, retrying... (attempt ${retryCount + 1})`);
+            retryCount++;
+            continue;
+          }
+
+          const [updatedNominee] = await db
+            .update(nominees)
+            .set({
+              ...baseUpdateFields,
+              tmdbId: searchResult.id,
+              poster: posterValid ? posterUrl : '/placeholder-poster.jpg',
+              backdropPath: posterValid ? formatImageUrl(personDetails.profile_path, 'original') : '/placeholder-backdrop.jpg',
+              biography: personDetails.biography || '',
+              cast: personDetails.movie_credits?.cast?.slice(0, 5).map((m: any) => m.title) || [],
+              crew: personDetails.movie_credits?.crew?.slice(0, 5).map((m: any) => `${m.job}: ${m.title}`) || [],
+              dataComplete: true
+            })
+            .where(eq(nominees.id, nominee.id))
+            .returning();
+
+          // Validate the updated nominee data
+          const validationReport = await validateNomineeData(updatedNominee);
+          if (validationReport.issues.length > 0) {
+            console.log(`Validation issues for ${nominee.name}:`, validationReport.issues);
+          }
+
+          return updatedNominee;
+        } else {
+          const searchResult = await searchMovie(nominee.name, nominee.ceremonyYear);
+          if (!searchResult) {
+            console.log(`No TMDB results found for movie: "${nominee.name}"`);
+            const [updatedNominee] = await db
+              .update(nominees)
+              .set({
+                ...baseUpdateFields,
+                poster: '/placeholder-poster.jpg',
+                backdropPath: '/placeholder-backdrop.jpg'
+              })
+              .where(eq(nominees.id, nominee.id))
+              .returning();
+            return updatedNominee;
+          }
+
+          const movieDetails = await getMovieDetails(searchResult.id);
+          if (!movieDetails) {
+            throw new Error("Failed to fetch movie details");
+          }
+
+          // Validate images before updating
+          const posterUrl = movieDetails.poster_path ? formatImageUrl(movieDetails.poster_path) : '/placeholder-poster.jpg';
+          const backdropUrl = movieDetails.backdrop_path ? formatImageUrl(movieDetails.backdrop_path, 'original') : '/placeholder-backdrop.jpg';
+
+          const [posterValid, backdropValid] = await Promise.all([
+            validateImageUrl(posterUrl),
+            validateImageUrl(backdropUrl)
+          ]);
+
+          if ((!posterValid || !backdropValid) && retryCount < maxRetries - 1) {
+            console.log(`Invalid images, retrying... (attempt ${retryCount + 1})`);
+            retryCount++;
+            continue;
+          }
+
+          const trailer = movieDetails.videos?.results?.find((video: any) =>
+            video.site === "YouTube" && 
+            (video.type === "Trailer" || video.type === "Teaser")
+          );
+
+          const [updatedNominee] = await db
+            .update(nominees)
+            .set({
+              ...baseUpdateFields,
+              tmdbId: movieDetails.id,
+              runtime: movieDetails.runtime || null,
+              releaseDate: movieDetails.release_date || null,
+              voteAverage: movieDetails.vote_average ? Math.round(movieDetails.vote_average * 10) : null,
+              poster: posterValid ? posterUrl : '/placeholder-poster.jpg',
+              backdropPath: backdropValid ? backdropUrl : '/placeholder-backdrop.jpg',
+              overview: movieDetails.overview || '',
+              genres: movieDetails.genres?.map((g: { name: string }) => g.name) || [],
+              productionCompanies: movieDetails.production_companies?.map((company: any) => ({
+                id: company.id,
+                name: company.name,
+                logoPath: company.logo_path ? formatImageUrl(company.logo_path) : null,
+                originCountry: company.origin_country
+              })) || [],
+              extendedCredits: {
+                cast: movieDetails.credits?.cast?.slice(0, 10).map((member: any) => ({
+                  id: member.id,
+                  name: member.name,
+                  character: member.character,
+                  profileImage: member.profile_path ? formatImageUrl(member.profile_path) : null
+                })) || [],
+                crew: movieDetails.credits?.crew?.filter((member: any) =>
+                  ['Director', 'Producer', 'Writer', 'Director of Photography'].includes(member.job)
+                ).map((member: any) => ({
+                  id: member.id,
+                  name: member.name,
+                  job: member.job,
+                  department: member.department,
+                  profileImage: member.profile_path ? formatImageUrl(member.profile_path) : null
+                })) || []
+              },
+              ...(trailer && {
+                trailerUrl: `https://www.youtube.com/embed/${trailer.key}`
+              }),
+              dataComplete: true
+            })
+            .where(eq(nominees.id, nominee.id))
+            .returning();
+
+          // Validate the updated nominee data
+          const validationReport = await validateNomineeData(updatedNominee);
+          if (validationReport.issues.length > 0) {
+            console.log(`Validation issues for ${nominee.name}:`, validationReport.issues);
+          }
+
+          return updatedNominee;
+        }
+      } catch (error) {
+        console.error(`Attempt ${retryCount + 1} failed for ${nominee.name}:`, error);
+        if (retryCount === maxRetries - 1) throw error;
+        retryCount++;
+        await new Promise(resolve => setTimeout(resolve, 1000 * Math.pow(2, retryCount)));
       }
-
-      const personDetails = await getPersonDetails(searchResult.id);
-      if (!personDetails) {
-        return nominee;
-      }
-
-      const [updatedNominee] = await db
-        .update(nominees)
-        .set({
-          ...baseUpdateFields,
-          tmdbId: searchResult.id,
-          poster: personDetails.profile_path ? formatImageUrl(personDetails.profile_path) : defaultPoster,
-          backdropPath: personDetails.profile_path ? formatImageUrl(personDetails.profile_path, 'original') : defaultBackdrop,
-          biography: personDetails.biography || '',
-          cast: personDetails.movie_credits?.cast?.slice(0, 5).map((m: any) => m.title) || [],
-          crew: personDetails.movie_credits?.crew?.slice(0, 5).map((m: any) => `${m.job}: ${m.title}`) || [],
-          dataComplete: true
-        })
-        .where(eq(nominees.id, nominee.id))
-        .returning();
-
-      return updatedNominee;
-    } else {
-      const searchResult = await searchMovie(nominee.name, nominee.ceremonyYear);
-      if (!searchResult) {
-        console.log(`No TMDB results found for movie: "${nominee.name}"`);
-        const [updatedNominee] = await db
-          .update(nominees)
-          .set({
-            ...baseUpdateFields,
-            poster: defaultPoster,
-            backdropPath: defaultBackdrop
-          })
-          .where(eq(nominees.id, nominee.id))
-          .returning();
-        return updatedNominee;
-      }
-
-      const movieDetails = await getMovieDetails(searchResult.id);
-      if (!movieDetails) {
-        return nominee;
-      }
-
-      const trailer = movieDetails.videos?.results?.find((video: any) =>
-        video.site === "YouTube" && 
-        (video.type === "Trailer" || video.type === "Teaser")
-      );
-
-      const [updatedNominee] = await db
-        .update(nominees)
-        .set({
-          ...baseUpdateFields,
-          tmdbId: movieDetails.id,
-          runtime: movieDetails.runtime || null,
-          releaseDate: movieDetails.release_date || null,
-          voteAverage: movieDetails.vote_average ? Math.round(movieDetails.vote_average * 10) : null,
-          poster: movieDetails.poster_path ? formatImageUrl(movieDetails.poster_path) : defaultPoster,
-          backdropPath: movieDetails.backdrop_path ? formatImageUrl(movieDetails.backdrop_path, 'original') : defaultBackdrop,
-          overview: movieDetails.overview || '',
-          genres: movieDetails.genres?.map((g: { name: string }) => g.name) || [],
-          productionCompanies: movieDetails.production_companies?.map((company: any) => ({
-            id: company.id,
-            name: company.name,
-            logoPath: company.logo_path ? formatImageUrl(company.logo_path) : null,
-            originCountry: company.origin_country
-          })) || [],
-          extendedCredits: {
-            cast: movieDetails.credits?.cast?.slice(0, 10).map((member: any) => ({
-              id: member.id,
-              name: member.name,
-              character: member.character,
-              profileImage: member.profile_path ? formatImageUrl(member.profile_path) : null
-            })) || [],
-            crew: movieDetails.credits?.crew?.filter((member: any) =>
-              ['Director', 'Producer', 'Writer', 'Director of Photography'].includes(member.job)
-            ).map((member: any) => ({
-              id: member.id,
-              name: member.name,
-              job: member.job,
-              department: member.department,
-              profileImage: member.profile_path ? formatImageUrl(member.profile_path) : null
-            })) || []
-          },
-          ...(trailer && {
-            trailerUrl: `https://www.youtube.com/embed/${trailer.key}`
-          }),
-          dataComplete: true
-        })
-        .where(eq(nominees.id, nominee.id))
-        .returning();
-
-      return updatedNominee;
     }
+
+    throw new Error(`Failed to update nominee after ${maxRetries} attempts`);
   } catch (error: any) {
     console.error(`Error updating TMDB data for "${nominee.name}":`, error.message);
     return nominee;

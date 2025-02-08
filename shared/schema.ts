@@ -32,6 +32,7 @@ export const nominees = pgTable("nominees", {
   funFacts: text("fun_facts").array().notNull(),
   ceremonyYear: integer("ceremony_year").notNull().default(2025),
   isWinner: boolean("is_winner").notNull().default(false),
+
   // TMDB specific fields
   tmdbId: integer("tmdb_id"),
   runtime: integer("runtime"),
@@ -39,6 +40,8 @@ export const nominees = pgTable("nominees", {
   voteAverage: integer("vote_average"),
   backdropPath: text("backdrop_path"),
   genres: text("genres").array(),
+  overview: text("overview"),  // Added for movies
+  biography: text("biography"), // Added for persons
   productionCompanies: jsonb("production_companies").$type<{
     id: number;
     name: string;
@@ -60,6 +63,7 @@ export const nominees = pgTable("nominees", {
       profileImage: string | null;
     }>;
   }>(),
+
   // Data versioning and validation fields
   lastUpdated: timestamp("last_updated").notNull().defaultNow(),
   dataVersion: integer("data_version").notNull().default(1),
@@ -67,6 +71,7 @@ export const nominees = pgTable("nominees", {
   lastTMDBSync: timestamp("last_tmdb_sync"),
 });
 
+// Other tables remain unchanged
 export const ballots = pgTable("ballots", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").notNull().references(() => users.id),
@@ -76,21 +81,19 @@ export const ballots = pgTable("ballots", {
   wantToWin: boolean("want_to_win").notNull().default(false),
 });
 
-// New watchlist table
 export const watchlist = pgTable("watchlist", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").notNull().references(() => users.id),
   nomineeId: integer("nominee_id").notNull().references(() => nominees.id),
   addedAt: timestamp("added_at").notNull().defaultNow(),
-  watchStatus: text("watch_status").notNull().default('pending'), // pending, watching, completed
-  rating: integer("rating"), // Optional user rating
-  notes: text("notes"), // Optional user notes
+  watchStatus: text("watch_status").notNull().default('pending'),
+  rating: integer("rating"),
+  notes: text("notes"),
 }, (table) => ({
-  // Ensure a user can only add a nominee once to their watchlist
   uniqUserNominee: unique().on(table.userId, table.nomineeId),
 }));
 
-// Define relationships
+// Relations remain unchanged
 export const usersRelations = relations(users, ({ many }) => ({
   ballots: many(ballots),
   watchlistItems: many(watchlist),
