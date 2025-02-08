@@ -2,6 +2,83 @@ import { db } from "./db";
 import { nominees } from "@shared/schema";
 import { updateNomineeWithTMDBData } from "./tmdb";
 
+// Historical Oscar nominees data (2020-2023)
+const nominees2020 = [
+  {
+    name: "Parasite",
+    category: "Best Picture",
+    isWinner: true,
+    streamingPlatforms: ["Hulu", "Digital Purchase"],
+    description: "A poor family schemes to become employed by a wealthy family and infiltrate their household.",
+    ceremonyYear: 2020
+  },
+  {
+    name: "1917",
+    category: "Best Picture",
+    isWinner: false,
+    streamingPlatforms: ["Digital Purchase"],
+    description: "Two young British soldiers during WWI are given an impossible mission.",
+    ceremonyYear: 2020
+  }
+];
+
+const nominees2021 = [
+  {
+    name: "Nomadland",
+    category: "Best Picture",
+    isWinner: true,
+    streamingPlatforms: ["Hulu"],
+    description: "A woman in her sixties embarks on a journey through the American West.",
+    ceremonyYear: 2021
+  },
+  {
+    name: "The Trial of the Chicago 7",
+    category: "Best Picture",
+    isWinner: false,
+    streamingPlatforms: ["Netflix"],
+    description: "The story of 7 people on trial stemming from various charges surrounding the uprising at the 1968 Democratic National Convention.",
+    ceremonyYear: 2021
+  }
+];
+
+const nominees2022 = [
+  {
+    name: "CODA",
+    category: "Best Picture",
+    isWinner: true,
+    streamingPlatforms: ["Apple TV+"],
+    description: "A hearing teenage girl with deaf parents discovers her passion for singing.",
+    ceremonyYear: 2022
+  },
+  {
+    name: "The Power of the Dog",
+    category: "Best Picture",
+    isWinner: false,
+    streamingPlatforms: ["Netflix"],
+    description: "A domineering rancher responds with mocking cruelty when his brother brings home a new wife and her son.",
+    ceremonyYear: 2022
+  }
+];
+
+const nominees2023 = [
+  {
+    name: "Everything Everywhere All at Once",
+    category: "Best Picture",
+    isWinner: true,
+    streamingPlatforms: ["Showtime"],
+    description: "A Chinese immigrant gets unwittingly embroiled in an epic adventure.",
+    ceremonyYear: 2023
+  },
+  {
+    name: "The Banshees of Inisherin",
+    category: "Best Picture",
+    isWinner: false,
+    streamingPlatforms: ["HBO Max"],
+    description: "Two lifelong friends find themselves at an impasse when one abruptly ends their relationship.",
+    ceremonyYear: 2023
+  }
+];
+
 // 2024 Oscar nominees with their categories and winners (96th Academy Awards)
 const nominees2024 = [
   // Best Picture
@@ -143,65 +220,73 @@ async function seed() {
     await db.delete(nominees);
     console.log("Cleared existing nominees");
 
-    // Insert 2024 nominees
-    const inserted2024 = await db.insert(nominees).values(
-      nominees2024.map(n => ({
-        name: n.name,
-        category: n.category,
-        description: n.description, 
-        poster: "", // Will be populated by TMDB
-        trailerUrl: "", // Will be populated by TMDB
-        streamingPlatforms: n.streamingPlatforms,
-        awards: [], // Will be populated by TMDB
-        cast: [], // Will be populated by TMDB
-        crew: [], // Will be populated by TMDB
-        funFacts: [],
-        ceremonyYear: 2024,
-        isWinner: n.isWinner
-      }))
-    ).returning();
-    console.log(`Inserted ${inserted2024.length} nominees for 2024`);
+    // Prepare all nominees data
+    const allNomineesData = [
+      ...nominees2020.map(n => ({ ...n, ceremonyYear: 2020 })),
+      ...nominees2021.map(n => ({ ...n, ceremonyYear: 2021 })),
+      ...nominees2022.map(n => ({ ...n, ceremonyYear: 2022 })),
+      ...nominees2023.map(n => ({ ...n, ceremonyYear: 2023 })),
+      ...nominees2024,
+      ...nominees2025
+    ];
 
-    // Insert 2025 nominees
-    const inserted2025 = await db.insert(nominees).values(
-      nominees2025.map(n => ({
+    // Insert all nominees with base data
+    const insertedNominees = await db.insert(nominees).values(
+      allNomineesData.map(n => ({
         name: n.name,
         category: n.category,
         description: n.description,
-        poster: "", // Will be populated by TMDB
-        trailerUrl: "", // Will be populated by TMDB
+        poster: "",
+        trailerUrl: "",
         streamingPlatforms: n.streamingPlatforms,
-        awards: [], // Will be populated by TMDB
-        cast: [], // Will be populated by TMDB
-        crew: [], // Will be populated by TMDB
+        awards: [],
+        cast: [],
+        crew: [],
         funFacts: [],
-        ceremonyYear: 2025,
-        isWinner: false // 2025 winners not yet determined
+        ceremonyYear: n.ceremonyYear,
+        isWinner: n.isWinner ?? false,
+        dataVersion: 1,
+        dataComplete: false
       }))
     ).returning();
-    console.log(`Inserted ${inserted2025.length} nominees for 2025`);
 
-    // Update all nominees with TMDB data
-    const allNominees = [...inserted2024, ...inserted2025];
+    console.log(`Inserted ${insertedNominees.length} nominees`);
+
+    // Update nominees with TMDB data
     console.log("Fetching TMDB data for each nominee...");
+    let successCount = 0;
+    let errorCount = 0;
 
-    const updatedNominees = await Promise.all(
-      allNominees.map(async nominee => {
+    for (const nominee of insertedNominees) {
+      try {
         const updated = await updateNomineeWithTMDBData(nominee);
         if (updated) {
-          console.log(`${nominee.name}: Category: ${nominee.category}, Year: ${nominee.ceremonyYear}`);
+          console.log(`✓ ${nominee.name} (${nominee.ceremonyYear}): Updated successfully`);
+          successCount++;
+        } else {
+          console.log(`✗ ${nominee.name} (${nominee.ceremonyYear}): Failed to update`);
+          errorCount++;
         }
-        return updated;
-      })
-    );
+      } catch (error) {
+        console.error(`Error updating ${nominee.name}:`, error);
+        errorCount++;
+      }
 
-    const successCount = updatedNominees.filter(Boolean).length;
-    console.log(`\nSummary:`);
-    console.log(`Successfully updated ${successCount} nominees with TMDB data`);
+      // Add delay between requests to respect TMDB rate limits
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    }
+
+    console.log("\nSeeding Summary:");
+    console.log(`Total nominees: ${insertedNominees.length}`);
+    console.log(`Successfully updated: ${successCount}`);
+    console.log(`Failed to update: ${errorCount}`);
     console.log("Database seeding completed");
+
   } catch (error) {
     console.error("Error seeding database:", error);
+    throw error;
   }
 }
 
-seed();
+// Run the seed function
+seed().catch(console.error);
