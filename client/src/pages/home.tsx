@@ -65,7 +65,7 @@ export default function Home() {
 
   useEffect(() => {
     const observers = new Map();
-    const headerOffset = 150; // Increased offset to account for fixed header + category nav
+    const headerOffset = 120; // Adjusted back to original value
 
     sortedCategories.forEach((category) => {
       const element = categorySectionRefs.current[category];
@@ -75,14 +75,13 @@ export default function Home() {
             entries.forEach((entry) => {
               if (entry.isIntersecting && !scrolling.current) {
                 const now = Date.now();
-                if (now - lastScrollTime.current > 200) { // Increased debounce time
-                  // Calculate if the section is effectively in view
+                if (now - lastScrollTime.current > 100) { // Reduced debounce time
                   const elementTop = entry.boundingClientRect.top;
-                  const elementBottom = entry.boundingClientRect.bottom;
+                  const elementHeight = entry.boundingClientRect.height;
                   const windowHeight = window.innerHeight;
 
-                  // Only update if the section is substantially in view
-                  if (elementTop < windowHeight / 2 && elementBottom > windowHeight / 3) {
+                  // More precise visibility calculation
+                  if (elementTop < windowHeight * 0.4 && elementTop > -elementHeight * 0.6) {
                     setActiveCategory(category);
                     lastScrollTime.current = now;
                   }
@@ -91,8 +90,8 @@ export default function Home() {
             });
           },
           {
-            threshold: [0, 0.3, 0.7], // Reduced number of thresholds
-            rootMargin: `-${headerOffset}px 0px -30% 0px` // Adjusted rootMargin
+            threshold: [0, 0.1, 0.2, 0.3, 0.4, 0.5], // More granular thresholds
+            rootMargin: `-${headerOffset}px 0px -10% 0px` // Adjusted margins for better triggering
           }
         );
 
@@ -110,7 +109,7 @@ export default function Home() {
     const element = categorySectionRefs.current[category];
     if (element) {
       scrolling.current = true;
-      const headerOffset = 150; // Match the offset from the observer
+      const headerOffset = 120;
 
       const elementRect = element.getBoundingClientRect();
       const absoluteElementTop = elementRect.top + window.scrollY;
@@ -118,17 +117,16 @@ export default function Home() {
 
       window.scrollTo({
         top: scrollPosition,
-        behavior: "smooth",
+        behavior: "smooth"
       });
 
       // Update the active category immediately for better UX
       setActiveCategory(category);
       lastScrollTime.current = Date.now();
 
-      // Allow for longer scroll animation before re-enabling intersection observer
       setTimeout(() => {
         scrolling.current = false;
-      }, 1200); // Increased timeout to match scroll animation
+      }, 800); // Reduced timeout for more responsive navigation
     }
   };
 
