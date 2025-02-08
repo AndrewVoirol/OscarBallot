@@ -87,35 +87,40 @@ const nominees2024 = [
     category: "Best Picture",
     isWinner: true,
     streamingPlatforms: ["Peacock", "Digital Purchase"],
-    description: "The story of American scientist J. Robert Oppenheimer and his role in the development of the atomic bomb."
+    description: "The story of American scientist J. Robert Oppenheimer and his role in the development of the atomic bomb.",
+    ceremonyYear: 2024
   },
   { 
     name: "Poor Things",
     category: "Best Picture",
     isWinner: false,
     streamingPlatforms: ["Theaters"],
-    description: "The incredible tale about the fantastical evolution of Bella Baxter, a young woman brought back to life by the brilliant and unorthodox scientist Dr. Godwin Baxter."
+    description: "The incredible tale about the fantastical evolution of Bella Baxter, a young woman brought back to life by the brilliant and unorthodox scientist Dr. Godwin Baxter.",
+    ceremonyYear: 2024
   },
   { 
     name: "Killers of the Flower Moon",
     category: "Best Picture",
     isWinner: false,
     streamingPlatforms: ["Apple TV+"],
-    description: "Members of the Osage tribe in the United States are murdered under mysterious circumstances in the 1920s, sparking a major F.B.I. investigation."
+    description: "Members of the Osage tribe in the United States are murdered under mysterious circumstances in the 1920s, sparking a major F.B.I. investigation.",
+    ceremonyYear: 2024
   },
   { 
     name: "Barbie",
     category: "Best Picture",
     isWinner: false,
     streamingPlatforms: ["Max"],
-    description: "Barbie suffers a crisis that leads her to question her world and her existence."
+    description: "Barbie suffers a crisis that leads her to question her world and her existence.",
+    ceremonyYear: 2024
   },
   { 
     name: "The Zone of Interest",
     category: "Best Picture",
     isWinner: false,
     streamingPlatforms: ["Theaters"],
-    description: "The commandant of Auschwitz, Rudolf Höss, and his wife Hedwig, strive to build a dream life for their family in a house and garden next to the camp."
+    description: "The commandant of Auschwitz, Rudolf Höss, and his wife Hedwig, strive to build a dream life for their family in a house and garden next to the camp.",
+    ceremonyYear: 2024
   },
   // Best Director
   {
@@ -123,14 +128,16 @@ const nominees2024 = [
     category: "Best Director",
     isWinner: true,
     streamingPlatforms: ["Peacock", "Digital Purchase"],
-    description: "Christopher Nolan for his visionary direction of Oppenheimer"
+    description: "Christopher Nolan for his visionary direction of Oppenheimer",
+    ceremonyYear: 2024
   },
   {
     name: "Poor Things",
     category: "Best Director",
     isWinner: false,
     streamingPlatforms: ["Theaters"],
-    description: "Yorgos Lanthimos for his innovative direction of Poor Things"
+    description: "Yorgos Lanthimos for his innovative direction of Poor Things",
+    ceremonyYear: 2024
   },
   // Best International Feature
   {
@@ -138,14 +145,16 @@ const nominees2024 = [
     category: "Best International Feature",
     isWinner: true,
     streamingPlatforms: ["Theaters"],
-    description: "Jonathan Glazer's haunting exploration of the banality of evil"
+    description: "Jonathan Glazer's haunting exploration of the banality of evil",
+    ceremonyYear: 2024
   },
   {
     name: "Perfect Days",
     category: "Best International Feature",
     isWinner: false,
     streamingPlatforms: ["Theaters"],
-    description: "Wim Wenders' meditation on finding beauty in the everyday"
+    description: "Wim Wenders' meditation on finding beauty in the everyday",
+    ceremonyYear: 2024
   }
 ];
 
@@ -222,12 +231,12 @@ async function seed() {
 
     // Prepare all nominees data
     const allNomineesData = [
-      ...nominees2020.map(n => ({ ...n, ceremonyYear: 2020 })),
-      ...nominees2021.map(n => ({ ...n, ceremonyYear: 2021 })),
-      ...nominees2022.map(n => ({ ...n, ceremonyYear: 2022 })),
-      ...nominees2023.map(n => ({ ...n, ceremonyYear: 2023 })),
-      ...nominees2024,
-      ...nominees2025
+      ...nominees2020,
+      ...nominees2021,
+      ...nominees2022,
+      ...nominees2023,
+      ...nominees2024.map(n => ({ ...n, ceremonyYear: 2024 })),
+      ...nominees2025.map(n => ({ ...n, ceremonyYear: 2025 }))
     ];
 
     // Insert all nominees with base data
