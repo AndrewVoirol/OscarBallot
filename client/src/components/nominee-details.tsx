@@ -17,11 +17,11 @@ interface NomineeDetailsProps {
 export function NomineeDetails({ nominee }: NomineeDetailsProps) {
   return (
     <div className="relative">
-      {nominee.backdrop_path && (
+      {nominee.backdropPath && (
         <div className="relative h-64 md:h-80">
           <div className="absolute inset-0 bg-gradient-to-b from-transparent to-background z-10" />
           <img
-            src={nominee.backdrop_path}
+            src={nominee.backdropPath}
             alt={`${nominee.name} backdrop`}
             className="absolute inset-0 w-full h-full object-cover"
           />
@@ -120,21 +120,22 @@ export function NomineeDetails({ nominee }: NomineeDetailsProps) {
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                   {nominee.extendedCredits.cast.slice(0, 12).map((member) => (
                     <div key={member.id} className="flex items-center gap-3">
-                      <Avatar className="h-12 w-12">
-                        {member.profileImage ? (
+                      <Avatar className="h-14 w-14 rounded-full overflow-hidden border-2 border-muted">
+                        {member.profile_path ? (
                           <AvatarImage
-                            src={member.profileImage}
+                            src={`https://image.tmdb.org/t/p/w185${member.profile_path}`}
                             alt={member.name}
+                            className="object-cover w-full h-full"
                           />
                         ) : (
-                          <AvatarFallback>
-                            <User className="h-6 w-6" />
+                          <AvatarFallback className="bg-muted">
+                            <User className="h-6 w-6 text-muted-foreground" />
                           </AvatarFallback>
                         )}
                       </Avatar>
-                      <div>
-                        <p className="text-sm font-medium line-clamp-1">{member.name}</p>
-                        <p className="text-xs text-muted-foreground line-clamp-1">
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium truncate">{member.name}</p>
+                        <p className="text-xs text-muted-foreground truncate">
                           {member.character}
                         </p>
                       </div>
@@ -154,21 +155,22 @@ export function NomineeDetails({ nominee }: NomineeDetailsProps) {
                     )
                     .map((member) => (
                       <div key={member.id} className="flex items-center gap-3">
-                        <Avatar className="h-12 w-12">
-                          {member.profileImage ? (
+                        <Avatar className="h-14 w-14 rounded-full overflow-hidden border-2 border-muted">
+                          {member.profile_path ? (
                             <AvatarImage
-                              src={member.profileImage}
+                              src={`https://image.tmdb.org/t/p/w185${member.profile_path}`}
                               alt={member.name}
+                              className="object-cover w-full h-full"
                             />
                           ) : (
-                            <AvatarFallback>
-                              <User className="h-6 w-6" />
+                            <AvatarFallback className="bg-muted">
+                              <User className="h-6 w-6 text-muted-foreground" />
                             </AvatarFallback>
                           )}
                         </Avatar>
-                        <div>
-                          <p className="text-sm font-medium line-clamp-1">{member.name}</p>
-                          <p className="text-xs text-muted-foreground line-clamp-1">{member.job}</p>
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium truncate">{member.name}</p>
+                          <p className="text-xs text-muted-foreground truncate">{member.job}</p>
                         </div>
                       </div>
                     ))}
@@ -180,19 +182,23 @@ export function NomineeDetails({ nominee }: NomineeDetailsProps) {
               <AccordionItem value="production">
                 <AccordionTrigger>Production Companies</AccordionTrigger>
                 <AccordionContent>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-2 gap-6">
                     {nominee.productionCompanies.map((company) => (
                       <div key={company.id} className="flex items-center gap-3">
-                        {company.logoPath ? (
-                          <img
-                            src={company.logoPath}
-                            alt={company.name}
-                            className="h-8 object-contain"
-                          />
+                        {company.logo_path ? (
+                          <div className="h-12 w-24 relative bg-white/5 rounded-lg p-2 flex items-center justify-center">
+                            <img
+                              src={`https://image.tmdb.org/t/p/w92${company.logo_path}`}
+                              alt={company.name}
+                              className="max-h-full max-w-full object-contain"
+                            />
+                          </div>
                         ) : (
-                          <Building2 className="h-6 w-6 text-muted-foreground" />
+                          <div className="h-12 w-12 rounded-lg bg-muted flex items-center justify-center">
+                            <Building2 className="h-6 w-6 text-muted-foreground" />
+                          </div>
                         )}
-                        <span className="text-sm">{company.name}</span>
+                        <span className="text-sm truncate">{company.name}</span>
                       </div>
                     ))}
                   </div>
