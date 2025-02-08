@@ -50,7 +50,9 @@ export const nominees = pgTable("nominees", {
     awards: Array<{
       name: string;
       type: string;
+      category: string;
       result: "Won" | "Nominated";
+      ceremonyName: string;
     }>;
   }[]>().notNull().default([]),
   cast: text("cast").array().notNull(),
@@ -59,7 +61,7 @@ export const nominees = pgTable("nominees", {
   ceremonyYear: integer("ceremony_year").notNull().default(2025),
   isWinner: boolean("is_winner").notNull().default(false),
 
-  // TMDB specific fields
+  // Enhanced TMDB fields
   tmdbId: integer("tmdb_id"),
   runtime: integer("runtime"),
   releaseDate: text("release_date"),
@@ -80,6 +82,8 @@ export const nominees = pgTable("nominees", {
       name: string;
       character: string;
       profileImage: string | null;
+      role: string;
+      department: string;
     }>;
     crew: Array<{
       id: number;
@@ -87,6 +91,29 @@ export const nominees = pgTable("nominees", {
       job: string;
       department: string;
       profileImage: string | null;
+    }>;
+  }>(),
+
+  // New fields for enhanced data
+  externalIds: jsonb("external_ids").$type<{
+    imdbId: string | null;
+    instagramId: string | null;
+    twitterId: string | null;
+    facebookId: string | null;
+  }>(),
+  careerHighlights: jsonb("career_highlights").$type<{
+    topRatedProjects: Array<{
+      id: number;
+      title: string;
+      year: number;
+      role: string;
+      rating: number;
+    }>;
+    awards: Array<{
+      name: string;
+      year: number;
+      category: string;
+      result: string;
     }>;
   }>(),
 
@@ -173,7 +200,9 @@ export const nomineeValidationSchema = z.object({
     awards: z.array(z.object({
       name: z.string(),
       type: z.string(),
-      result: z.enum(["Won", "Nominated"])
+      category: z.string(),
+      result: z.enum(["Won", "Nominated"]),
+      ceremonyName: z.string()
     }))
   })),
   cast: z.array(z.string()).min(1, "At least one cast member required"),

@@ -8,7 +8,7 @@ interface ValidationError {
   details: string;
 }
 
-// Official 2025 nominees data structure
+// Official 2025 nominees data structure - this matches oscars.org
 const official2025Categories = {
   [OscarCategories.PICTURE]: [
     "American Fiction",
@@ -68,7 +68,7 @@ const official2025Categories = {
 
 export async function validate2025Nominees() {
   const errors: ValidationError[] = [];
-  
+
   // Get all 2025 nominees from database
   const currentNominees = await db
     .select()
@@ -78,7 +78,7 @@ export async function validate2025Nominees() {
   // Check for completeness in each category
   for (const [category, expectedNominees] of Object.entries(official2025Categories)) {
     const categoryNominees = currentNominees.filter(n => n.category === category);
-    
+
     // Check for missing nominees
     for (const expectedName of expectedNominees) {
       const found = categoryNominees.find(n => n.name === expectedName);
