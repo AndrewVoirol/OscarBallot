@@ -1,3 +1,4 @@
+import { validate2025Nominees } from "./oscar2025validator";
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
@@ -129,15 +130,19 @@ export function registerRoutes(app: Express): Server {
           try {
             const updated = await updateNomineeWithTMDBData(nominee);
             const validation = await validateNomineeData(updated);
-            return { nominee: updated, validation };
+            return { nominee: updated, validation, error: null };
           } catch (error) {
             console.error(`Failed to update ${nominee.name}:`, error);
-            return { nominee, error: error.message };
+            return { 
+              nominee, 
+              validation: null, 
+              error: error instanceof Error ? error.message : String(error)
+            };
           }
         })
       );
 
-      const successful = updates.filter(u => !u.error);
+      const successful = updates.filter(u => !u.error && u.validation);
       const failed = updates.filter(u => u.error);
       const withIssues = successful.filter(u => u.validation.issues.length > 0);
 
@@ -193,6 +198,24 @@ export function registerRoutes(app: Express): Server {
     } catch (error: any) {
       console.error('Error updating nominee TMDB data:', error);
       res.status(500).json({ message: "Failed to update nominee TMDB data" });
+    }
+  });
+
+  // Add new route for 2025 nominee validation
+  app.get("/api/nominees/validate-2025", async (_req, res) => {
+    try {
+      const validationResult = await validate2025Nominees();
+      if (!validationResult) {
+        res.status(500).json({ message: "Failed to validate 2025 nominees - no result returned" });
+        return;
+      }
+      res.json(validationResult);
+    } catch (error) {
+      console.error('Error validating 2025 nominees:', error);
+      res.status(500).json({ 
+        message: "Failed to validate 2025 nominees",
+        error: error instanceof Error ? error.message : String(error)
+      });
     }
   });
 
