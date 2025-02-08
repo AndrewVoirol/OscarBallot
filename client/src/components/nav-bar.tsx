@@ -1,6 +1,7 @@
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
+import { useQuery } from "@tanstack/react-query";
 import {
   Select,
   SelectContent,
@@ -16,6 +17,16 @@ interface NavBarProps {
 
 export function NavBar({ selectedYear = 2025, onYearChange }: NavBarProps) {
   const { user, logoutMutation } = useAuth();
+  const { data: years } = useQuery<number[]>({
+    queryKey: ["/api/nominees/years"],
+    queryFn: async () => {
+      const response = await fetch("/api/nominees/years");
+      if (!response.ok) throw new Error("Failed to fetch years");
+      const allYears = await response.json();
+      // For now, only show 2024 and 2025
+      return allYears.filter((year: number) => year >= 2024 && year <= 2025);
+    },
+  });
 
   return (
     <nav className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -36,8 +47,11 @@ export function NavBar({ selectedYear = 2025, onYearChange }: NavBarProps) {
               <SelectValue placeholder="Year" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="2025">2025</SelectItem>
-              <SelectItem value="2024">2024</SelectItem>
+              {years?.map((year) => (
+                <SelectItem key={year} value={year.toString()}>
+                  {year}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
           {user ? (
