@@ -17,24 +17,49 @@ export function registerRoutes(app: Express): Server {
 
   // Public routes for accessing nominee data
   app.get("/api/nominees", async (req, res) => {
-    const year = parseInt(req.query.year as string) || 2025;
-    const nominees = await storage.getNominees(year);
-    res.json(nominees);
+    try {
+      const year = parseInt(req.query.year as string);
+      if (isNaN(year)) {
+        // If no year is provided or it's invalid, return nominees from all years
+        const nominees = await storage.getNominees();
+        return res.json(nominees);
+      }
+      const nominees = await storage.getNominees(year);
+      res.json(nominees);
+    } catch (error) {
+      console.error('Error fetching nominees:', error);
+      res.status(500).json({ message: "Failed to fetch nominees" });
+    }
   });
 
   app.get("/api/nominees/category/:category", async (req, res) => {
-    const year = parseInt(req.query.year as string) || 2025;
-    const nominees = await storage.getNomineesByCategory(req.params.category, year);
-    res.json(nominees);
+    try {
+      const year = parseInt(req.query.year as string);
+      if (isNaN(year)) {
+        // If no year is provided or it's invalid, return nominees from all years for this category
+        const nominees = await storage.getNomineesByCategory(req.params.category);
+        return res.json(nominees);
+      }
+      const nominees = await storage.getNomineesByCategory(req.params.category, year);
+      res.json(nominees);
+    } catch (error) {
+      console.error('Error fetching nominees by category:', error);
+      res.status(500).json({ message: "Failed to fetch nominees" });
+    }
   });
 
   app.get("/api/nominees/:id", async (req, res) => {
-    const nominee = await storage.getNominee(parseInt(req.params.id));
-    if (!nominee) {
-      res.status(404).json({ message: "Nominee not found" });
-      return;
+    try {
+      const nominee = await storage.getNominee(parseInt(req.params.id));
+      if (!nominee) {
+        res.status(404).json({ message: "Nominee not found" });
+        return;
+      }
+      res.json(nominee);
+    } catch (error) {
+      console.error('Error fetching nominee:', error);
+      res.status(500).json({ message: "Failed to fetch nominee" });
     }
-    res.json(nominee);
   });
 
   // Public endpoint to update TMDB data for all nominees

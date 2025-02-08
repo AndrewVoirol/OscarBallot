@@ -1,7 +1,7 @@
 import { type Nominee, type InsertNominee, type Ballot, type InsertBallot, type User, type InsertUser, type Watchlist, type InsertWatchlist, nominees, ballots, users, watchlist } from "@shared/schema";
 import session from "express-session";
 import { db } from "./db";
-import { eq, and } from "drizzle-orm";
+import { eq, and, desc } from "drizzle-orm";
 import createMemoryStore from "memorystore";
 
 const MemoryStore = createMemoryStore(session);
@@ -29,19 +29,33 @@ export class DatabaseStorage implements IStorage {
 
   constructor() {
     this.sessionStore = new MemoryStore({
-      checkPeriod: 86400000, // prune expired entries every 24h
-      stale: false, // Do not serve stale sessions
+      checkPeriod: 86400000,
+      stale: false,
     });
   }
 
-  async getNominees(year: number = 2025): Promise<Nominee[]> {
+  async getNominees(year?: number): Promise<Nominee[]> {
+    if (!year) {
+      return await db
+        .select()
+        .from(nominees)
+        .orderBy(desc(nominees.ceremonyYear));
+    }
     return await db
       .select()
       .from(nominees)
-      .where(eq(nominees.ceremonyYear, year));
+      .where(eq(nominees.ceremonyYear, year))
+      .orderBy(desc(nominees.ceremonyYear));
   }
 
-  async getNomineesByCategory(category: string, year: number = 2025): Promise<Nominee[]> {
+  async getNomineesByCategory(category: string, year?: number): Promise<Nominee[]> {
+    if (!year) {
+      return await db
+        .select()
+        .from(nominees)
+        .where(eq(nominees.category, category))
+        .orderBy(desc(nominees.ceremonyYear));
+    }
     return await db
       .select()
       .from(nominees)
@@ -50,7 +64,8 @@ export class DatabaseStorage implements IStorage {
           eq(nominees.category, category),
           eq(nominees.ceremonyYear, year)
         )
-      );
+      )
+      .orderBy(desc(nominees.ceremonyYear));
   }
 
   async getNominee(id: number): Promise<Nominee | undefined> {
