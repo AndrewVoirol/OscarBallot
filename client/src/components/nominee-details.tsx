@@ -8,6 +8,7 @@ import { AwardsHistory } from "./awards-history";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Clock, Calendar, Star, Building2, User } from "lucide-react";
+import { DialogTitle } from "@/components/ui/dialog";
 import type { Nominee } from "@shared/schema";
 
 interface NomineeDetailsProps {
@@ -29,6 +30,8 @@ export function NomineeDetails({ nominee }: NomineeDetailsProps) {
       )}
 
       <div className="relative z-20 p-6 -mt-16">
+        <DialogTitle className="sr-only">Details for {nominee.name}</DialogTitle>
+
         <div className="flex flex-col md:flex-row gap-6">
           <div className="shrink-0 w-40 md:w-48">
             <div className="aspect-[2/3] relative bg-muted rounded-lg overflow-hidden shadow-lg">
@@ -42,7 +45,9 @@ export function NomineeDetails({ nominee }: NomineeDetailsProps) {
 
           <div className="flex-1">
             <h2 className="text-2xl font-bold text-primary mb-2">{nominee.name}</h2>
-            <p className="text-muted-foreground mb-6">{nominee.description}</p>
+            <p className="text-muted-foreground mb-6">
+              {nominee.description || nominee.overview}
+            </p>
 
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
               {nominee.runtime && (
@@ -83,7 +88,7 @@ export function NomineeDetails({ nominee }: NomineeDetailsProps) {
               </div>
             )}
 
-            {nominee.streamingPlatforms.length > 0 && (
+            {nominee.streamingPlatforms && nominee.streamingPlatforms.length > 0 && (
               <div className="mb-6">
                 <h3 className="text-sm font-semibold mb-2">Where to Watch</h3>
                 <div className="flex flex-wrap gap-2">
@@ -101,7 +106,7 @@ export function NomineeDetails({ nominee }: NomineeDetailsProps) {
         {nominee.trailerUrl && (
           <div className="aspect-video w-full mt-6 rounded-lg overflow-hidden bg-muted">
             <iframe
-              src={nominee.trailerUrl}
+              src={nominee.trailerUrl.replace('watch?v=', 'embed/')}
               title={`${nominee.name} Trailer`}
               className="w-full h-full"
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
@@ -136,7 +141,7 @@ export function NomineeDetails({ nominee }: NomineeDetailsProps) {
                       <div className="min-w-0">
                         <p className="text-sm font-medium truncate">{member.name}</p>
                         <p className="text-xs text-muted-foreground truncate">
-                          {member.character}
+                          {member.character || member.role}
                         </p>
                       </div>
                     </div>
@@ -206,6 +211,19 @@ export function NomineeDetails({ nominee }: NomineeDetailsProps) {
               </AccordionItem>
             )}
           </Accordion>
+        )}
+
+        {nominee.funFacts && nominee.funFacts.length > 0 && (
+          <div className="mt-6">
+            <h3 className="text-lg font-semibold mb-3">Fun Facts</h3>
+            <ul className="space-y-2">
+              {nominee.funFacts.map((fact, index) => (
+                <li key={index} className="text-sm text-muted-foreground">
+                  • {fact}
+                </li>
+              ))}
+            </ul>
+          </div>
         )}
       </div>
     </div>
