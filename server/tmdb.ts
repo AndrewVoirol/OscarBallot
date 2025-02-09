@@ -20,7 +20,6 @@ const tmdbAxios = axios.create({
   timeout: 15000
 });
 
-// Enhanced retry logic with exponential backoff
 const withRetry = async (fn: () => Promise<any>, retries = 3, initialDelay = 1000) => {
   let lastError;
   for (let i = 0; i < retries; i++) {
@@ -40,9 +39,8 @@ const withRetry = async (fn: () => Promise<any>, retries = 3, initialDelay = 100
   throw lastError;
 };
 
-// Enhanced TMDB query parameters for comprehensive data
-const PERSON_APPEND_PARAMS = "movie_credits,images,combined_credits,external_ids,tagged_images";
-const MOVIE_APPEND_PARAMS = "credits,videos,images,keywords,recommendations,similar,release_dates,external_ids";
+const PERSON_APPEND_PARAMS = "movie_credits,images,combined_credits,external_ids,tagged_images,changes";
+const MOVIE_APPEND_PARAMS = "credits,videos,images,keywords,recommendations,similar,release_dates,external_ids,changes,awards";
 
 async function searchMovie(query: string, year?: number) {
   try {
@@ -66,7 +64,6 @@ async function searchMovie(query: string, year?: number) {
     const results = response.data.results;
     const searchYear = year ? year - 1 : undefined;
 
-    // Enhanced matching algorithm
     const bestMatch = results.reduce((best: any, current: any) => {
       const releaseYear = current.release_date ? new Date(current.release_date).getFullYear() : null;
       const currentScore = calculateMatchScore(current, query, releaseYear, searchYear);
@@ -95,19 +92,16 @@ function calculateMatchScore(movie: any, query: string, movieYear: number | null
 
   let score = 0;
 
-  // Exact match gives highest score
   if (normalizedTitle === normalizedQuery) {
     score += 100;
   } else if (normalizedTitle.includes(normalizedQuery) || normalizedQuery.includes(normalizedTitle)) {
     score += 50;
   }
 
-  // Year matching
   if (searchYear && movieYear === searchYear) {
     score += 30;
   }
 
-  // Popularity and vote count as tiebreakers
   score += (movie.popularity || 0) / 100;
   score += Math.min((movie.vote_count || 0) / 1000, 10);
 
@@ -131,7 +125,6 @@ async function searchPerson(query: string) {
       return null;
     }
 
-    // Enhanced person matching with more criteria
     const results = response.data.results;
     const bestMatch = results.reduce((best: any, current: any) => {
       const currentScore = calculatePersonMatchScore(current, query);
@@ -157,19 +150,16 @@ function calculatePersonMatchScore(person: any, query: string): number {
 
   let score = 0;
 
-  // Exact match gives highest score
   if (normalizedName === normalizedQuery) {
     score += 100;
   } else if (normalizedName.includes(normalizedQuery) || normalizedQuery.includes(normalizedName)) {
     score += 50;
   }
 
-  // Known for department bonus
   if (person.known_for_department === "Acting" || person.known_for_department === "Directing") {
     score += 20;
   }
 
-  // Popularity and known credits as tiebreakers
   score += (person.popularity || 0) / 100;
   score += Math.min((person.known_for?.length || 0) * 5, 20);
 
@@ -236,7 +226,6 @@ function isPersonCategory(category: string): boolean {
   ].includes(category);
 }
 
-// Enhanced image validation with size and format checks
 async function validateImageUrl(url: string): Promise<boolean> {
   if (!url || url === '/placeholder-poster.jpg' || url === '/placeholder-backdrop.jpg') {
     return false;
@@ -251,7 +240,6 @@ async function validateImageUrl(url: string): Promise<boolean> {
     const contentType = response.headers['content-type'];
     const contentLength = parseInt(response.headers['content-length'] || '0');
 
-    // Verify it's an image and has reasonable size (> 5KB)
     return contentType?.startsWith('image/') && contentLength > 5000;
   } catch (error) {
     console.error(`Failed to validate image URL: ${url}`, error);
@@ -259,7 +247,6 @@ async function validateImageUrl(url: string): Promise<boolean> {
   }
 }
 
-// Enhanced validation report interface
 export interface ValidationReport {
   nomineeId: number;
   name: string;
@@ -269,12 +256,10 @@ export interface ValidationReport {
   severity: 'high' | 'medium' | 'low';
 }
 
-// Enhanced data validation with more detailed checks
 export async function validateNomineeData(nominee: Nominee): Promise<ValidationReport> {
   const issues: string[] = [];
   let severity: 'high' | 'medium' | 'low' = 'low';
 
-  // Critical data validation
   if (!nominee.name) {
     issues.push("Missing name");
     severity = 'high';
@@ -288,7 +273,6 @@ export async function validateNomineeData(nominee: Nominee): Promise<ValidationR
     severity = 'high';
   }
 
-  // Image validation with improved error messages
   const posterValid = await validateImageUrl(nominee.poster);
   if (!posterValid) {
     issues.push("Invalid or missing poster image");
@@ -301,14 +285,12 @@ export async function validateNomineeData(nominee: Nominee): Promise<ValidationR
     severity = 'medium';
   }
 
-  // TMDB data validation
   if (!nominee.tmdbId) {
     issues.push("Missing TMDB ID");
     severity = 'high';
   }
 
   if (isPersonCategory(nominee.category)) {
-    // Person-specific validations
     if (!nominee.biography) {
       issues.push("Missing biography");
       severity = 'medium';
@@ -318,7 +300,6 @@ export async function validateNomineeData(nominee: Nominee): Promise<ValidationR
       severity = 'medium';
     }
   } else {
-    // Movie-specific validations
     if (!nominee.overview) {
       issues.push("Missing overview");
       severity = 'medium';
@@ -337,7 +318,6 @@ export async function validateNomineeData(nominee: Nominee): Promise<ValidationR
     }
   }
 
-  // Enhanced streaming platform validation
   if (!nominee.streamingPlatforms || nominee.streamingPlatforms.length === 0) {
     issues.push("Missing streaming platforms");
     severity = 'medium';
@@ -353,7 +333,6 @@ export async function validateNomineeData(nominee: Nominee): Promise<ValidationR
   };
 }
 
-// Add new function to fetch comprehensive nominee data
 async function fetchComprehensiveNomineeData(nominee: Nominee): Promise<any> {
   const isPersonCategory = [
     'Best Actor',
@@ -371,7 +350,6 @@ async function fetchComprehensiveNomineeData(nominee: Nominee): Promise<any> {
       const personDetails = await getPersonDetails(searchResult.id);
       if (!personDetails) return null;
 
-      // Extract comprehensive career data
       const careerHighlights = {
         topRatedProjects: personDetails.movie_credits?.cast
           ?.sort((a: any, b: any) => b.vote_average - a.vote_average)
@@ -383,20 +361,39 @@ async function fetchComprehensiveNomineeData(nominee: Nominee): Promise<any> {
             role: project.character || project.job,
             rating: Math.round(project.vote_average * 10)
           })) || [],
-        awards: [] // To be populated from additional sources
+        awards: [] 
       };
 
       return {
         tmdbId: searchResult.id,
         biography: personDetails.biography,
+        profileImage: personDetails.profile_path ? formatImageUrl(personDetails.profile_path) : null,
         externalIds: {
           imdbId: personDetails.external_ids?.imdb_id,
           instagramId: personDetails.external_ids?.instagram_id,
           twitterId: personDetails.external_ids?.twitter_id,
           facebookId: personDetails.external_ids?.facebook_id
         },
+        cast: personDetails.movie_credits?.cast?.map((c: any) => ({
+          movieId: c.id,
+          title: c.title,
+          character: c.character,
+          releaseDate: c.release_date
+        })) || [],
+        crew: personDetails.movie_credits?.crew?.map((c: any) => ({
+          movieId: c.id,
+          title: c.title,
+          job: c.job,
+          department: c.department,
+          releaseDate: c.release_date
+        })) || [],
         careerHighlights,
-        profileImage: personDetails.profile_path ? formatImageUrl(personDetails.profile_path) : null
+        funFacts: [
+          `Known for department: ${personDetails.known_for_department}`,
+          `Place of birth: ${personDetails.place_of_birth}`,
+          `Birthday: ${personDetails.birthday}`,
+          `Total movies: ${(personDetails.movie_credits?.cast?.length || 0) + (personDetails.movie_credits?.crew?.length || 0)}`
+        ]
       };
     } else {
       const searchResult = await searchMovie(nominee.name, nominee.ceremonyYear);
@@ -411,14 +408,33 @@ async function fetchComprehensiveNomineeData(nominee: Nominee): Promise<any> {
         releaseDate: movieDetails.release_date,
         runtime: movieDetails.runtime,
         genres: movieDetails.genres?.map((g: any) => g.name),
+        poster: movieDetails.poster_path ? formatImageUrl(movieDetails.poster_path) : null,
+        backdropPath: movieDetails.backdrop_path ? formatImageUrl(movieDetails.backdrop_path, 'original') : null,
+        trailerUrl: movieDetails.videos?.results?.find((v: any) => 
+          v.type === "Trailer" && v.site === "YouTube"
+        )?.key ? `https://www.youtube.com/watch?v=${movieDetails.videos.results[0].key}` : null,
+        cast: movieDetails.credits?.cast?.slice(0, 10).map((c: any) => c.name) || [],
+        crew: movieDetails.credits?.crew
+          ?.filter((c: any) => ["Director", "Producer", "Screenplay", "Writer"].includes(c.job))
+          .map((c: any) => `${c.name} (${c.job})`) || [],
+        funFacts: [
+          `Budget: $${movieDetails.budget?.toLocaleString()}`,
+          `Runtime: ${movieDetails.runtime} minutes`,
+          `Original Language: ${movieDetails.original_language?.toUpperCase()}`,
+          `Production Companies: ${movieDetails.production_companies?.map((pc: any) => pc.name).join(", ")}`
+        ],
+        productionCompanies: movieDetails.production_companies?.map((pc: any) => ({
+          id: pc.id,
+          name: pc.name,
+          logoPath: pc.logo_path ? formatImageUrl(pc.logo_path) : null,
+          originCountry: pc.origin_country
+        })),
         externalIds: {
           imdbId: movieDetails.external_ids?.imdb_id,
           instagramId: movieDetails.external_ids?.instagram_id,
           twitterId: movieDetails.external_ids?.twitter_id,
           facebookId: movieDetails.external_ids?.facebook_id
-        },
-        poster: movieDetails.poster_path ? formatImageUrl(movieDetails.poster_path) : null,
-        backdropPath: movieDetails.backdrop_path ? formatImageUrl(movieDetails.backdrop_path, 'original') : null
+        }
       };
     }
   } catch (error) {
@@ -427,7 +443,6 @@ async function fetchComprehensiveNomineeData(nominee: Nominee): Promise<any> {
   }
 }
 
-// Update the existing updateNomineeWithTMDBData function to use the new comprehensive data
 export async function updateNomineeWithTMDBData(nominee: Nominee): Promise<Nominee> {
   try {
     console.log(`Processing nominee: "${nominee.name}" (${nominee.ceremonyYear})`);
@@ -438,7 +453,6 @@ export async function updateNomineeWithTMDBData(nominee: Nominee): Promise<Nomin
       return nominee;
     }
 
-    // Update nominee with comprehensive data
     const [updatedNominee] = await db
       .update(nominees)
       .set({
