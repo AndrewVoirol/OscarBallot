@@ -60,13 +60,13 @@ export function NomineeCard({ nominee, isLoading, isHistorical }: NomineeCardPro
               </Badge>
             </div>
           )}
-          <AwardsBadge awards={nominee.awards} />
+          <AwardsBadge awards={nominee.awards || {}} />
         </div>
       </CardHeader>
       <CardContent className="p-4 sm:p-6">
         <h3 className="text-xl sm:text-lg font-semibold mb-3 sm:mb-2 line-clamp-2">{nominee.name}</h3>
         <div className="flex flex-wrap gap-2 mb-6 sm:mb-4">
-          {nominee.streamingPlatforms.map((platform) => (
+          {nominee.streamingPlatforms?.map((platform) => (
             <span
               key={platform}
               className="text-sm sm:text-xs px-3 py-1.5 sm:py-1 rounded-full bg-primary/10 text-primary"
