@@ -75,7 +75,7 @@ class RateLimiter {
       const delay = this.baseDelay * Math.pow(2, attempt);
       console.log(`Rate limit reached for ${endpoint}, waiting ${delay}ms (attempt ${attempt + 1}/${this.maxBackoffAttempts})`);
       await new Promise(resolve => setTimeout(resolve, delay));
-      
+
       timestamps = timestamps.filter(time => now - time < RATE_LIMIT.perSeconds * 1000);
     }
 
@@ -293,7 +293,7 @@ async function getPersonDetails(personId: number) {
       for (let attempts = 0; attempts < RATE_LIMIT.retryAttempts; attempts++) {
         console.log(`Rate limit hit, attempt ${attempts + 1}/${RATE_LIMIT.retryAttempts}`);
         await new Promise(resolve => setTimeout(resolve, RATE_LIMIT.retryDelay));
-        
+
         try {
           const retryResponse = await tmdbAxios.get(`/person/${personId}`, {
             params: {
@@ -438,6 +438,21 @@ export async function validateNomineeData(nominee: Nominee): Promise<ValidationR
 }
 
 async function fetchComprehensiveNomineeData(nominee: Nominee): Promise<any> {
+  if (!nominee?.name || !nominee?.category || !nominee?.ceremonyYear) {
+    console.error('Invalid nominee data:', nominee);
+    throw new Error('Missing required nominee fields');
+  }
+
+  const categoryHandler = new OscarCategoryTMDBHandler(tmdbAxios);
+  const categoryValidation = await categoryHandler.fetchTMDBDataForCategory(
+    nominee,
+    nominee.category
+  );
+
+  if (!categoryValidation.isValid) {
+    console.warn(`Category validation issues for ${nominee.name}:`, categoryValidation.errors);
+  }
+
   const isPersonCategory = [
     'Best Actor',
     'Best Actress',
