@@ -94,39 +94,6 @@ export const nominees = pgTable("nominees", {
     }>;
   }>(),
 
-  // Enhanced TMDB fields
-  tmdbId: integer("tmdb_id"),
-  runtime: integer("runtime"),
-  releaseDate: text("release_date"),
-  voteAverage: integer("vote_average"),
-  backdropPath: text("backdrop_path"),
-  genres: text("genres").array(),
-  overview: text("overview"),
-  biography: text("biography"),
-  productionCompanies: jsonb("production_companies").$type<{
-    id: number;
-    name: string;
-    logoPath: string | null;
-    originCountry: string;
-  }[]>(),
-  extendedCredits: jsonb("extended_credits").$type<{
-    cast: Array<{
-      id: number;
-      name: string;
-      character: string;
-      profileImage: string | null;
-      role: string;
-      department: string;
-    }>;
-    crew: Array<{
-      id: number;
-      name: string;
-      job: string;
-      department: string;
-      profileImage: string | null;
-    }>;
-  }>(),
-
   // New fields for enhanced data
   externalIds: jsonb("external_ids").$type<{
     imdbId: string | null;

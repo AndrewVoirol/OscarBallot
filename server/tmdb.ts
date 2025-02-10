@@ -51,9 +51,31 @@ interface TMDBResponse {
 const RATE_LIMIT = {
   maxRequests: 30,
   perSeconds: 1,
+  retryAttempts: 3,
+  retryDelay: 1000,
 };
 
-const rateLimiter = new Map<string, number[]>();
+class RateLimiter {
+  private requests: Map<string, number[]> = new Map();
+  
+  async throttle(endpoint: string): Promise<void> {
+    const now = Date.now();
+    let timestamps = this.requests.get(endpoint) || [];
+    timestamps = timestamps.filter(time => now - time < RATE_LIMIT.perSeconds * 1000);
+    
+    if (timestamps.length >= RATE_LIMIT.maxRequests) {
+      const oldestRequest = timestamps[0];
+      const waitTime = (RATE_LIMIT.perSeconds * 1000) - (now - oldestRequest);
+      await new Promise(resolve => setTimeout(resolve, waitTime));
+      return this.throttle(endpoint);
+    }
+    
+    timestamps.push(now);
+    this.requests.set(endpoint, timestamps);
+  }
+}
+
+const rateLimiter = new RateLimiter();
 
 const tmdbAxios = axios.create({
   baseURL: TMDB_BASE_URL,
