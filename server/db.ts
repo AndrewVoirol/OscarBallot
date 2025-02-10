@@ -30,7 +30,21 @@ export async function migrateDb() {
           ADD COLUMN IF NOT EXISTS overview TEXT,
           ADD COLUMN IF NOT EXISTS biography TEXT,
           ADD COLUMN IF NOT EXISTS production_companies JSONB,
-          ADD COLUMN IF NOT EXISTS extended_credits JSONB;
+          ADD COLUMN IF NOT EXISTS extended_credits JSONB,
+          ADD COLUMN IF NOT EXISTS media_validation JSONB DEFAULT '{"images": {}, "videos": [], "lastValidated": null}'::jsonb,
+          ADD COLUMN IF NOT EXISTS validation_score INTEGER DEFAULT 0;
+
+        CREATE TABLE IF NOT EXISTS media_validation_log (
+          id SERIAL PRIMARY KEY,
+          nominee_id INTEGER REFERENCES nominees(id),
+          validation_type TEXT NOT NULL,
+          status TEXT NOT NULL,
+          details JSONB,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_media_validation_nominee ON media_validation_log(nominee_id);
+        CREATE INDEX IF NOT EXISTS idx_media_validation_status ON media_validation_log(status);
       EXCEPTION
         WHEN others THEN
           raise notice 'Error adding columns: %', SQLERRM;
