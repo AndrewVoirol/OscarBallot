@@ -57,19 +57,19 @@ const RATE_LIMIT = {
 
 class RateLimiter {
   private requests: Map<string, number[]> = new Map();
-  
+
   async throttle(endpoint: string): Promise<void> {
     const now = Date.now();
     let timestamps = this.requests.get(endpoint) || [];
     timestamps = timestamps.filter(time => now - time < RATE_LIMIT.perSeconds * 1000);
-    
+
     if (timestamps.length >= RATE_LIMIT.maxRequests) {
       const oldestRequest = timestamps[0];
       const waitTime = (RATE_LIMIT.perSeconds * 1000) - (now - oldestRequest);
       await new Promise(resolve => setTimeout(resolve, waitTime));
       return this.throttle(endpoint);
     }
-    
+
     timestamps.push(now);
     this.requests.set(endpoint, timestamps);
   }
@@ -269,6 +269,15 @@ async function getPersonDetails(personId: number) {
     console.log(`Successfully retrieved details for person ID ${personId}`);
     return response.data;
   } catch (error: any) {
+    let attempts = 0;
+    if (error.response?.status === 429) {
+      console.log(`Rate limit hit, waiting ${RATE_LIMIT.retryDelay}ms before retry...`);
+      await new Promise(resolve => setTimeout(resolve, RATE_LIMIT.retryDelay));
+      attempts++;
+      if (attempts < RATE_LIMIT.retryAttempts) {
+          continue;
+      }
+    }
     console.error(`Error fetching person details for ID ${personId}:`, error.response?.data || error.message);
     return null;
   }
