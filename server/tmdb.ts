@@ -269,13 +269,22 @@ async function getPersonDetails(personId: number) {
     console.log(`Successfully retrieved details for person ID ${personId}`);
     return response.data;
   } catch (error: any) {
-    let attempts = 0;
     if (error.response?.status === 429) {
-      console.log(`Rate limit hit, waiting ${RATE_LIMIT.retryDelay}ms before retry...`);
-      await new Promise(resolve => setTimeout(resolve, RATE_LIMIT.retryDelay));
-      attempts++;
-      if (attempts < RATE_LIMIT.retryAttempts) {
-          continue;
+      for (let attempts = 0; attempts < RATE_LIMIT.retryAttempts; attempts++) {
+        console.log(`Rate limit hit, attempt ${attempts + 1}/${RATE_LIMIT.retryAttempts}`);
+        await new Promise(resolve => setTimeout(resolve, RATE_LIMIT.retryDelay));
+        
+        try {
+          const retryResponse = await tmdbAxios.get(`/person/${personId}`, {
+            params: {
+              append_to_response: PERSON_APPEND_PARAMS,
+              language: "en-US"
+            }
+          });
+          return retryResponse.data;
+        } catch (retryError) {
+          if (retryError.response?.status !== 429) throw retryError;
+        }
       }
     }
     console.error(`Error fetching person details for ID ${personId}:`, error.response?.data || error.message);
