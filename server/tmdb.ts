@@ -57,21 +57,33 @@ const RATE_LIMIT = {
 
 class RateLimiter {
   private requests: Map<string, number[]> = new Map();
+  private readonly maxBackoffAttempts = 3;
+  private readonly baseDelay = 1000;
 
   async throttle(endpoint: string): Promise<void> {
     const now = Date.now();
     let timestamps = this.requests.get(endpoint) || [];
     timestamps = timestamps.filter(time => now - time < RATE_LIMIT.perSeconds * 1000);
 
-    if (timestamps.length >= RATE_LIMIT.maxRequests) {
-      const oldestRequest = timestamps[0];
-      const waitTime = (RATE_LIMIT.perSeconds * 1000) - (now - oldestRequest);
-      await new Promise(resolve => setTimeout(resolve, waitTime));
-      return this.throttle(endpoint);
+    for (let attempt = 0; attempt < this.maxBackoffAttempts; attempt++) {
+      if (timestamps.length < RATE_LIMIT.maxRequests) {
+        timestamps.push(now);
+        this.requests.set(endpoint, timestamps);
+        return;
+      }
+
+      const delay = this.baseDelay * Math.pow(2, attempt);
+      console.log(`Rate limit reached for ${endpoint}, waiting ${delay}ms (attempt ${attempt + 1}/${this.maxBackoffAttempts})`);
+      await new Promise(resolve => setTimeout(resolve, delay));
+      
+      timestamps = timestamps.filter(time => now - time < RATE_LIMIT.perSeconds * 1000);
     }
 
-    timestamps.push(now);
-    this.requests.set(endpoint, timestamps);
+    throw new Error(`Rate limit exceeded for ${endpoint} after ${this.maxBackoffAttempts} attempts`);
+  }
+
+  clearEndpoint(endpoint: string): void {
+    this.requests.delete(endpoint);
   }
 }
 
@@ -256,19 +268,27 @@ async function getMovieDetails(movieId: number) {
 async function getPersonDetails(personId: number) {
   try {
     console.log(`Fetching comprehensive details for person ID: ${personId}`);
-    const response = await withRetry(() => tmdbAxios.get(
-      `/person/${personId}`,
-      {
+    const response = await withRetry(async () => {
+      await rateLimiter.throttle('/person');
+      return tmdbAxios.get(`/person/${personId}`, {
         params: {
           append_to_response: PERSON_APPEND_PARAMS,
           language: "en-US"
         }
-      }
-    ));
+      });
+    });
+
+    if (!response.data) {
+      throw new Error(`No data returned for person ID ${personId}`);
+    }
 
     console.log(`Successfully retrieved details for person ID ${personId}`);
     return response.data;
   } catch (error: any) {
+    if (error.response?.status === 404) {
+      console.error(`Person ID ${personId} not found in TMDB`);
+      return null;
+    }
     if (error.response?.status === 429) {
       for (let attempts = 0; attempts < RATE_LIMIT.retryAttempts; attempts++) {
         console.log(`Rate limit hit, attempt ${attempts + 1}/${RATE_LIMIT.retryAttempts}`);
