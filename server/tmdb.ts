@@ -312,6 +312,51 @@ async function getPersonDetails(personId: number) {
   }
 }
 
+class MediaValidator {
+  private readonly TMDB_IMAGE_BASE = 'https://image.tmdb.org/t/p/';
+  private readonly VALID_VIDEO_SITES = ['YouTube', 'Vimeo'];
+
+  constructor(private tmdbAccessToken: string) {}
+
+  async validateAndFormatImages(posterPath: string | null, backdropPath: string | null): Promise<{
+    poster: string | null;
+    backdrop: string | null;
+  }> {
+    const poster = posterPath ? await this.validateImage(posterPath) : null;
+    const backdrop = backdropPath ? await this.validateImage(backdropPath) : null;
+    return { poster, backdrop };
+  }
+
+  async validateImage(path: string): Promise<string> {
+    const url = `${this.TMDB_IMAGE_BASE}original${path}`;
+    const isValid = await this.verifyImageAvailability(url);
+    return isValid ? url : '/placeholder-poster.jpg';
+  }
+
+  async verifyImageAvailability(url: string): Promise<boolean> {
+    try {
+      const response = await fetch(url, { method: 'HEAD' });
+      return response.ok;
+    } catch (error) {
+      console.error(`Error verifying image availability for ${url}:`, error);
+      return false;
+    }
+  }
+
+  async getBestTrailer(videos: any[]): Promise<any | null> {
+    if (!videos?.length) return null;
+    
+    const validTrailers = videos
+      .filter(video => 
+        this.VALID_VIDEO_SITES.includes(video.site) && 
+        video.type === 'Trailer'
+      )
+      .sort((a, b) => b.official ? 1 : -1);
+      
+    return validTrailers[0] || null;
+  }
+}
+
 const mediaValidator = new MediaValidator(TMDB_ACCESS_TOKEN);
 
 async function formatImageUrl(path: string | null, size: 'w500' | 'original' = 'w500'): Promise<string> {
