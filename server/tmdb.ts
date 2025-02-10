@@ -11,6 +11,50 @@ if (!TMDB_ACCESS_TOKEN) {
   throw new Error("TMDB_ACCESS_TOKEN environment variable is required");
 }
 
+interface TMDBResponse {
+  id: number;
+  title?: string;
+  name?: string;
+  media_type?: string;
+  profile_path?: string;
+  poster_path?: string;
+  backdrop_path?: string;
+  release_date?: string;
+  runtime?: number;
+  vote_average?: number;
+  overview?: string;
+  biography?: string;
+  production_companies?: Array<{
+    id: number;
+    name: string;
+    logo_path: string | null;
+    origin_country: string;
+  }>;
+  credits?: {
+    cast: Array<{
+      id: number;
+      name: string;
+      character: string;
+      profile_path: string | null;
+      known_for_department: string;
+    }>;
+    crew: Array<{
+      id: number;
+      name: string;
+      job: string;
+      department: string;
+      profile_path: string | null;
+    }>;
+  };
+}
+
+const RATE_LIMIT = {
+  maxRequests: 30,
+  perSeconds: 1,
+};
+
+const rateLimiter = new Map<string, number[]>();
+
 const tmdbAxios = axios.create({
   baseURL: TMDB_BASE_URL,
   headers: {
