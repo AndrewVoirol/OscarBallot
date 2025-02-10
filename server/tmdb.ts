@@ -312,10 +312,14 @@ async function getPersonDetails(personId: number) {
   }
 }
 
-function formatImageUrl(path: string | null, size: 'w500' | 'original' = 'w500'): string {
+const mediaValidator = new MediaValidator(TMDB_ACCESS_TOKEN);
+
+async function formatImageUrl(path: string | null, size: 'w500' | 'original' = 'w500'): Promise<string> {
   if (!path) return '/placeholder-poster.jpg';
   if (!path.startsWith('http')) {
-    return `${TMDB_IMAGE_BASE_URL}/${size}${path}`;
+    const url = `${TMDB_IMAGE_BASE_URL}/${size}${path}`;
+    const isValid = await mediaValidator.verifyImageAvailability(url);
+    return isValid ? url : '/placeholder-poster.jpg';
   }
   return path;
 }
@@ -520,6 +524,15 @@ async function fetchComprehensiveNomineeData(nominee: Nominee): Promise<any> {
 
       const movieDetails = await getMovieDetails(searchResult.id);
       if (!movieDetails) return null;
+
+      // Validate and format images
+      const { poster, backdrop } = await mediaValidator.validateAndFormatImages(
+        movieDetails.poster_path,
+        movieDetails.backdrop_path
+      );
+
+      // Get best available trailer
+      const bestTrailer = await mediaValidator.getBestTrailer(movieDetails.videos?.results || []);
 
       return {
         tmdbId: searchResult.id,
