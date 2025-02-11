@@ -1,9 +1,9 @@
-import { pgTable, text, serial, integer, jsonb, boolean, timestamp, unique, index } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, jsonb, boolean, timestamp, unique } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { relations } from "drizzle-orm";
 
-// Oscar categories enum
+// Add validation enums for categories
 export const OscarCategories = {
   PICTURE: "Best Picture",
   ACTOR: "Best Actor",
@@ -29,7 +29,6 @@ export const OscarCategories = {
 
 export type OscarCategory = typeof OscarCategories[keyof typeof OscarCategories];
 
-// Users table with authentication
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   username: text("username").notNull().unique(),
@@ -37,97 +36,116 @@ export const users = pgTable("users", {
   isAdmin: boolean("is_admin").notNull().default(false),
 });
 
-// Nominees table with essential fields and TMDB integration
 export const nominees = pgTable("nominees", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
   category: text("category").notNull(),
   description: text("description").notNull(),
-  tmdbId: integer("tmdb_id"),
-  posterPath: text("poster_path"),
-  backdropPath: text("backdrop_path"),
-  trailerUrl: text("trailer_url"),
-
-  // Basic movie/person info
-  releaseDate: text("release_date"),
-  runtime: integer("runtime"),
-  voteAverage: integer("vote_average"),
-  genres: text("genres").array(),
-  overview: text("overview"),
-
-  // Credits and additional info
-  cast: jsonb("cast").$type<Array<{
-    id: number,
-    name: string,
-    character: string,
-    profilePath: string | null
-  }>>(),
-  director: text("director"),
-
-  // Oscar specific fields
-  ceremonyYear: integer("ceremony_year").notNull(),
+  posterPath: text("poster_path").notNull(),
+  trailerUrl: text("trailer_url").notNull(),
+  streamingPlatforms: text("streaming_platforms").array().notNull(),
+  awards: jsonb("awards").notNull(),
+  historicalAwards: jsonb("historical_awards").$type<{
+    year: number;
+    awards: Array<{
+      name: string;
+      type: string;
+      category: string;
+      result: "Won" | "Nominated";
+      ceremonyName: string;
+    }>;
+  }[]>().notNull().default([]),
+  cast: text("cast").array().notNull(),
+  crew: text("crew").array().notNull(),
+  funFacts: text("fun_facts").array().notNull(),
+  ceremonyYear: integer("ceremony_year").notNull().default(2024),
   isWinner: boolean("is_winner").notNull().default(false),
 
-  // Validation status
-  lastUpdated: timestamp("last_updated").notNull().defaultNow(),
-  isValidated: boolean("is_validated").notNull().default(false),
-  validationErrors: text("validation_errors").array().default([]),
-}, (table) => ({
-  categoryIdx: index("nominee_category_idx").on(table.category),
-  yearIdx: index("nominee_year_idx").on(table.ceremonyYear),
-  tmdbIdx: index("nominee_tmdb_idx").on(table.tmdbId),
-}));
+  // TMDB fields
+  tmdbId: integer("tmdb_id"),
+  runtime: integer("runtime"),
+  releaseDate: text("release_date"),
+  voteAverage: integer("vote_average"),
+  backdropPath: text("backdrop_path"),
+  genres: text("genres").array(),
+  overview: text("overview"),
+  biography: text("biography"),
 
-// User predictions/voting
-export const predictions = pgTable("predictions", {
+  // Validation fields
+  lastUpdated: timestamp("last_updated").notNull().defaultNow(),
+  dataVersion: integer("data_version").notNull().default(1),
+  dataComplete: boolean("data_complete").notNull().default(false),
+  lastTMDBSync: timestamp("last_tmdb_sync"),
+  validationStatus: text("validation_status").notNull().default('pending'),
+  validationErrors: text("validation_errors").array().notNull().default([]),
+});
+
+export const ballots = pgTable("ballots", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").notNull().references(() => users.id),
   nomineeId: integer("nominee_id").notNull().references(() => nominees.id),
-  predictedWinner: boolean("predicted_winner").notNull().default(false),
   hasWatched: boolean("has_watched").notNull().default(false),
+  predictedWinner: boolean("predicted_winner").notNull().default(false),
+  wantToWin: boolean("want_to_win").notNull().default(false),
+});
+
+export const watchlist = pgTable("watchlist", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  nomineeId: integer("nominee_id").notNull().references(() => nominees.id),
+  addedAt: timestamp("added_at").notNull().defaultNow(),
+  watchStatus: text("watch_status").notNull().default('pending'),
   rating: integer("rating"),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
+  notes: text("notes"),
 }, (table) => ({
   uniqUserNominee: unique().on(table.userId, table.nomineeId),
 }));
 
 // Relations
 export const usersRelations = relations(users, ({ many }) => ({
-  predictions: many(predictions),
+  ballots: many(ballots),
+  watchlistItems: many(watchlist),
 }));
 
 export const nomineesRelations = relations(nominees, ({ many }) => ({
-  predictions: many(predictions),
+  ballots: many(ballots),
+  watchlistItems: many(watchlist),
 }));
 
-export const predictionsRelations = relations(predictions, ({ one }) => ({
+export const ballotsRelations = relations(ballots, ({ one }) => ({
   user: one(users, {
-    fields: [predictions.userId],
+    fields: [ballots.userId],
     references: [users.id],
   }),
   nominee: one(nominees, {
-    fields: [predictions.nomineeId],
+    fields: [ballots.nomineeId],
     references: [nominees.id],
   }),
 }));
 
-// Zod schemas for validation
+export const watchlistRelations = relations(watchlist, ({ one }) => ({
+  user: one(users, {
+    fields: [watchlist.userId],
+    references: [users.id],
+  }),
+  nominee: one(nominees, {
+    fields: [watchlist.nomineeId],
+    references: [nominees.id],
+  }),
+}));
+
+// Create insert schemas
 export const insertUserSchema = createInsertSchema(users).omit({ id: true });
-export const insertNomineeSchema = createInsertSchema(nominees).omit({ 
-  id: true,
-  lastUpdated: true,
-  isValidated: true,
-  validationErrors: true
-});
-export const insertPredictionSchema = createInsertSchema(predictions).omit({ 
-  id: true,
-  createdAt: true
-});
+export const insertNomineeSchema = createInsertSchema(nominees);
+export const insertBallotSchema = createInsertSchema(ballots);
+export const insertWatchlistSchema = createInsertSchema(watchlist).omit({ id: true, addedAt: true });
 
 // Export types
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 export type InsertNominee = z.infer<typeof insertNomineeSchema>;
 export type Nominee = typeof nominees.$inferSelect;
-export type InsertPrediction = z.infer<typeof insertPredictionSchema>;
-export type Prediction = typeof predictions.$inferSelect;
+export type InsertBallot = z.infer<typeof insertBallotSchema>;
+export type Ballot = typeof ballots.$inferSelect;
+export type InsertWatchlist = z.infer<typeof insertWatchlistSchema>;
+export type Watchlist = typeof watchlist.$inferSelect;

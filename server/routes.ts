@@ -2,7 +2,7 @@ import { validate2025Nominees } from "./oscar2025validator";
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertPredictionSchema } from "@shared/schema";
+import { insertBallotSchema } from "@shared/schema";
 import { setupAuth, requireAuth } from "./auth";
 import { updateNomineeWithTMDBData, validateNomineeData } from "./tmdb";
 import rateLimit from 'express-rate-limit';
@@ -129,6 +129,74 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  setupAuth(app);
+
+  // Ballot routes
+  app.get("/api/ballots/:nomineeId", requireAuth, async (req, res) => {
+    const ballot = await storage.getBallot(
+      parseInt(req.params.nomineeId),
+      req.user!.id
+    );
+    if (!ballot) {
+      res.json({
+        nomineeId: parseInt(req.params.nomineeId),
+        userId: req.user!.id,
+        hasWatched: false,
+        predictedWinner: false,
+        wantToWin: false
+      });
+      return;
+    }
+    res.json(ballot);
+  });
+
+  app.post("/api/ballots", requireAuth, async (req, res) => {
+    const result = insertBallotSchema.safeParse(req.body);
+    if (!result.success) {
+      res.status(400).json({ message: "Invalid ballot data" });
+      return;
+    }
+    const ballot = await storage.updateBallot({
+      ...result.data,
+      userId: req.user!.id
+    });
+    res.json(ballot);
+  });
+
+  // Watchlist routes
+  app.get("/api/watchlist", requireAuth, async (req, res) => {
+    try {
+      const watchlist = await storage.getWatchlist(req.user!.id);
+      res.json(watchlist);
+    } catch (error) {
+      console.error('Error fetching watchlist:', error);
+      res.status(500).json({ message: "Failed to fetch watchlist" });
+    }
+  });
+
+  app.post("/api/watchlist", requireAuth, async (req, res) => {
+    try {
+      const watchlistItem = await storage.addToWatchlist({
+        ...req.body,
+        userId: req.user!.id
+      });
+      res.json(watchlistItem);
+    } catch (error) {
+      console.error('Error adding to watchlist:', error);
+      res.status(500).json({ message: "Failed to add to watchlist" });
+    }
+  });
+
+  app.delete("/api/watchlist/:nomineeId", requireAuth, async (req, res) => {
+    try {
+      await storage.removeFromWatchlist(req.user!.id, parseInt(req.params.nomineeId));
+      res.sendStatus(200);
+    } catch (error) {
+      console.error('Error removing from watchlist:', error);
+      res.status(500).json({ message: "Failed to remove from watchlist" });
+    }
+  });
+
   // Enhanced TMDB update endpoint with validation
   app.post("/api/nominees/update-tmdb", tmdbLimiter, async (_req, res) => {
     try {
@@ -208,39 +276,6 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  setupAuth(app);
-
-  // Prediction routes
-  app.get("/api/predictions/:nomineeId", requireAuth, async (req, res) => {
-    const prediction = await storage.getPrediction(
-      parseInt(req.params.nomineeId),
-      req.user!.id
-    );
-    if (!prediction) {
-      res.json({
-        nomineeId: parseInt(req.params.nomineeId),
-        userId: req.user!.id,
-        hasWatched: false,
-        predictedWinner: false,
-        rating: null
-      });
-      return;
-    }
-    res.json(prediction);
-  });
-
-  app.post("/api/predictions", requireAuth, async (req, res) => {
-    const result = insertPredictionSchema.safeParse(req.body);
-    if (!result.success) {
-      res.status(400).json({ message: "Invalid prediction data" });
-      return;
-    }
-    const prediction = await storage.updatePrediction({
-      ...result.data,
-      userId: req.user!.id
-    });
-    res.json(prediction);
-  });
 
   return createServer(app);
 }

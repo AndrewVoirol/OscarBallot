@@ -285,28 +285,6 @@ async function getPersonDetails(personId: number) {
     console.log(`Successfully retrieved details for person ID ${personId}`);
     return response.data;
   } catch (error: any) {
-    if (error.response?.status === 404) {
-      console.error(`Person ID ${personId} not found in TMDB`);
-      return null;
-    }
-    if (error.response?.status === 429) {
-      for (let attempts = 0; attempts < RATE_LIMIT.retryAttempts; attempts++) {
-        console.log(`Rate limit hit, attempt ${attempts + 1}/${RATE_LIMIT.retryAttempts}`);
-        await new Promise(resolve => setTimeout(resolve, RATE_LIMIT.retryDelay));
-
-        try {
-          const retryResponse = await tmdbAxios.get(`/person/${personId}`, {
-            params: {
-              append_to_response: PERSON_APPEND_PARAMS,
-              language: "en-US"
-            }
-          });
-          return retryResponse.data;
-        } catch (retryError) {
-          if (retryError.response?.status !== 429) throw retryError;
-        }
-      }
-    }
     console.error(`Error fetching person details for ID ${personId}:`, error.response?.data || error.message);
     return null;
   }
@@ -363,8 +341,15 @@ async function formatImageUrl(path: string | null, size: 'w500' | 'original' = '
   if (!path) return '/placeholder-poster.jpg';
   if (!path.startsWith('http')) {
     const url = `${TMDB_IMAGE_BASE_URL}/${size}${path}`;
-    const isValid = await mediaValidator.verifyImageAvailability(url);
-    return isValid ? url : '/placeholder-poster.jpg';
+    try {
+      const response = await axios.head(url, {
+        timeout: 5000,
+        validateStatus: (status) => status === 200
+      });
+      return response.status === 200 ? url : '/placeholder-poster.jpg';
+    } catch {
+      return '/placeholder-poster.jpg';
+    }
   }
   return path;
 }
@@ -492,16 +477,6 @@ async function fetchComprehensiveNomineeData(nominee: Nominee): Promise<any> {
     throw new Error('Missing required nominee fields');
   }
 
-  const categoryHandler = new OscarCategoryTMDBHandler(tmdbAxios);
-  const categoryValidation = await categoryHandler.fetchTMDBDataForCategory(
-    nominee,
-    nominee.category
-  );
-
-  if (!categoryValidation.isValid) {
-    console.warn(`Category validation issues for ${nominee.name}:`, categoryValidation.errors);
-  }
-
   const isPersonCategory = [
     'Best Actor',
     'Best Actress',
@@ -518,24 +493,12 @@ async function fetchComprehensiveNomineeData(nominee: Nominee): Promise<any> {
       const personDetails = await getPersonDetails(searchResult.id);
       if (!personDetails) return null;
 
-      const careerHighlights = {
-        topRatedProjects: personDetails.movie_credits?.cast
-          ?.sort((a: any, b: any) => b.vote_average - a.vote_average)
-          .slice(0, 10)
-          .map((project: any) => ({
-            id: project.id,
-            title: project.title,
-            year: project.release_date ? new Date(project.release_date).getFullYear() : null,
-            role: project.character || project.job,
-            rating: Math.round(project.vote_average * 10)
-          })) || [],
-        awards: [] 
-      };
-
+      // For person categories, use profile_path instead of poster_path
       return {
         tmdbId: searchResult.id,
+        posterPath: personDetails.profile_path ? await formatImageUrl(personDetails.profile_path) : null,
         biography: personDetails.biography,
-        profileImage: personDetails.profile_path ? formatImageUrl(personDetails.profile_path) : null,
+        profileImage: personDetails.profile_path ? await formatImageUrl(personDetails.profile_path) : null,
         externalIds: {
           imdbId: personDetails.external_ids?.imdb_id,
           instagramId: personDetails.external_ids?.instagram_id,
@@ -555,7 +518,19 @@ async function fetchComprehensiveNomineeData(nominee: Nominee): Promise<any> {
           department: c.department,
           releaseDate: c.release_date
         })) || [],
-        careerHighlights,
+        careerHighlights: {
+          topRatedProjects: personDetails.movie_credits?.cast
+            ?.sort((a: any, b: any) => b.vote_average - a.vote_average)
+            .slice(0, 10)
+            .map((project: any) => ({
+              id: project.id,
+              title: project.title,
+              year: project.release_date ? new Date(project.release_date).getFullYear() : null,
+              role: project.character || project.job,
+              rating: Math.round(project.vote_average * 10)
+            })) || [],
+          awards: []
+        },
         funFacts: [
           `Known for department: ${personDetails.known_for_department}`,
           `Place of birth: ${personDetails.place_of_birth}`,
@@ -581,15 +556,13 @@ async function fetchComprehensiveNomineeData(nominee: Nominee): Promise<any> {
 
       return {
         tmdbId: searchResult.id,
+        posterPath: poster,
+        backdropPath: backdrop,
         overview: movieDetails.overview,
         releaseDate: movieDetails.release_date,
         runtime: movieDetails.runtime,
         genres: movieDetails.genres?.map((g: any) => g.name),
-        poster: movieDetails.poster_path ? formatImageUrl(movieDetails.poster_path) : null,
-        backdropPath: movieDetails.backdrop_path ? formatImageUrl(movieDetails.backdrop_path, 'original') : null,
-        trailerUrl: movieDetails.videos?.results?.find((v: any) => 
-          v.type === "Trailer" && v.site === "YouTube"
-        )?.key ? `https://www.youtube.com/watch?v=${movieDetails.videos.results[0].key}` : null,
+        trailerUrl: bestTrailer ? (bestTrailer.site === 'YouTube' ? `https://www.youtube.com/watch?v=${bestTrailer.key}` : bestTrailer.site) : null,
         cast: movieDetails.credits?.cast?.slice(0, 10).map((c: any) => c.name) || [],
         crew: movieDetails.credits?.crew
           ?.filter((c: any) => ["Director", "Producer", "Screenplay", "Writer"].includes(c.job))
@@ -603,7 +576,7 @@ async function fetchComprehensiveNomineeData(nominee: Nominee): Promise<any> {
         productionCompanies: movieDetails.production_companies?.map((pc: any) => ({
           id: pc.id,
           name: pc.name,
-          logoPath: pc.logo_path ? formatImageUrl(pc.logo_path) : null,
+          logoPath: pc.logo_path ? await formatImageUrl(pc.logo_path) : null,
           originCountry: pc.origin_country
         })),
         externalIds: {
@@ -624,23 +597,87 @@ export async function updateNomineeWithTMDBData(nominee: Nominee): Promise<Nomin
   try {
     console.log(`Processing nominee: "${nominee.name}" (${nominee.ceremonyYear})`);
 
-    const comprehensiveData = await fetchComprehensiveNomineeData(nominee);
-    if (!comprehensiveData) {
-      console.log(`No comprehensive data found for: "${nominee.name}"`);
-      return nominee;
+    const isPersonCategory = [
+      'Best Actor',
+      'Best Actress',
+      'Best Supporting Actor',
+      'Best Supporting Actress',
+      'Best Director'
+    ].includes(nominee.category);
+
+    if (isPersonCategory) {
+      const searchResult = await searchPerson(nominee.name);
+      if (!searchResult) {
+        console.log(`No person data found for: "${nominee.name}"`);
+        return nominee;
+      }
+
+      const personDetails = await getPersonDetails(searchResult.id);
+      if (!personDetails) return nominee;
+
+      // For person categories, use profile_path as the posterPath
+      const profileImageUrl = personDetails.profile_path ? 
+        `${TMDB_IMAGE_BASE_URL}/original${personDetails.profile_path}` : 
+        '/placeholder-profile.jpg';
+
+      const [updatedNominee] = await db
+        .update(nominees)
+        .set({
+          tmdbId: searchResult.id,
+          posterPath: profileImageUrl,
+          biography: personDetails.biography,
+          overview: personDetails.biography,
+          cast: personDetails.movie_credits?.cast?.slice(0, 10).map((c: any) => c.name) || [],
+          crew: personDetails.movie_credits?.crew?.slice(0, 10).map((c: any) => `${c.name} (${c.job})`) || [],
+          lastTMDBSync: new Date(),
+          dataComplete: true,
+          validationStatus: 'success'
+        })
+        .where(eq(nominees.id, nominee.id))
+        .returning();
+
+      return updatedNominee;
+    } else {
+      const searchResult = await searchMovie(nominee.name, nominee.ceremonyYear);
+      if (!searchResult) {
+        console.log(`No movie data found for: "${nominee.name}"`);
+        return nominee;
+      }
+
+      const movieDetails = await getMovieDetails(searchResult.id);
+      if (!movieDetails) return nominee;
+
+      const posterUrl = movieDetails.poster_path ? 
+        `${TMDB_IMAGE_BASE_URL}/original${movieDetails.poster_path}` : 
+        '/placeholder-poster.jpg';
+
+      const backdropUrl = movieDetails.backdrop_path ? 
+        `${TMDB_IMAGE_BASE_URL}/original${movieDetails.backdrop_path}` : 
+        null;
+
+      const [updatedNominee] = await db
+        .update(nominees)
+        .set({
+          tmdbId: searchResult.id,
+          posterPath: posterUrl,
+          backdropPath: backdropUrl,
+          overview: movieDetails.overview,
+          releaseDate: movieDetails.release_date,
+          runtime: movieDetails.runtime,
+          genres: movieDetails.genres?.map((g: any) => g.name),
+          cast: movieDetails.credits?.cast?.slice(0, 10).map((c: any) => c.name) || [],
+          crew: movieDetails.credits?.crew
+            ?.filter((c: any) => ["Director", "Producer", "Screenplay", "Writer"].includes(c.job))
+            .map((c: any) => `${c.name} (${c.job})`) || [],
+          lastTMDBSync: new Date(),
+          dataComplete: true,
+          validationStatus: 'success'
+        })
+        .where(eq(nominees.id, nominee.id))
+        .returning();
+
+      return updatedNominee;
     }
-
-    const [updatedNominee] = await db
-      .update(nominees)
-      .set({
-        ...comprehensiveData,
-        lastTMDBSync: new Date(),
-        dataComplete: true
-      })
-      .where(eq(nominees.id, nominee.id))
-      .returning();
-
-    return updatedNominee;
   } catch (error: any) {
     console.error(`Error updating TMDB data for "${nominee.name}":`, error.message);
     return nominee;

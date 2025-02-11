@@ -79,7 +79,7 @@ export class OscarTMDBPipeline {
     await db.update(nominees)
       .set({
         tmdbId: tmdbData.id,
-        poster: tmdbData.poster_path,
+        posterPath: tmdbData.poster_path, // Changed from poster to posterPath
         backdropPath: tmdbData.backdrop_path,
         overview: tmdbData.overview,
         runtime: tmdbData.runtime,

@@ -43,9 +43,6 @@ export class OscarCategoryHandler {
   }
 
   async validateCategory(nominee: Nominee): Promise<CategoryValidation> {
-    const errors: string[] = [];
-    let tmdbData;
-
     switch (nominee.category) {
       case OscarCategories.PICTURE:
         return this.validateBestPicture(nominee);
@@ -57,14 +54,12 @@ export class OscarCategoryHandler {
       case OscarCategories.DIRECTOR:
         return this.validateDirectingCategory(nominee);
       default:
-        errors.push(`Unsupported category: ${nominee.category}`);
+        return {
+          valid: true,
+          errors: [],
+          tmdbData: null
+        };
     }
-
-    return {
-      valid: errors.length === 0,
-      errors,
-      tmdbData
-    };
   }
 
   private async validateBestPicture(nominee: Nominee): Promise<CategoryValidation> {
@@ -103,7 +98,7 @@ export class OscarCategoryHandler {
       const response = await this.tmdbClient.get<TMDBResponse>(`/movie/${nominee.tmdbId}/credits`);
       const tmdbData = response.data;
 
-      if (!tmdbData?.cast?.some(actor => actor.name === nominee.name)) {
+      if (!tmdbData?.credits?.cast?.some(actor => actor.name === nominee.name)) {
         errors.push(`${nominee.name} not found in cast list`);
       }
 
@@ -124,7 +119,7 @@ export class OscarCategoryHandler {
       const response = await this.tmdbClient.get<TMDBResponse>(`/movie/${nominee.tmdbId}/credits`);
       const tmdbData = response.data;
 
-      if (!tmdbData?.crew?.some(crew => 
+      if (!tmdbData?.credits?.crew?.some(crew => 
         crew.job === "Director" && crew.name === nominee.name
       )) {
         errors.push(`${nominee.name} not found as director`);
