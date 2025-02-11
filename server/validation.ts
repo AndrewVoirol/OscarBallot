@@ -10,10 +10,30 @@ export interface ValidationResult {
   missingFields: string[];
 }
 
+import { MediaValidationService } from './media-validation';
+
+const mediaValidationService = new MediaValidationService(process.env.TMDB_ACCESS_TOKEN || '');
+
 export async function validateNominee(nominee: Nominee): Promise<ValidationResult> {
   const errors: string[] = [];
   const warnings: string[] = [];
   const missingFields: string[] = [];
+
+  // Validate media content
+  try {
+    const mediaValidation = await mediaValidationService.validateNomineeMedia(nominee.id);
+    if (!mediaValidation.poster) {
+      missingFields.push('poster');
+    }
+    if (!mediaValidation.backdrop) {
+      warnings.push('Missing backdrop image');
+    }
+    if (!mediaValidation.bestTrailer) {
+      warnings.push('Missing trailer');
+    }
+  } catch (error) {
+    errors.push(`Media validation failed: ${error.message}`);
+  }
 
   // Validate against schema
   const schemaValidation = nomineeValidationSchema.safeParse(nominee);
