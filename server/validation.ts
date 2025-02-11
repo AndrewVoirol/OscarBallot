@@ -14,10 +14,18 @@ import { MediaValidationService } from './media-validation';
 
 const mediaValidationService = new MediaValidationService(process.env.TMDB_ACCESS_TOKEN || '');
 
+import { ValidationReportService } from './validation-report';
+
+const validationReportService = new ValidationReportService();
+
 export async function validateNominee(nominee: Nominee): Promise<ValidationResult> {
   const errors: string[] = [];
   const warnings: string[] = [];
   const missingFields: string[] = [];
+  
+  // Track validation metrics
+  let mediaScore = 0;
+  let dataCompleteness = 100;
 
   // Validate media content
   try {
@@ -74,6 +82,19 @@ export async function validateNominee(nominee: Nominee): Promise<ValidationResul
   if (personCategories.includes(nominee.category as any)) {
     if (!nominee.biography) missingFields.push('biography');
   }
+
+  // Calculate final scores
+  if (missingFields.length > 0) {
+    dataCompleteness -= (missingFields.length * 10);
+  }
+  
+  // Generate validation report
+  await validationReportService.createReport(nominee.id, {
+    mediaScore,
+    dataCompleteness,
+    issues: [...errors, ...warnings],
+    recommendations: missingFields.map(field => `Add missing ${field}`)
+  });
 
   return {
     isValid: errors.length === 0,
