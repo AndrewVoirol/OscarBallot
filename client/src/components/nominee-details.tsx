@@ -42,6 +42,9 @@ export function NomineeDetails({ nominee }: NomineeDetailsProps) {
 
       <div className="relative z-20 p-6 -mt-16">
         <DialogTitle className="sr-only">Details for {nominee.name}</DialogTitle>
+<DialogDescription className="sr-only">
+  Detailed information about {nominee.name} including awards history, cast, and crew
+</DialogDescription>
 
         <div className="flex flex-col md:flex-row gap-6">
           <div className="shrink-0 w-40 md:w-48">
