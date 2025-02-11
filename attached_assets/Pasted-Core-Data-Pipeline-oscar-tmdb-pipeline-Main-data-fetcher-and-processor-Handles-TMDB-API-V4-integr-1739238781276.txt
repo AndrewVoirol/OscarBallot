@@ -1,0 +1,74 @@
+Core Data Pipeline (oscar-tmdb-pipeline)
+
+Main data fetcher and processor
+Handles TMDB API V4 integration
+Manages database schema and storage
+This is your primary starting point
+
+
+Media & Validation Enhancement (media-validation)
+
+Handles trailer verification and selection
+Manages image sizes and validation
+Ensures data quality
+This supplements the core pipeline
+
+
+Frontend Components
+
+Movie media display component
+Can be addressed later
+
+
+
+For your immediate needs focusing on 2024-2025 awards seasons, here's what to prioritize:
+
+Use the Core Pipeline First
+
+typescriptCopyclass OscarTMDBPipeline {
+  // This is your main entry point
+  constructor(dbConfig: any, tmdbAccessToken: string) {
+    this.pool = new Pool(dbConfig);
+    this.tmdbAccessToken = tmdbAccessToken;
+  }
+}
+
+Awards Season Handling
+Important consideration: You're absolutely right about the awards season distinction. For example:
+
+
+"Oppenheimer" (Released July 2023) → 2024 Awards Season
+"Poor Things" (Released December 2023) → 2024 Awards Season
+"Dune: Part Two" (Released March 2024) → 2025 Awards Season
+
+To handle this, you should use the nomination data as your source of truth, not release dates. The pipeline includes methods to parse nomination data directly from the Academy's format:
+typescriptCopy// This handles the official nomination data
+parseOscarNominees(content: string, year: number): OscarNominee[] {
+  // Parses official Academy nomination lists
+  // Year parameter refers to the ceremony year, not release year
+}
+
+Data Quality Pipeline Order
+For best results, use this sequence:
+
+typescriptCopyconst pipeline = new OscarTMDBPipeline(config, tmdbToken);
+
+// 1. Initialize database
+await pipeline.initializeDatabase();
+
+// 2. Process 2024 season (96th Academy Awards)
+const nominees2024 = pipeline.parseOscarNominees(oscar2024Data, 2024);
+await pipeline.processNominees(nominees2024);
+
+// 3. Process 2025 season (97th Academy Awards)
+const nominees2025 = pipeline.parseOscarNominees(oscar2025Data, 2025);
+await pipeline.processNominees(nominees2025);
+
+// 4. Validate and enhance media content
+const mediaValidator = new MediaValidator(tmdbToken);
+await pipeline.enhanceWithMediaContent(mediaValidator);
+Key Files to Focus On:
+
+oscar-tmdb-pipeline.ts - Your core data processing
+media-validation.ts - Media enhancement
+Database schema definitions
