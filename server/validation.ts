@@ -18,10 +18,33 @@ import { ValidationReportService } from './validation-report';
 
 const validationReportService = new ValidationReportService();
 
+import { AwardsSeasonHandler } from './awards-season-handler';
+import { OscarCategoryHandler } from './category-handler';
+import { TMDBClient } from './tmdb';
+
+const awardsHandler = new AwardsSeasonHandler();
+const categoryHandler = new OscarCategoryHandler(new TMDBClient(process.env.TMDB_ACCESS_TOKEN || ''));
+
 export async function validateNominee(nominee: Nominee): Promise<ValidationResult> {
   const errors: string[] = [];
   const warnings: string[] = [];
   const missingFields: string[] = [];
+
+  // Validate season eligibility
+  const seasonValidation = await awardsHandler.validateNomineeForSeason(
+    nominee,
+    nominee.year as 2024 | 2025
+  );
+
+  if (!seasonValidation.eligible) {
+    errors.push(seasonValidation.reason || 'Not eligible for season');
+  }
+
+  // Validate category-specific requirements
+  const categoryValidation = await categoryHandler.validateCategory(nominee);
+  if (!categoryValidation.valid) {
+    errors.push(...categoryValidation.errors);
+  }
   
   // Track validation metrics
   let mediaScore = 100;
