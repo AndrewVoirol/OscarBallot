@@ -4,7 +4,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertBallotSchema } from "@shared/schema";
 import { setupAuth, requireAuth } from "./auth";
-import { updateNomineeWithTMDBData, validateNomineeData, type ValidationReport } from "./tmdb";
+import { updateNomineeWithTMDBData, validateNomineeData } from "./tmdb";
 import rateLimit from 'express-rate-limit';
 import { eq } from "drizzle-orm";
 
@@ -14,6 +14,53 @@ export function registerRoutes(app: Express): Server {
     windowMs: 15 * 60 * 1000, // 15 minutes
     max: 10, // limit each IP to 10 requests per windowMs
     message: "Too many requests to update TMDB data, please try again later"
+  });
+
+  // Add new route for 2025 nominee validation
+  app.get("/api/nominees/validate-2025", async (_req, res) => {
+    try {
+      const validationResult = await validate2025Nominees();
+      if (!validationResult) {
+        res.status(500).json({ message: "Failed to validate 2025 nominees - no result returned" });
+        return;
+      }
+      res.json(validationResult);
+    } catch (error) {
+      console.error('Error validating 2025 nominees:', error);
+      res.status(500).json({ 
+        message: "Failed to validate 2025 nominees",
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+
+  // Enhanced validation report endpoint
+  app.get("/api/nominees/validation-report", async (_req, res) => {
+    try {
+      const nominees = await storage.getNominees();
+      const validationPromises = nominees.map(nominee => validateNomineeData(nominee));
+      const validationReports = await Promise.all(validationPromises);
+
+      // Group issues by severity
+      const issuesBySeverity = {
+        high: validationReports.filter(r => r.severity === 'high'),
+        medium: validationReports.filter(r => r.severity === 'medium'),
+        low: validationReports.filter(r => r.severity === 'low')
+      };
+
+      // Filter to only show nominees with issues
+      const problemNominees = validationReports.filter(report => report.issues.length > 0);
+
+      res.json({
+        totalNominees: nominees.length,
+        nomineesWithIssues: problemNominees.length,
+        issuesBySeverity,
+        reports: problemNominees
+      });
+    } catch (error) {
+      console.error('Error generating validation report:', error);
+      res.status(500).json({ message: "Failed to generate validation report" });
+    }
   });
 
   // Public routes for accessing nominee data
@@ -90,34 +137,6 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // Enhanced validation report endpoint
-  app.get("/api/nominees/validation-report", async (_req, res) => {
-    try {
-      const nominees = await storage.getNominees();
-      const validationPromises = nominees.map(nominee => validateNomineeData(nominee));
-      const validationReports = await Promise.all(validationPromises);
-
-      // Group issues by severity
-      const issuesBySeverity = {
-        high: validationReports.filter(r => r.severity === 'high'),
-        medium: validationReports.filter(r => r.severity === 'medium'),
-        low: validationReports.filter(r => r.severity === 'low')
-      };
-
-      // Filter to only show nominees with issues
-      const problemNominees = validationReports.filter(report => report.issues.length > 0);
-
-      res.json({
-        totalNominees: nominees.length,
-        nomineesWithIssues: problemNominees.length,
-        issuesBySeverity,
-        reports: problemNominees
-      });
-    } catch (error) {
-      console.error('Error generating validation report:', error);
-      res.status(500).json({ message: "Failed to generate validation report" });
-    }
-  });
 
   // Enhanced TMDB update endpoint with validation
   app.post("/api/nominees/update-tmdb", tmdbLimiter, async (_req, res) => {
@@ -198,24 +217,6 @@ export function registerRoutes(app: Express): Server {
     } catch (error: any) {
       console.error('Error updating nominee TMDB data:', error);
       res.status(500).json({ message: "Failed to update nominee TMDB data" });
-    }
-  });
-
-  // Add new route for 2025 nominee validation
-  app.get("/api/nominees/validate-2025", async (_req, res) => {
-    try {
-      const validationResult = await validate2025Nominees();
-      if (!validationResult) {
-        res.status(500).json({ message: "Failed to validate 2025 nominees - no result returned" });
-        return;
-      }
-      res.json(validationResult);
-    } catch (error) {
-      console.error('Error validating 2025 nominees:', error);
-      res.status(500).json({ 
-        message: "Failed to validate 2025 nominees",
-        error: error instanceof Error ? error.message : String(error)
-      });
     }
   });
 

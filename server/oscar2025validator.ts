@@ -94,7 +94,9 @@ export async function validate2025Nominees() {
         errors.push({
           type: 'missing',
           category,
-          details: `Missing nominee: ${expectedName} in ${category}`
+          details: `Missing nominee: ${expectedName} in ${category}`,
+          severity: 'high',
+          recommendation: `Add nominee "${expectedName}" to ${category}`
         });
         continue;
       }
@@ -104,7 +106,9 @@ export async function validate2025Nominees() {
         errors.push({
           type: 'incomplete',
           category,
-          details: `Incomplete TMDB data for ${expectedName}: missing ${!found.tmdbId ? 'TMDB ID' : 'poster'}`
+          details: `Incomplete TMDB data for ${expectedName}: missing ${!found.tmdbId ? 'TMDB ID' : 'poster'}`,
+          severity: 'high',
+          recommendation: 'Update TMDB data for complete nominee information'
         });
       }
 
@@ -116,7 +120,9 @@ export async function validate2025Nominees() {
             category,
             details: `Incomplete movie data for ${expectedName}: missing ${
               !found.overview ? 'overview' : !found.releaseDate ? 'release date' : 'runtime'
-            }`
+            }`,
+            severity: 'high',
+            recommendation: 'Fetch complete movie details from TMDB'
           });
         }
       }
@@ -128,7 +134,9 @@ export async function validate2025Nominees() {
           errors.push({
             type: 'incomplete',
             category,
-            details: `Missing biography for ${expectedName}`
+            details: `Missing biography for ${expectedName}`,
+            severity: 'medium',
+            recommendation: 'Fetch biography data from TMDB'
           });
         }
       }
@@ -140,7 +148,9 @@ export async function validate2025Nominees() {
         errors.push({
           type: 'incorrect',
           category,
-          details: `Incorrect nominee in database: ${current.name} for ${category}`
+          details: `Incorrect nominee in database: ${current.name} for ${category}`,
+          severity: 'high',
+          recommendation: `Remove incorrect nominee "${current.name}" from ${category}`
         });
       }
     }
