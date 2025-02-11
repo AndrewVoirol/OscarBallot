@@ -88,3 +88,50 @@ export function ValidationReport({ report }: ValidationReportProps) {
     </div>
   );
 }
+import { useQuery } from '@tanstack/react-query';
+import { Card } from './ui/card';
+import { Progress } from './ui/progress';
+
+export function ValidationReport({ nomineeId }: { nomineeId: number }) {
+  const { data: report } = useQuery({
+    queryKey: ['validation-report', nomineeId],
+    queryFn: async () => {
+      const res = await fetch(`/api/nominees/${nomineeId}/validation`);
+      return res.json();
+    }
+  });
+
+  if (!report) return null;
+
+  return (
+    <Card className="p-4">
+      <h3 className="font-bold mb-4">Data Quality Report</h3>
+      <div className="space-y-4">
+        <div>
+          <div className="flex justify-between mb-2">
+            <span>Media Score</span>
+            <span>{report.mediaScore}%</span>
+          </div>
+          <Progress value={report.mediaScore} />
+        </div>
+        <div>
+          <div className="flex justify-between mb-2">
+            <span>Data Completeness</span>
+            <span>{report.dataCompleteness}%</span>
+          </div>
+          <Progress value={report.dataCompleteness} />
+        </div>
+        {report.issues.length > 0 && (
+          <div>
+            <h4 className="font-semibold mb-2">Issues</h4>
+            <ul className="list-disc pl-4">
+              {report.issues.map((issue: string, i: number) => (
+                <li key={i} className="text-sm text-muted-foreground">{issue}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </div>
+    </Card>
+  );
+}
