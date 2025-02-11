@@ -1,0 +1,69 @@
+Please resolve the errors. 
+
+Focus on getting the pipeline working with just 2024-2025 seasons
+Use the Academy's official nomination lists as your primary data source
+Let TMDB fill in the rich content (images, descriptions, etc.)
+Validate the data quality before moving to frontend development
+
+Let's start with handling the 2024-2025 awards season data specifically. This is a crucial foundation, and we should get it right before moving forward.Awards Season Data HandlerClick to open codeThis AwardsSeasonHandler specifically focuses on:
+
+Properly parsing the 2024-2025 awards season data
+Validating nominees against season eligibility
+Ensuring data integrity for each awards season
+
+Key features:
+
+Season-specific configuration
+Strict eligibility checking
+Category-specific validation rules
+Detailed error reporting
+
+Best Picture validation and then create a comprehensive category handler that will integrate smoothly with the TMDB pipeline.
+First, let's add proper Best Picture validation:Awards Season Data HandlerClick to open codeNow, let's create a comprehensive category handler that will integrate with the TMDB pipeline:Oscar Category TMDB Data HandlerClick to open codeThis implementation provides:
+
+Comprehensive Best Picture Validation:
+
+Runtime requirements
+Theatrical release verification
+Producer credits validation
+Disqualification checks
+
+
+Category-Specific TMDB Data Handling:
+
+Specific requirements per category
+Validation rules for each category
+Required credits checking
+Data enhancement for special categories
+
+
+Integration Points:
+
+Works with the awards season handler
+Connects to TMDB pipeline
+Handles all Oscar categories
+
+// Setup handlers
+const seasonHandler = new AwardsSeasonHandler();
+const categoryHandler = new OscarCategoryTMDBHandler(tmdbClient);
+
+// Process nominees
+async function processNominee(nominee: NomineeData) {
+  // 1. Validate season eligibility
+  const seasonValidation = await seasonHandler.verifySeasonEligibility(
+    nominee.releaseDate,
+    2025 // or 2024
+  );
+
+  if (!seasonValidation.eligible) {
+    return { error: seasonValidation.reason };
+  }
+
+  // 2. Get category-specific TMDB data
+  const categoryData = await categoryHandler.fetchTMDBDataForCategory(
+    nominee,
+    nominee.category
+  );
+
+  return categoryData;
+}
