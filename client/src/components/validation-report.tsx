@@ -1,20 +1,34 @@
-
 import { AlertCircle, CheckCircle, XCircle } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
+import { useQuery } from '@tanstack/react-query';
 
 interface ValidationReportProps {
-  report: {
+  report?: {
     mediaScore: number;
     dataCompleteness: number;
     issues: string[];
     recommendations: string[];
   };
+  nomineeId?: number;
 }
 
-export function ValidationReport({ report }: ValidationReportProps) {
+export function ValidationReport({ report: propReport, nomineeId }: ValidationReportProps) {
+  const { data: fetchedReport } = useQuery({
+    queryKey: ['validation-report', nomineeId],
+    queryFn: async () => {
+      const res = await fetch(`/api/nominees/${nomineeId}/validation`);
+      return res.json();
+    },
+    enabled: !!nomineeId
+  });
+
+  const report = propReport || fetchedReport;
+
+  if (!report) return null;
+
   const totalScore = (report.mediaScore + report.dataCompleteness) / 2;
 
   return (
@@ -86,52 +100,5 @@ export function ValidationReport({ report }: ValidationReportProps) {
         </Alert>
       )}
     </div>
-  );
-}
-import { useQuery } from '@tanstack/react-query';
-import { Card } from './ui/card';
-import { Progress } from './ui/progress';
-
-export function ValidationReport({ nomineeId }: { nomineeId: number }) {
-  const { data: report } = useQuery({
-    queryKey: ['validation-report', nomineeId],
-    queryFn: async () => {
-      const res = await fetch(`/api/nominees/${nomineeId}/validation`);
-      return res.json();
-    }
-  });
-
-  if (!report) return null;
-
-  return (
-    <Card className="p-4">
-      <h3 className="font-bold mb-4">Data Quality Report</h3>
-      <div className="space-y-4">
-        <div>
-          <div className="flex justify-between mb-2">
-            <span>Media Score</span>
-            <span>{report.mediaScore}%</span>
-          </div>
-          <Progress value={report.mediaScore} />
-        </div>
-        <div>
-          <div className="flex justify-between mb-2">
-            <span>Data Completeness</span>
-            <span>{report.dataCompleteness}%</span>
-          </div>
-          <Progress value={report.dataCompleteness} />
-        </div>
-        {report.issues.length > 0 && (
-          <div>
-            <h4 className="font-semibold mb-2">Issues</h4>
-            <ul className="list-disc pl-4">
-              {report.issues.map((issue: string, i: number) => (
-                <li key={i} className="text-sm text-muted-foreground">{issue}</li>
-              ))}
-            </ul>
-          </div>
-        )}
-      </div>
-    </Card>
   );
 }
