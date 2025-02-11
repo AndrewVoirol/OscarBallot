@@ -24,8 +24,35 @@ export async function validateNominee(nominee: Nominee): Promise<ValidationResul
   const missingFields: string[] = [];
   
   // Track validation metrics
-  let mediaScore = 0;
+  let mediaScore = 100;
   let dataCompleteness = 100;
+
+  // Essential fields check
+  if (!nominee.name || nominee.name.trim() === '') {
+    errors.push('Missing nominee name');
+    dataCompleteness -= 20;
+  }
+
+  if (!nominee.category || !Object.values(OscarCategories).includes(nominee.category as any)) {
+    errors.push('Invalid or missing category');
+    dataCompleteness -= 20;
+  }
+
+  // Media validation
+  if (!nominee.poster || nominee.poster === '/placeholder-poster.jpg') {
+    errors.push('Missing valid poster image');
+    mediaScore -= 40;
+  }
+
+  if (!nominee.backdropPath || nominee.backdropPath === '/placeholder-backdrop.jpg') {
+    warnings.push('Missing backdrop image');
+    mediaScore -= 20;
+  }
+
+  if (!nominee.trailerUrl) {
+    warnings.push('Missing trailer URL');
+    mediaScore -= 20;
+  }
 
   // Validate media content
   try {

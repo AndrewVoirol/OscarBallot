@@ -1,62 +1,51 @@
-
-import { MediaValidator } from './validation';
-import { db } from './db';
-import { nominees } from '@shared/schema';
-import { eq } from 'drizzle-orm';
+import { Nominee } from "@shared/schema";
+import fetch from "node-fetch";
 
 export class MediaValidationService {
-  private mediaValidator: MediaValidator;
+  constructor(private tmdbToken: string) {}
 
-  constructor(tmdbAccessToken: string) {
-    this.mediaValidator = new MediaValidator(tmdbAccessToken);
-  }
+  async validateNomineeMedia(nomineeId: number): Promise<{
+    poster: boolean;
+    backdrop: boolean;
+    bestTrailer: boolean;
+    score: number;
+  }> {
+    try {
+      const response = await fetch(`https://api.themoviedb.org/3/movie/${nomineeId}?api_key=${this.tmdbToken}`);
+      const data = await response.json();
 
-  async validateNomineeMedia(nomineeId: number) {
-    const nominee = await db.query.nominees.findFirst({
-      where: eq(nominees.id, nomineeId)
-    });
+      const posterValid = data.poster_path ? await this.validateImageUrl(data.poster_path) : false;
+      const backdropValid = data.backdrop_path ? await this.validateImageUrl(data.backdrop_path) : false;
 
-    if (!nominee) {
-      throw new Error('Nominee not found');
+      let score = 100;
+      if (!posterValid) score -= 40;
+      if (!backdropValid) score -= 30;
+      if (!data.videos?.results?.length) score -= 30;
+
+      return {
+        poster: posterValid,
+        backdrop: backdropValid,
+        bestTrailer: data.videos?.results?.length > 0,
+        score
+      };
+    } catch (error) {
+      console.error('Media validation failed:', error);
+      return {
+        poster: false,
+        backdrop: false,
+        bestTrailer: false,
+        score: 0
+      };
     }
-
-    // Validate images
-    const { poster, backdrop } = await this.mediaValidator.validateAndFormatImages(
-      nominee.poster,
-      nominee.backdropPath
-    );
-
-    // Get best trailer if available
-    const trailers = nominee.videos || [];
-    const bestTrailer = await this.mediaValidator.getBestTrailer(trailers);
-
-    // Update nominee with validated media
-    await db.update(nominees)
-      .set({
-        mediaValidation: {
-          images: { poster, backdrop },
-          videos: bestTrailer ? [bestTrailer] : [],
-          lastValidated: new Date().toISOString()
-        },
-        validationScore: this.calculateValidationScore({ poster, backdrop }, bestTrailer)
-      })
-      .where(eq(nominees.id, nomineeId));
-
-    return {
-      poster,
-      backdrop,
-      bestTrailer
-    };
   }
 
-  private calculateValidationScore(
-    images: { poster: any; backdrop: any },
-    trailer: any
-  ): number {
-    let score = 0;
-    if (images.poster) score += 40;
-    if (images.backdrop) score += 30;
-    if (trailer) score += 30;
-    return score;
+  private async validateImageUrl(path: string): Promise<boolean> {
+    if (!path) return false;
+    try {
+      const response = await fetch(`https://image.tmdb.org/t/p/original${path}`);
+      return response.ok;
+    } catch {
+      return false;
+    }
   }
 }
