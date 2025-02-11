@@ -48,6 +48,11 @@ export function NomineeDetails({ nominee }: NomineeDetailsProps) {
 
         <div className="flex flex-col md:flex-row gap-6">
           <div className="shrink-0 w-40 md:w-48">
+            {nominee.validationStatus === 'failed' && (
+              <div className="mb-4 p-2 bg-red-100 text-red-800 rounded">
+                Data validation issues detected
+              </div>
+            )}
             <div className="aspect-[2/3] relative bg-muted rounded-lg overflow-hidden shadow-lg">
               <img
                 src={nominee.poster}

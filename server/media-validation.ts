@@ -39,13 +39,14 @@ export class MediaValidationService {
     }
   }
 
-  private async validateImageUrl(path: string): Promise<boolean> {
-    if (!path) return false;
+  private async validateImageUrl(path: string): Promise<{isValid: boolean; quality: 'high' | 'medium' | 'low'}> {
+    if (!path || path === '/placeholder-poster.jpg' || path === '/placeholder-backdrop.jpg') 
+      return {isValid: false, quality: 'low'};
     try {
       const response = await fetch(`https://image.tmdb.org/t/p/original${path}`);
-      return response.ok;
+      return response.ok ? {isValid: true, quality: 'high'} : {isValid: false, quality: 'low'};
     } catch {
-      return false;
+      return {isValid: false, quality: 'low'};
     }
   }
 }

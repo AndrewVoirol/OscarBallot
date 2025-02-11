@@ -6,6 +6,14 @@ interface ValidationError {
   type: 'missing' | 'incorrect' | 'incomplete';
   category: string;
   details: string;
+  severity: 'high' | 'medium' | 'low';
+  recommendation?: string;
+}
+
+interface NomineeMetadata {
+  tmdbData: any;
+  mediaValidation: any;
+  historicalData: any;
 }
 
 // Official 2025 nominees data structure - this matches oscars.org
