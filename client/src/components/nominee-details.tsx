@@ -10,12 +10,23 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Clock, Calendar, Star, Building2, User } from "lucide-react";
 import { DialogTitle } from "@/components/ui/dialog";
 import type { Nominee } from "@shared/schema";
+import { ValidationReport } from "./validation-report";
+import { useQuery } from "@tanstack/react-query";
 
 interface NomineeDetailsProps {
   nominee: Nominee;
 }
 
 export function NomineeDetails({ nominee }: NomineeDetailsProps) {
+  const { data: validationReport, status } = useQuery({
+    queryKey: ["/api/nominees/validation", nominee.id],
+    queryFn: async () => {
+      const response = await fetch(`/api/nominees/${nominee.id}/validation`);
+      if (!response.ok) throw new Error("Failed to fetch validation report");
+      return response.json();
+    },
+  });
+
   return (
     <div className="relative">
       {nominee.backdropPath && (
@@ -225,6 +236,8 @@ export function NomineeDetails({ nominee }: NomineeDetailsProps) {
             </ul>
           </div>
         )}
+        {validationReport && <ValidationReport report={validationReport} />}
+
       </div>
     </div>
   );
