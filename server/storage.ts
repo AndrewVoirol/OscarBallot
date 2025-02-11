@@ -1,4 +1,4 @@
-import { type Nominee, type InsertNominee, type Ballot, type InsertBallot, type User, type InsertUser, type Watchlist, type InsertWatchlist, nominees, ballots, users, watchlist } from "@shared/schema";
+import { type Nominee, type InsertNominee, type User, type InsertUser, type Prediction, type InsertPrediction, nominees, predictions, users } from "@shared/schema";
 import session from "express-session";
 import { db } from "./db";
 import { eq, and, desc } from "drizzle-orm";
@@ -10,17 +10,11 @@ export interface IStorage {
   getNominees(year?: number): Promise<Nominee[]>;
   getNomineesByCategory(category: string, year?: number): Promise<Nominee[]>;
   getNominee(id: number): Promise<Nominee | undefined>;
-  getBallot(nomineeId: number, userId: number): Promise<Ballot | undefined>;
-  updateBallot(ballot: InsertBallot & { userId: number }): Promise<Ballot>;
+  getPrediction(nomineeId: number, userId: number): Promise<Prediction | undefined>;
+  updatePrediction(prediction: InsertPrediction & { userId: number }): Promise<Prediction>;
   getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
-
-  getWatchlist(userId: number): Promise<(Watchlist & { nominee: Nominee })[]>;
-  addToWatchlist(watchlistItem: InsertWatchlist): Promise<Watchlist>;
-  removeFromWatchlist(userId: number, nomineeId: number): Promise<void>;
-  updateWatchlistStatus(userId: number, nomineeId: number, status: string): Promise<Watchlist>;
-
   sessionStore: session.Store;
 }
 
@@ -76,34 +70,34 @@ export class DatabaseStorage implements IStorage {
     return nominee;
   }
 
-  async getBallot(nomineeId: number, userId: number): Promise<Ballot | undefined> {
-    const [ballot] = await db
+  async getPrediction(nomineeId: number, userId: number): Promise<Prediction | undefined> {
+    const [prediction] = await db
       .select()
-      .from(ballots)
+      .from(predictions)
       .where(
         and(
-          eq(ballots.nomineeId, nomineeId),
-          eq(ballots.userId, userId)
+          eq(predictions.nomineeId, nomineeId),
+          eq(predictions.userId, userId)
         )
       );
-    return ballot;
+    return prediction;
   }
 
-  async updateBallot(insertBallot: InsertBallot & { userId: number }): Promise<Ballot> {
-    const existingBallot = await this.getBallot(insertBallot.nomineeId, insertBallot.userId);
-    if (existingBallot) {
-      const [ballot] = await db
-        .update(ballots)
-        .set(insertBallot)
-        .where(eq(ballots.id, existingBallot.id))
+  async updatePrediction(insertPrediction: InsertPrediction & { userId: number }): Promise<Prediction> {
+    const existingPrediction = await this.getPrediction(insertPrediction.nomineeId, insertPrediction.userId);
+    if (existingPrediction) {
+      const [prediction] = await db
+        .update(predictions)
+        .set(insertPrediction)
+        .where(eq(predictions.id, existingPrediction.id))
         .returning();
-      return ballot;
+      return prediction;
     }
-    const [ballot] = await db
-      .insert(ballots)
-      .values(insertBallot)
+    const [prediction] = await db
+      .insert(predictions)
+      .values(insertPrediction)
       .returning();
-    return ballot;
+    return prediction;
   }
 
   async getUser(id: number): Promise<User | undefined> {
@@ -128,55 +122,6 @@ export class DatabaseStorage implements IStorage {
       .values(insertUser)
       .returning();
     return user;
-  }
-
-  async getWatchlist(userId: number): Promise<(Watchlist & { nominee: Nominee })[]> {
-    const watchlistItems = await db
-      .select({
-        watchlist: watchlist,
-        nominee: nominees,
-      })
-      .from(watchlist)
-      .where(eq(watchlist.userId, userId))
-      .innerJoin(nominees, eq(watchlist.nomineeId, nominees.id));
-
-    return watchlistItems.map(item => ({
-      ...item.watchlist,
-      nominee: item.nominee,
-    }));
-  }
-
-  async addToWatchlist(insertWatchlist: InsertWatchlist): Promise<Watchlist> {
-    const [watchlistItem] = await db
-      .insert(watchlist)
-      .values(insertWatchlist)
-      .returning();
-    return watchlistItem;
-  }
-
-  async removeFromWatchlist(userId: number, nomineeId: number): Promise<void> {
-    await db
-      .delete(watchlist)
-      .where(
-        and(
-          eq(watchlist.userId, userId),
-          eq(watchlist.nomineeId, nomineeId)
-        )
-      );
-  }
-
-  async updateWatchlistStatus(userId: number, nomineeId: number, status: string): Promise<Watchlist> {
-    const [watchlistItem] = await db
-      .update(watchlist)
-      .set({ watchStatus: status })
-      .where(
-        and(
-          eq(watchlist.userId, userId),
-          eq(watchlist.nomineeId, nomineeId)
-        )
-      )
-      .returning();
-    return watchlistItem;
   }
 }
 

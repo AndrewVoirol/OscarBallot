@@ -2,7 +2,7 @@ import { validate2025Nominees } from "./oscar2025validator";
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertBallotSchema } from "@shared/schema";
+import { insertPredictionSchema } from "@shared/schema";
 import { setupAuth, requireAuth } from "./auth";
 import { updateNomineeWithTMDBData, validateNomineeData } from "./tmdb";
 import rateLimit from 'express-rate-limit';
@@ -41,20 +41,12 @@ export function registerRoutes(app: Express): Server {
       const validationPromises = nominees.map(nominee => validateNomineeData(nominee));
       const validationReports = await Promise.all(validationPromises);
 
-      // Group issues by severity
-      const issuesBySeverity = {
-        high: validationReports.filter(r => r.severity === 'high'),
-        medium: validationReports.filter(r => r.severity === 'medium'),
-        low: validationReports.filter(r => r.severity === 'low')
-      };
-
-      // Filter to only show nominees with issues
+      // Filter to only show nominees with validation issues
       const problemNominees = validationReports.filter(report => report.issues.length > 0);
 
       res.json({
         totalNominees: nominees.length,
         nomineesWithIssues: problemNominees.length,
-        issuesBySeverity,
         reports: problemNominees
       });
     } catch (error) {
@@ -137,7 +129,6 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-
   // Enhanced TMDB update endpoint with validation
   app.post("/api/nominees/update-tmdb", tmdbLimiter, async (_req, res) => {
     try {
@@ -161,9 +152,8 @@ export function registerRoutes(app: Express): Server {
         })
       );
 
-      const successful = updates.filter(u => !u.error && u.validation);
+      const successful = updates.filter(u => !u.error);
       const failed = updates.filter(u => u.error);
-      const withIssues = successful.filter(u => u.validation.issues.length > 0);
 
       console.log(`Updated ${successful.length} out of ${nominees.length} nominees`);
 
@@ -173,13 +163,11 @@ export function registerRoutes(app: Express): Server {
           total: nominees.length,
           successful: successful.length,
           failed: failed.length,
-          withIssues: withIssues.length
         },
         failed: failed.map(f => ({
           name: f.nominee.name,
           error: f.error
-        })),
-        withIssues: withIssues.map(n => n.validation)
+        }))
       });
     } catch (error: any) {
       console.error('Error updating nominees with TMDB data:', error);
@@ -222,35 +210,36 @@ export function registerRoutes(app: Express): Server {
 
   setupAuth(app);
 
-  app.get("/api/ballots/:nomineeId", requireAuth, async (req, res) => {
-    const ballot = await storage.getBallot(
+  // Prediction routes
+  app.get("/api/predictions/:nomineeId", requireAuth, async (req, res) => {
+    const prediction = await storage.getPrediction(
       parseInt(req.params.nomineeId),
       req.user!.id
     );
-    if (!ballot) {
+    if (!prediction) {
       res.json({
         nomineeId: parseInt(req.params.nomineeId),
         userId: req.user!.id,
         hasWatched: false,
         predictedWinner: false,
-        wantToWin: false
+        rating: null
       });
       return;
     }
-    res.json(ballot);
+    res.json(prediction);
   });
 
-  app.post("/api/ballots", requireAuth, async (req, res) => {
-    const result = insertBallotSchema.safeParse(req.body);
+  app.post("/api/predictions", requireAuth, async (req, res) => {
+    const result = insertPredictionSchema.safeParse(req.body);
     if (!result.success) {
-      res.status(400).json({ message: "Invalid ballot data" });
+      res.status(400).json({ message: "Invalid prediction data" });
       return;
     }
-    const ballot = await storage.updateBallot({
+    const prediction = await storage.updatePrediction({
       ...result.data,
       userId: req.user!.id
     });
-    res.json(ballot);
+    res.json(prediction);
   });
 
   return createServer(app);
