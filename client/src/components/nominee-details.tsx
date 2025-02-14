@@ -4,34 +4,18 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { AwardsHistory } from "./awards-history";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Clock, Calendar, Star, Building2, User } from "lucide-react";
+import { DialogTitle } from "@/components/ui/dialog";
 import type { Nominee } from "@shared/schema";
-import { ValidationReport } from "./validation-report";
-import { useQuery } from "@tanstack/react-query";
 
 interface NomineeDetailsProps {
   nominee: Nominee;
 }
 
 export function NomineeDetails({ nominee }: NomineeDetailsProps) {
-  const { data: validationReport, status } = useQuery({
-    queryKey: ["/api/nominees/validation", nominee.id],
-    queryFn: async () => {
-      const response = await fetch(`/api/nominees/${nominee.id}/validation`);
-      if (!response.ok) throw new Error("Failed to fetch validation report");
-      return response.json();
-    },
-  });
-
   return (
     <div className="relative">
       {nominee.backdropPath && (
@@ -47,17 +31,9 @@ export function NomineeDetails({ nominee }: NomineeDetailsProps) {
 
       <div className="relative z-20 p-6 -mt-16">
         <DialogTitle className="sr-only">Details for {nominee.name}</DialogTitle>
-        <DialogDescription className="sr-only">
-          Detailed information about {nominee.name} including awards history, cast, and crew
-        </DialogDescription>
 
         <div className="flex flex-col md:flex-row gap-6">
           <div className="shrink-0 w-40 md:w-48">
-            {nominee.validationStatus === 'failed' && (
-              <div className="mb-4 p-2 bg-red-100 text-red-800 rounded">
-                Data validation issues detected
-              </div>
-            )}
             <div className="aspect-[2/3] relative bg-muted rounded-lg overflow-hidden shadow-lg">
               <img
                 src={nominee.poster}
@@ -249,7 +225,6 @@ export function NomineeDetails({ nominee }: NomineeDetailsProps) {
             </ul>
           </div>
         )}
-        {validationReport && <ValidationReport report={validationReport} />}
       </div>
     </div>
   );

@@ -4,7 +4,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertBallotSchema } from "@shared/schema";
 import { setupAuth, requireAuth } from "./auth";
-import { updateNomineeWithTMDBData, validateNomineeData } from "./tmdb";
+import { updateNomineeWithTMDBData, validateNomineeData, type ValidationReport } from "./tmdb";
 import rateLimit from 'express-rate-limit';
 import { eq } from "drizzle-orm";
 
@@ -14,45 +14,6 @@ export function registerRoutes(app: Express): Server {
     windowMs: 15 * 60 * 1000, // 15 minutes
     max: 10, // limit each IP to 10 requests per windowMs
     message: "Too many requests to update TMDB data, please try again later"
-  });
-
-  // Add new route for 2025 nominee validation
-  app.get("/api/nominees/validate-2025", async (_req, res) => {
-    try {
-      const validationResult = await validate2025Nominees();
-      if (!validationResult) {
-        res.status(500).json({ message: "Failed to validate 2025 nominees - no result returned" });
-        return;
-      }
-      res.json(validationResult);
-    } catch (error) {
-      console.error('Error validating 2025 nominees:', error);
-      res.status(500).json({ 
-        message: "Failed to validate 2025 nominees",
-        error: error instanceof Error ? error.message : String(error)
-      });
-    }
-  });
-
-  // Enhanced validation report endpoint
-  app.get("/api/nominees/validation-report", async (_req, res) => {
-    try {
-      const nominees = await storage.getNominees();
-      const validationPromises = nominees.map(nominee => validateNomineeData(nominee));
-      const validationReports = await Promise.all(validationPromises);
-
-      // Filter to only show nominees with validation issues
-      const problemNominees = validationReports.filter(report => report.issues.length > 0);
-
-      res.json({
-        totalNominees: nominees.length,
-        nomineesWithIssues: problemNominees.length,
-        reports: problemNominees
-      });
-    } catch (error) {
-      console.error('Error generating validation report:', error);
-      res.status(500).json({ message: "Failed to generate validation report" });
-    }
   });
 
   // Public routes for accessing nominee data
@@ -129,71 +90,32 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  setupAuth(app);
+  // Enhanced validation report endpoint
+  app.get("/api/nominees/validation-report", async (_req, res) => {
+    try {
+      const nominees = await storage.getNominees();
+      const validationPromises = nominees.map(nominee => validateNomineeData(nominee));
+      const validationReports = await Promise.all(validationPromises);
 
-  // Ballot routes
-  app.get("/api/ballots/:nomineeId", requireAuth, async (req, res) => {
-    const ballot = await storage.getBallot(
-      parseInt(req.params.nomineeId),
-      req.user!.id
-    );
-    if (!ballot) {
+      // Group issues by severity
+      const issuesBySeverity = {
+        high: validationReports.filter(r => r.severity === 'high'),
+        medium: validationReports.filter(r => r.severity === 'medium'),
+        low: validationReports.filter(r => r.severity === 'low')
+      };
+
+      // Filter to only show nominees with issues
+      const problemNominees = validationReports.filter(report => report.issues.length > 0);
+
       res.json({
-        nomineeId: parseInt(req.params.nomineeId),
-        userId: req.user!.id,
-        hasWatched: false,
-        predictedWinner: false,
-        wantToWin: false
+        totalNominees: nominees.length,
+        nomineesWithIssues: problemNominees.length,
+        issuesBySeverity,
+        reports: problemNominees
       });
-      return;
-    }
-    res.json(ballot);
-  });
-
-  app.post("/api/ballots", requireAuth, async (req, res) => {
-    const result = insertBallotSchema.safeParse(req.body);
-    if (!result.success) {
-      res.status(400).json({ message: "Invalid ballot data" });
-      return;
-    }
-    const ballot = await storage.updateBallot({
-      ...result.data,
-      userId: req.user!.id
-    });
-    res.json(ballot);
-  });
-
-  // Watchlist routes
-  app.get("/api/watchlist", requireAuth, async (req, res) => {
-    try {
-      const watchlist = await storage.getWatchlist(req.user!.id);
-      res.json(watchlist);
     } catch (error) {
-      console.error('Error fetching watchlist:', error);
-      res.status(500).json({ message: "Failed to fetch watchlist" });
-    }
-  });
-
-  app.post("/api/watchlist", requireAuth, async (req, res) => {
-    try {
-      const watchlistItem = await storage.addToWatchlist({
-        ...req.body,
-        userId: req.user!.id
-      });
-      res.json(watchlistItem);
-    } catch (error) {
-      console.error('Error adding to watchlist:', error);
-      res.status(500).json({ message: "Failed to add to watchlist" });
-    }
-  });
-
-  app.delete("/api/watchlist/:nomineeId", requireAuth, async (req, res) => {
-    try {
-      await storage.removeFromWatchlist(req.user!.id, parseInt(req.params.nomineeId));
-      res.sendStatus(200);
-    } catch (error) {
-      console.error('Error removing from watchlist:', error);
-      res.status(500).json({ message: "Failed to remove from watchlist" });
+      console.error('Error generating validation report:', error);
+      res.status(500).json({ message: "Failed to generate validation report" });
     }
   });
 
@@ -220,8 +142,9 @@ export function registerRoutes(app: Express): Server {
         })
       );
 
-      const successful = updates.filter(u => !u.error);
+      const successful = updates.filter(u => !u.error && u.validation);
       const failed = updates.filter(u => u.error);
+      const withIssues = successful.filter(u => u.validation.issues.length > 0);
 
       console.log(`Updated ${successful.length} out of ${nominees.length} nominees`);
 
@@ -231,11 +154,13 @@ export function registerRoutes(app: Express): Server {
           total: nominees.length,
           successful: successful.length,
           failed: failed.length,
+          withIssues: withIssues.length
         },
         failed: failed.map(f => ({
           name: f.nominee.name,
           error: f.error
-        }))
+        })),
+        withIssues: withIssues.map(n => n.validation)
       });
     } catch (error: any) {
       console.error('Error updating nominees with TMDB data:', error);
@@ -276,6 +201,56 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // Add new route for 2025 nominee validation
+  app.get("/api/nominees/validate-2025", async (_req, res) => {
+    try {
+      const validationResult = await validate2025Nominees();
+      if (!validationResult) {
+        res.status(500).json({ message: "Failed to validate 2025 nominees - no result returned" });
+        return;
+      }
+      res.json(validationResult);
+    } catch (error) {
+      console.error('Error validating 2025 nominees:', error);
+      res.status(500).json({ 
+        message: "Failed to validate 2025 nominees",
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+
+  setupAuth(app);
+
+  app.get("/api/ballots/:nomineeId", requireAuth, async (req, res) => {
+    const ballot = await storage.getBallot(
+      parseInt(req.params.nomineeId),
+      req.user!.id
+    );
+    if (!ballot) {
+      res.json({
+        nomineeId: parseInt(req.params.nomineeId),
+        userId: req.user!.id,
+        hasWatched: false,
+        predictedWinner: false,
+        wantToWin: false
+      });
+      return;
+    }
+    res.json(ballot);
+  });
+
+  app.post("/api/ballots", requireAuth, async (req, res) => {
+    const result = insertBallotSchema.safeParse(req.body);
+    if (!result.success) {
+      res.status(400).json({ message: "Invalid ballot data" });
+      return;
+    }
+    const ballot = await storage.updateBallot({
+      ...result.data,
+      userId: req.user!.id
+    });
+    res.json(ballot);
+  });
 
   return createServer(app);
 }
