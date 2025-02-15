@@ -142,6 +142,7 @@ export function NomineeDetails({ nominee }: NomineeDetailsProps) {
                             <AvatarImage
                               src={member.profileImage}
                               alt={member.name}
+                              className="object-cover"
                             />
                             <AvatarFallback>
                               <User className="h-6 w-6 text-muted-foreground" />
@@ -173,12 +174,11 @@ export function NomineeDetails({ nominee }: NomineeDetailsProps) {
                         ?.map((member) => (
                           <div key={`${nominee.id}-crew-${member.id}-${member.job}`} className="flex items-center gap-3">
                             <Avatar className="h-14 w-14">
-                              {member.profile_path && (
-                                <AvatarImage
-                                  src={member.profileImage}
-                                  alt={member.name}
-                                />
-                              )}
+                              <AvatarImage
+                                src={member.profileImage}
+                                alt={member.name}
+                                className="object-cover"
+                              />
                               <AvatarFallback>
                                 <User className="h-6 w-6 text-muted-foreground" />
                               </AvatarFallback>
