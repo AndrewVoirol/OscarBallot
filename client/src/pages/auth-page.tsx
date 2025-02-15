@@ -48,7 +48,14 @@ export default function AuthPage() {
     <div className="min-h-screen grid lg:grid-cols-2">
       <div className="flex items-center justify-center p-8">
         <Card className="w-full max-w-md">
-          <CardHeader>
+          <CardHeader className="space-y-4">
+            <Button 
+              variant="ghost" 
+              className="w-full"
+              onClick={() => setLocation("/")}
+            >
+              ← Continue Browsing as Guest
+            </Button>
             <CardTitle className="text-2xl text-center bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary/60">
               Optional Authentication
             </CardTitle>
