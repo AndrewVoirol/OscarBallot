@@ -9,6 +9,8 @@ import { Badge } from "@/components/ui/badge";
 import { Trophy } from "lucide-react";
 import type { Nominee } from "@shared/schema";
 
+const TMDB_IMAGE_BASE_URL = "https://image.tmdb.org/t/p/original";
+
 interface NomineeCardProps {
   nominee: Nominee;
   isLoading?: boolean;
@@ -17,6 +19,11 @@ interface NomineeCardProps {
 
 export function NomineeCard({ nominee, isLoading, isHistorical }: NomineeCardProps) {
   const [isOpen, setIsOpen] = useState(false);
+
+  const getImageUrl = (path: string | null | undefined) => {
+    if (!path) return null;
+    return path.startsWith('http') ? path : `${TMDB_IMAGE_BASE_URL}${path}`;
+  };
 
   if (isLoading) {
     return (
@@ -47,7 +54,7 @@ export function NomineeCard({ nominee, isLoading, isHistorical }: NomineeCardPro
       <CardHeader className="relative p-0">
         <div className="relative aspect-[2/3] bg-muted">
           <img
-            src={nominee.poster}
+            src={getImageUrl(nominee.posterPath)}
             alt={nominee.name}
             className="absolute inset-0 w-full h-full object-cover"
             loading="lazy"
