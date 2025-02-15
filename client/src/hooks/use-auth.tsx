@@ -17,7 +17,6 @@ type AuthContextType = {
 };
 
 type LoginData = Pick<InsertUser, "username" | "password">;
-type AuthResponse = Express.User & { isGuest?: boolean };
 
 const useLoginMutation = () => {
   const { toast } = useToast();
