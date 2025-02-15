@@ -23,15 +23,23 @@ export function NomineeDetails({ nominee }: NomineeDetailsProps) {
     });
   };
 
+  const getImageUrl = (path: string | null) => {
+    if (!path) return null;
+    return `https://image.tmdb.org/t/p/w500${path}`;
+  };
+
   return (
     <div className="relative">
       {nominee.backdropPath && (
         <div className="relative h-64 md:h-80">
           <div className="absolute inset-0 bg-gradient-to-b from-transparent to-background z-10" />
           <img
-            src={nominee.backdropPath}
+            src={getImageUrl(nominee.backdropPath)}
             alt={`${nominee.name} backdrop`}
             className="absolute inset-0 w-full h-full object-cover"
+            onError={(e) => {
+              e.currentTarget.style.display = 'none';
+            }}
           />
         </div>
       )}
@@ -44,6 +52,9 @@ export function NomineeDetails({ nominee }: NomineeDetailsProps) {
                 src={nominee.poster}
                 alt={nominee.name}
                 className="absolute inset-0 w-full h-full object-cover"
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none';
+                }}
               />
             </div>
           </div>
@@ -115,50 +126,17 @@ export function NomineeDetails({ nominee }: NomineeDetailsProps) {
 
             <Accordion type="single" collapsible className="mt-6">
               {/* Cast Section */}
-              <AccordionItem value="cast">
-                <AccordionTrigger>Cast</AccordionTrigger>
-                <AccordionContent>
-                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                    {nominee.extendedCredits?.cast.slice(0, 12).map((member) => (
-                      <div key={`${nominee.id}-cast-${member.id}`} className="flex items-center gap-3">
-                        <Avatar className="h-14 w-14 rounded-full overflow-hidden border-2 border-muted">
-                          {member.profile_path ? (
-                            <AvatarImage
-                              src={`https://image.tmdb.org/t/p/w500${member.profile_path}`}
-                              alt={member.name}
-                              className="object-cover w-full h-full"
-                            />
-                          ) : (
-                            <AvatarFallback className="bg-muted">
-                              <User className="h-6 w-6 text-muted-foreground" />
-                            </AvatarFallback>
-                          )}
-                        </Avatar>
-                        <div className="min-w-0">
-                          <p className="text-sm font-medium truncate">{member.name}</p>
-                          <p className="text-xs text-muted-foreground truncate">{member.character}</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </AccordionContent>
-              </AccordionItem>
-
-              {/* Crew Section */}
-              <AccordionItem value="crew">
-                <AccordionTrigger>Crew</AccordionTrigger>
-                <AccordionContent>
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                    {nominee.extendedCredits?.crew
-                      .filter((member) =>
-                        ["Director", "Producer", "Writer", "Director of Photography"].includes(member.job)
-                      )
-                      .map((member) => (
-                        <div key={`${nominee.id}-crew-${member.id}-${member.job}`} className="flex items-center gap-3">
+              {nominee.extendedCredits?.cast && nominee.extendedCredits.cast.length > 0 && (
+                <AccordionItem value="cast">
+                  <AccordionTrigger>Cast</AccordionTrigger>
+                  <AccordionContent>
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                      {nominee.extendedCredits.cast.slice(0, 12).map((member) => (
+                        <div key={`${nominee.id}-cast-${member.id}`} className="flex items-center gap-3">
                           <Avatar className="h-14 w-14 rounded-full overflow-hidden border-2 border-muted">
                             {member.profile_path ? (
                               <AvatarImage
-                                src={`https://image.tmdb.org/t/p/w500${member.profile_path}`}
+                                src={getImageUrl(member.profile_path)}
                                 alt={member.name}
                                 className="object-cover w-full h-full"
                               />
@@ -170,13 +148,50 @@ export function NomineeDetails({ nominee }: NomineeDetailsProps) {
                           </Avatar>
                           <div className="min-w-0">
                             <p className="text-sm font-medium truncate">{member.name}</p>
-                            <p className="text-xs text-muted-foreground truncate">{member.job}</p>
+                            <p className="text-xs text-muted-foreground truncate">{member.character}</p>
                           </div>
                         </div>
                       ))}
-                  </div>
-                </AccordionContent>
-              </AccordionItem>
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+              )}
+
+              {/* Crew Section */}
+              {nominee.extendedCredits?.crew && nominee.extendedCredits.crew.length > 0 && (
+                <AccordionItem value="crew">
+                  <AccordionTrigger>Crew</AccordionTrigger>
+                  <AccordionContent>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                      {nominee.extendedCredits.crew
+                        .filter((member) =>
+                          ["Director", "Producer", "Writer", "Director of Photography"].includes(member.job)
+                        )
+                        .map((member) => (
+                          <div key={`${nominee.id}-crew-${member.id}-${member.job}`} className="flex items-center gap-3">
+                            <Avatar className="h-14 w-14 rounded-full overflow-hidden border-2 border-muted">
+                              {member.profile_path ? (
+                                <AvatarImage
+                                  src={getImageUrl(member.profile_path)}
+                                  alt={member.name}
+                                  className="object-cover w-full h-full"
+                                />
+                              ) : (
+                                <AvatarFallback className="bg-muted">
+                                  <User className="h-6 w-6 text-muted-foreground" />
+                                </AvatarFallback>
+                              )}
+                            </Avatar>
+                            <div className="min-w-0">
+                              <p className="text-sm font-medium truncate">{member.name}</p>
+                              <p className="text-xs text-muted-foreground truncate">{member.job}</p>
+                            </div>
+                          </div>
+                        ))}
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+              )}
 
               {/* Fun Facts Section */}
               {nominee.funFacts && nominee.funFacts.length > 0 && (
@@ -209,9 +224,12 @@ export function NomineeDetails({ nominee }: NomineeDetailsProps) {
                           {company.logo_path ? (
                             <div className="h-12 w-24 relative bg-white/5 rounded-lg p-2 flex items-center justify-center">
                               <img
-                                src={`https://image.tmdb.org/t/p/w500${company.logo_path}`}
+                                src={getImageUrl(company.logo_path)}
                                 alt={company.name}
                                 className="max-h-full max-w-full object-contain"
+                                onError={(e) => {
+                                  e.currentTarget.style.display = 'none';
+                                }}
                               />
                             </div>
                           ) : (
