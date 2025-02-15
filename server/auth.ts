@@ -117,9 +117,15 @@ export function setupAuth(app: Express): void {
 
   app.get("/api/auth/user", (req, res) => {
     if (!req.isAuthenticated()) {
-      return res.status(401).json({ message: "Not authenticated" });
+      return res.status(200).json({ 
+        isGuest: true,
+        message: "Guest user"
+      });
     }
-    res.json(req.user);
+    res.json({
+      ...req.user,
+      isGuest: false
+    });
   });
 }
 
