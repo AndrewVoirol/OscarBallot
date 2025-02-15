@@ -9,12 +9,21 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Clock, Calendar, Star, Building2, User, LightbulbIcon } from "lucide-react";
 import type { Nominee } from "@shared/schema";
+import { Card, CardContent } from "@/components/ui/card";
 
 interface NomineeDetailsProps {
   nominee: Nominee;
 }
 
 export function NomineeDetails({ nominee }: NomineeDetailsProps) {
+  const formatDate = (dateStr: string) => {
+    return new Date(dateStr).toLocaleDateString(undefined, {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
+  };
+
   return (
     <div className="relative">
       {nominee.backdropPath && (
@@ -41,59 +50,65 @@ export function NomineeDetails({ nominee }: NomineeDetailsProps) {
           </div>
 
           <div className="flex-1">
-            <h2 className="text-2xl font-bold text-primary mb-2">{nominee.name}</h2>
-            <p className="text-muted-foreground mb-6">{nominee.description}</p>
+            <h2 className="text-2xl font-bold text-primary mb-4">{nominee.name}</h2>
 
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
-              {nominee.runtime && (
-                <div className="flex items-center gap-2">
-                  <Clock className="h-4 w-4 text-primary" />
-                  <span className="text-sm">
-                    {Math.floor(nominee.runtime / 60)}h {nominee.runtime % 60}min
-                  </span>
-                </div>
-              )}
-              {nominee.releaseDate && (
-                <div className="flex items-center gap-2">
-                  <Calendar className="h-4 w-4 text-primary" />
-                  <span className="text-sm">
-                    {new Date(nominee.releaseDate).toLocaleDateString(undefined, {
-                      year: "numeric",
-                      month: "short",
-                      day: "numeric",
-                    })}
-                  </span>
-                </div>
-              )}
-              {nominee.voteAverage && (
-                <div className="flex items-center gap-2">
-                  <Star className="h-4 w-4 text-primary" />
-                  <span className="text-sm">{(nominee.voteAverage / 10).toFixed(1)}/10</span>
-                </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+              <Card>
+                <CardContent className="p-4 space-y-4">
+                  {nominee.runtime && (
+                    <div className="flex items-center gap-2">
+                      <Clock className="h-4 w-4 text-primary" />
+                      <span className="text-sm">
+                        {Math.floor(nominee.runtime / 60)}h {nominee.runtime % 60}min
+                      </span>
+                    </div>
+                  )}
+                  {nominee.releaseDate && (
+                    <div className="flex items-center gap-2">
+                      <Calendar className="h-4 w-4 text-primary" />
+                      <span className="text-sm">{formatDate(nominee.releaseDate)}</span>
+                    </div>
+                  )}
+                  {nominee.voteAverage && (
+                    <div className="flex items-center gap-2">
+                      <Star className="h-4 w-4 text-primary" />
+                      <span className="text-sm">{(nominee.voteAverage / 10).toFixed(1)}/10</span>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {nominee.genres && nominee.genres.length > 0 && (
+                <Card>
+                  <CardContent className="p-4">
+                    <h3 className="text-sm font-semibold mb-2">Genres</h3>
+                    <div className="flex flex-wrap gap-2">
+                      {nominee.genres.map((genre, index) => (
+                        <Badge key={`${nominee.id}-genre-${index}`} variant="secondary">
+                          {genre}
+                        </Badge>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
               )}
             </div>
 
-            {nominee.genres && nominee.genres.length > 0 && (
-              <div className="flex flex-wrap gap-2 mb-6">
-                {nominee.genres.map((genre) => (
-                  <Badge key={genre} variant="secondary" className="text-xs">
-                    {genre}
-                  </Badge>
-                ))}
-              </div>
-            )}
+            <p className="text-muted-foreground mb-6">{nominee.description}</p>
 
-            {nominee.streamingPlatforms.length > 0 && (
-              <div className="mb-6">
-                <h3 className="text-sm font-semibold mb-2">Where to Watch</h3>
-                <div className="flex flex-wrap gap-2">
-                  {nominee.streamingPlatforms.map((platform) => (
-                    <Badge key={platform} variant="outline">
-                      {platform}
-                    </Badge>
-                  ))}
-                </div>
-              </div>
+            {nominee.streamingPlatforms && nominee.streamingPlatforms.length > 0 && (
+              <Card className="mb-6">
+                <CardContent className="p-4">
+                  <h3 className="text-sm font-semibold mb-2">Where to Watch</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {nominee.streamingPlatforms.map((platform, index) => (
+                      <Badge key={`${nominee.id}-platform-${index}`} variant="outline">
+                        {platform}
+                      </Badge>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
             )}
           </div>
         </div>
@@ -122,7 +137,7 @@ export function NomineeDetails({ nominee }: NomineeDetailsProps) {
               <AccordionContent>
                 <ul className="space-y-2">
                   {nominee.funFacts.map((fact, index) => (
-                    <li key={`fun-fact-${nominee.id}-${index}`} className="flex items-start gap-2">
+                    <li key={`${nominee.id}-fact-${index}`} className="flex items-start gap-2">
                       <span className="text-primary">•</span>
                       <span>{fact}</span>
                     </li>
@@ -137,11 +152,11 @@ export function NomineeDetails({ nominee }: NomineeDetailsProps) {
             <AccordionContent>
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                 {nominee.extendedCredits?.cast.slice(0, 12).map((member) => (
-                  <div key={`cast-${nominee.id}-${member.id}`} className="flex items-center gap-3">
+                  <div key={`${nominee.id}-cast-${member.id}`} className="flex items-center gap-3">
                     <Avatar className="h-14 w-14 rounded-full overflow-hidden border-2 border-muted">
-                      {member.profile_path ? (
+                      {member.profileImage ? (
                         <AvatarImage
-                          src={`https://image.tmdb.org/t/p/w500${member.profile_path}`}
+                          src={member.profileImage}
                           alt={member.name}
                           className="object-cover w-full h-full"
                         />
@@ -153,9 +168,7 @@ export function NomineeDetails({ nominee }: NomineeDetailsProps) {
                     </Avatar>
                     <div className="min-w-0">
                       <p className="text-sm font-medium truncate">{member.name}</p>
-                      <p className="text-xs text-muted-foreground truncate">
-                        {member.character}
-                      </p>
+                      <p className="text-xs text-muted-foreground truncate">{member.character}</p>
                     </div>
                   </div>
                 ))}
@@ -172,11 +185,11 @@ export function NomineeDetails({ nominee }: NomineeDetailsProps) {
                     ["Director", "Producer", "Writer", "Director of Photography"].includes(member.job)
                   )
                   .map((member) => (
-                    <div key={`crew-${nominee.id}-${member.id}`} className="flex items-center gap-3">
+                    <div key={`${nominee.id}-crew-${member.id}`} className="flex items-center gap-3">
                       <Avatar className="h-14 w-14 rounded-full overflow-hidden border-2 border-muted">
-                        {member.profile_path ? (
+                        {member.profileImage ? (
                           <AvatarImage
-                            src={`https://image.tmdb.org/t/p/w500${member.profile_path}`}
+                            src={member.profileImage}
                             alt={member.name}
                             className="object-cover w-full h-full"
                           />
@@ -202,11 +215,11 @@ export function NomineeDetails({ nominee }: NomineeDetailsProps) {
               <AccordionContent>
                 <div className="grid grid-cols-2 gap-6">
                   {nominee.productionCompanies.map((company) => (
-                    <div key={`company-${nominee.id}-${company.id}`} className="flex items-center gap-3">
-                      {company.logo_path ? (
+                    <div key={`${nominee.id}-company-${company.id}`} className="flex items-center gap-3">
+                      {company.logoPath ? (
                         <div className="h-12 w-24 relative bg-white/5 rounded-lg p-2 flex items-center justify-center">
                           <img
-                            src={`https://image.tmdb.org/t/p/w500${company.logo_path}`}
+                            src={company.logoPath}
                             alt={company.name}
                             className="max-h-full max-w-full object-contain"
                           />
