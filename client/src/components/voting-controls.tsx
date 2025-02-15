@@ -4,7 +4,7 @@ import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
 import { apiRequest } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
-import { useAuthPrompt } from "@/components/auth-prompt-dialog";
+import { useLocation } from "wouter";
 import type { Ballot } from "@shared/schema";
 
 interface VotingControlsProps {
@@ -15,7 +15,7 @@ interface VotingControlsProps {
 export function VotingControls({ nomineeId, isHistorical = false }: VotingControlsProps) {
   const { toast } = useToast();
   const { user } = useAuth();
-  const { promptAuth } = useAuthPrompt();
+  const [, setLocation] = useLocation();
 
   const { data: ballot } = useQuery<Ballot>({
     queryKey: [`/api/ballots/${nomineeId}`],
@@ -43,7 +43,12 @@ export function VotingControls({ nomineeId, isHistorical = false }: VotingContro
 
   const handleAction = (field: keyof Omit<Ballot, "id" | "nomineeId" | "userId">) => {
     if (!user) {
-      promptAuth("voting");
+      toast({
+        title: "Login Required",
+        description: "Sign in or register to save your Oscar predictions",
+        variant: "default",
+      });
+      setLocation("/auth");
       return;
     }
     mutation.mutate({ [field]: !ballot?.[field] });
