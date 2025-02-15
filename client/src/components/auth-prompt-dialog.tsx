@@ -43,14 +43,14 @@ export function AuthPromptDialog({
             {messages[feature].description}
           </DialogDescription>
         </DialogHeader>
-        <DialogFooter className="flex-col sm:flex-row gap-2 sm:gap-0">
+        <DialogFooter className="flex flex-col sm:flex-row gap-2">
           <Button
             variant="ghost"
             onClick={() => {
-              onOpenChange(false);
+              onOpenChange(false); // Just close dialog, no redirect
             }}
           >
-            Continue Browsing
+            Continue Browsing as Guest
           </Button>
           <div className="flex gap-2">
             <Button
