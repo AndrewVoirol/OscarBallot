@@ -140,7 +140,7 @@ export function NomineeDetails({ nominee }: NomineeDetailsProps) {
                         <div key={`${nominee.id}-cast-${member.id}`} className="flex items-center gap-3">
                           <Avatar className="h-14 w-14">
                             <AvatarImage
-                              src={getImageUrl(member.profile_path)}
+                              src={member.profileImage}
                               alt={member.name}
                             />
                             <AvatarFallback>
@@ -175,9 +175,8 @@ export function NomineeDetails({ nominee }: NomineeDetailsProps) {
                             <Avatar className="h-14 w-14">
                               {member.profile_path && (
                                 <AvatarImage
-                                  src={getImageUrl(member.profile_path)}
+                                  src={member.profileImage}
                                   alt={member.name}
-                                  onError={handleImageError}
                                 />
                               )}
                               <AvatarFallback>
