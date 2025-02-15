@@ -36,7 +36,7 @@ export function NomineeDetails({ nominee }: NomineeDetailsProps) {
           <div className="shrink-0 w-40 md:w-48">
             <div className="aspect-[2/3] relative bg-muted rounded-lg overflow-hidden shadow-lg">
               <img
-                src={nominee.poster}
+                src={nominee.posterPath}
                 alt={nominee.name}
                 className="absolute inset-0 w-full h-full object-cover"
               />
@@ -63,9 +63,9 @@ export function NomineeDetails({ nominee }: NomineeDetailsProps) {
                   <Calendar className="h-4 w-4 text-primary" />
                   <span className="text-sm">
                     {new Date(nominee.releaseDate).toLocaleDateString(undefined, {
-                      year: 'numeric',
-                      month: 'short',
-                      day: 'numeric'
+                      year: "numeric",
+                      month: "short",
+                      day: "numeric",
                     })}
                   </span>
                 </div>
@@ -106,7 +106,7 @@ export function NomineeDetails({ nominee }: NomineeDetailsProps) {
         {nominee.trailerUrl && (
           <div className="aspect-video w-full mt-6 rounded-lg overflow-hidden bg-muted">
             <iframe
-              src={nominee.trailerUrl.replace('watch?v=', 'embed/')}
+              src={nominee.trailerUrl.replace("watch?v=", "embed/")}
               title={`${nominee.name} Trailer`}
               className="w-full h-full"
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"

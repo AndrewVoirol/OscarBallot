@@ -41,7 +41,7 @@ export const nominees = pgTable("nominees", {
   name: text("name").notNull(),
   category: text("category").notNull(),
   description: text("description").notNull(),
-  poster: text("poster").notNull(),
+  posterPath: text("poster_path").notNull(), // Changed from poster to poster_path
   trailerUrl: text("trailer_url").notNull(),
   streamingPlatforms: text("streaming_platforms").array().notNull(),
   awards: jsonb("awards").notNull(),
