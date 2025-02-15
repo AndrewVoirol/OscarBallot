@@ -1,9 +1,20 @@
 import { db } from "./db";
 import { nominees } from "@shared/schema";
 import { updateNomineeWithTMDBData } from "./tmdb";
+import { sql } from "drizzle-orm";
 
-// 2024 Oscar nominees with their categories and winners (96th Academy Awards)
-const nominees2024 = [
+// Base nominee type for seeding
+type BaseSeedNominee = {
+  name: string;
+  category: string;
+  isWinner: boolean;
+  streamingPlatforms: string[];
+  description: string;
+  funFacts: string[];
+};
+
+// 2024 Oscar nominees (96th Academy Awards)
+const nominees2024: BaseSeedNominee[] = [
   // Best Picture
   { 
     name: "Oppenheimer",
@@ -89,8 +100,8 @@ const nominees2024 = [
   }
 ];
 
-// 2025 Oscar nominees (97th Academy Awards) - Anticipated Contenders
-const nominees2025 = [
+// 2025 Oscar nominees (97th Academy Awards)
+const nominees2025: BaseSeedNominee[] = [
   // Best Picture Contenders
   { 
     name: "Dune: Part Two",
@@ -168,79 +179,59 @@ async function seed() {
   try {
     console.log("Starting database seeding...");
 
-    // Clear existing nominees
-    await db.delete(nominees);
+    // Clear existing nominees using a more efficient query
+    await db.execute(sql`TRUNCATE TABLE ${nominees}`);
     console.log("Cleared existing nominees");
 
-    // Insert 2024 nominees
-    const inserted2024 = await db.insert(nominees).values(
-      nominees2024.map(n => ({
-        name: n.name,
-        category: n.category,
-        description: n.description, 
-        poster: "",
-        trailerUrl: "",
-        streamingPlatforms: n.streamingPlatforms,
-        awards: [],
-        castMembers: [], 
-        crew: [],
-        funFacts: n.funFacts || [], 
-        ceremonyYear: 2024,
-        isWinner: n.isWinner,
-        historicalAwards: [], 
-        genres: [], 
-        backdropPath: "", 
-        productionCompanies: [], 
-        extendedCredits: { cast: [], crew: [] } 
-      }))
-    ).returning();
-    console.log(`Inserted ${inserted2024.length} nominees for 2024`);
+    // Transform nominees data for insertion
+    const transformNominee = (nominee: BaseSeedNominee, year: number) => ({
+      ...nominee,
+      poster: "",
+      trailerUrl: "",
+      awards: [],
+      castMembers: [],
+      crew: [],
+      ceremonyYear: year,
+      historicalAwards: [],
+      genres: [],
+      backdropPath: "",
+      productionCompanies: [],
+      extendedCredits: { cast: [], crew: [] }
+    });
 
-    // Insert 2025 nominees
-    const inserted2025 = await db.insert(nominees).values(
-      nominees2025.map(n => ({
-        name: n.name,
-        category: n.category,
-        description: n.description,
-        poster: "",
-        trailerUrl: "",
-        streamingPlatforms: n.streamingPlatforms,
-        awards: [],
-        castMembers: [], 
-        crew: [],
-        funFacts: n.funFacts || [], 
-        ceremonyYear: 2025,
-        isWinner: false,
-        historicalAwards: [], 
-        genres: [], 
-        backdropPath: "", 
-        productionCompanies: [], 
-        extendedCredits: { cast: [], crew: [] } 
-      }))
-    ).returning();
-    console.log(`Inserted ${inserted2025.length} nominees for 2025`);
+    // Batch insert nominees for both years
+    const nomineeRecords = [
+      ...nominees2024.map(n => transformNominee(n, 2024)),
+      ...nominees2025.map(n => transformNominee(n, 2025))
+    ];
 
-    // Update all nominees with TMDB data
-    const allNominees = [...inserted2024, ...inserted2025];
-    console.log("Fetching TMDB data for each nominee...");
+    const inserted = await db.insert(nominees)
+      .values(nomineeRecords)
+      .returning();
 
-    const updatedNominees = await Promise.all(
-      allNominees.map(async nominee => {
-        const updated = await updateNomineeWithTMDBData(nominee);
-        if (updated) {
-          console.log(`Updated: ${nominee.name} (${nominee.category}, ${nominee.ceremonyYear})`);
-        }
-        return updated;
-      })
+    console.log(`Inserted ${inserted.length} nominees`);
+
+    // Update TMDB data in parallel with proper error handling
+    console.log("Fetching TMDB data for nominees...");
+    const results = await Promise.allSettled(
+      inserted.map(nominee => updateNomineeWithTMDBData(nominee))
     );
 
-    const successCount = updatedNominees.filter(Boolean).length;
-    console.log(`\nSummary:`);
-    console.log(`Successfully updated ${successCount} nominees with TMDB data`);
+    // Log results summary
+    const successful = results.filter(r => r.status === 'fulfilled' && r.value).length;
+    const failed = results.filter(r => r.status === 'rejected').length;
+
+    console.log("\nSeeding Summary:");
+    console.log(`- Total nominees inserted: ${inserted.length}`);
+    console.log(`- TMDB updates successful: ${successful}`);
+    console.log(`- TMDB updates failed: ${failed}`);
     console.log("Database seeding completed");
+
   } catch (error) {
     console.error("Error seeding database:", error);
+    throw error; // Re-throw to ensure the error is properly handled by the calling code
   }
 }
 
-seed();
+// Execute seeding
+seed().catch(console.error);
