@@ -9,7 +9,6 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Clock, Calendar, Star, Building2, User, LightbulbIcon } from "lucide-react";
 import type { Nominee } from "@shared/schema";
-import { Card, CardContent } from "@/components/ui/card";
 
 interface NomineeDetailsProps {
   nominee: Nominee;
@@ -39,78 +38,65 @@ export function NomineeDetails({ nominee }: NomineeDetailsProps) {
 
       <div className="relative z-20 p-6 -mt-16">
         <div className="flex flex-col md:flex-row gap-6">
-          {/* Left column with poster and metadata */}
-          <div className="md:w-72">
-            <div className="aspect-[2/3] relative bg-muted rounded-lg overflow-hidden shadow-lg mb-4">
+          <div className="shrink-0 w-40 md:w-48">
+            <div className="aspect-[2/3] relative bg-muted rounded-lg overflow-hidden shadow-lg">
               <img
                 src={nominee.poster}
                 alt={nominee.name}
                 className="absolute inset-0 w-full h-full object-cover"
               />
             </div>
-
-            {/* Metadata cards */}
-            <div className="space-y-4">
-              <Card>
-                <CardContent className="p-4 space-y-4">
-                  {nominee.runtime && (
-                    <div className="flex items-center gap-2">
-                      <Clock className="h-4 w-4 text-primary" />
-                      <span className="text-sm">
-                        {Math.floor(nominee.runtime / 60)}h {nominee.runtime % 60}min
-                      </span>
-                    </div>
-                  )}
-                  {nominee.releaseDate && (
-                    <div className="flex items-center gap-2">
-                      <Calendar className="h-4 w-4 text-primary" />
-                      <span className="text-sm">{formatDate(nominee.releaseDate)}</span>
-                    </div>
-                  )}
-                  {nominee.voteAverage && (
-                    <div className="flex items-center gap-2">
-                      <Star className="h-4 w-4 text-primary" />
-                      <span className="text-sm">{(nominee.voteAverage / 10).toFixed(1)}/10</span>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-
-              {nominee.genres && nominee.genres.length > 0 && (
-                <Card>
-                  <CardContent className="p-4">
-                    <h3 className="text-sm font-semibold mb-2">Genres</h3>
-                    <div className="flex flex-wrap gap-2">
-                      {nominee.genres.map((genre, index) => (
-                        <Badge key={`${nominee.id}-genre-${index}`} variant="secondary">
-                          {genre}
-                        </Badge>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-
-              {nominee.streamingPlatforms && nominee.streamingPlatforms.length > 0 && (
-                <Card>
-                  <CardContent className="p-4">
-                    <h3 className="text-sm font-semibold mb-2">Where to Watch</h3>
-                    <div className="flex flex-wrap gap-2">
-                      {nominee.streamingPlatforms.map((platform, index) => (
-                        <Badge key={`${nominee.id}-platform-${index}`} variant="outline">
-                          {platform}
-                        </Badge>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-            </div>
           </div>
 
-          {/* Right column with title, description, and accordions */}
           <div className="flex-1">
             <h2 className="text-2xl font-bold text-primary mb-4">{nominee.name}</h2>
+
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+              {nominee.runtime && (
+                <div className="flex items-center gap-2">
+                  <Clock className="h-4 w-4 text-primary" />
+                  <span className="text-sm">
+                    {Math.floor(nominee.runtime / 60)}h {nominee.runtime % 60}min
+                  </span>
+                </div>
+              )}
+              {nominee.releaseDate && (
+                <div className="flex items-center gap-2">
+                  <Calendar className="h-4 w-4 text-primary" />
+                  <span className="text-sm">{formatDate(nominee.releaseDate)}</span>
+                </div>
+              )}
+              {nominee.voteAverage && (
+                <div className="flex items-center gap-2">
+                  <Star className="h-4 w-4 text-primary" />
+                  <span className="text-sm">{(nominee.voteAverage / 10).toFixed(1)}/10</span>
+                </div>
+              )}
+            </div>
+
+            {nominee.genres && nominee.genres.length > 0 && (
+              <div className="flex flex-wrap gap-2 mb-6">
+                {nominee.genres.map((genre, index) => (
+                  <Badge key={`${nominee.id}-genre-${index}`} variant="secondary" className="text-xs">
+                    {genre}
+                  </Badge>
+                ))}
+              </div>
+            )}
+
+            {nominee.streamingPlatforms && nominee.streamingPlatforms.length > 0 && (
+              <div className="mb-6">
+                <h3 className="text-sm font-semibold mb-2">Where to Watch</h3>
+                <div className="flex flex-wrap gap-2">
+                  {nominee.streamingPlatforms.map((platform, index) => (
+                    <Badge key={`${nominee.id}-platform-${index}`} variant="outline">
+                      {platform}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <p className="text-muted-foreground mb-6">{nominee.description}</p>
 
             {nominee.trailerUrl && (
