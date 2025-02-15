@@ -13,7 +13,23 @@ if (!TMDB_API_KEY) {
 async function searchMovie(query: string, year?: number) {
   try {
     console.log(`Searching for movie: ${query}${year ? ` (${year})` : ''}`);
-    const response = await fetch(`${TMDB_BASE_URL}/search/movie?api_key=${TMDB_API_KEY}&query=${encodeURIComponent(query)}&language=en-US&include_adult=false${year ? `&year=${year}` : ''}&region=US`);
+
+    const headers = {
+      'Authorization': `Bearer ${TMDB_API_KEY}`,
+      'Content-Type': 'application/json;charset=utf-8'
+    };
+
+    const response = await fetch(
+      `${TMDB_BASE_URL}/search/movie?` + 
+      new URLSearchParams({
+        query: query,
+        language: 'en-US',
+        include_adult: 'false',
+        ...(year && { year: year.toString() }),
+        region: 'US'
+      }),
+      { headers }
+    );
 
     if (!response.ok) {
       throw new Error(`TMDB API error: ${response.status} ${response.statusText}`);
@@ -41,8 +57,19 @@ async function searchMovie(query: string, year?: number) {
 async function getMovieDetails(movieId: number) {
   try {
     console.log(`Fetching details for movie ID: ${movieId}`);
+
+    const headers = {
+      'Authorization': `Bearer ${TMDB_API_KEY}`,
+      'Content-Type': 'application/json;charset=utf-8'
+    };
+
     const response = await fetch(
-      `${TMDB_BASE_URL}/movie/${movieId}?api_key=${TMDB_API_KEY}&language=en-US&append_to_response=credits,videos,images`
+      `${TMDB_BASE_URL}/movie/${movieId}?` + 
+      new URLSearchParams({
+        language: 'en-US',
+        append_to_response: 'credits,videos,images'
+      }),
+      { headers }
     );
 
     if (!response.ok) {

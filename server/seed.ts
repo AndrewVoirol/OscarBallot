@@ -149,15 +149,20 @@ async function seed() {
         name: n.name,
         category: n.category,
         description: n.description, 
-        poster: "", // Will be populated by TMDB
-        trailerUrl: "", // Will be populated by TMDB
+        poster: "",
+        trailerUrl: "",
         streamingPlatforms: n.streamingPlatforms,
-        awards: [], // Will be populated by TMDB
-        cast: [], // Will be populated by TMDB
-        crew: [], // Will be populated by TMDB
+        awards: [],
+        castMembers: [], 
+        crew: [],
         funFacts: [],
         ceremonyYear: 2024,
-        isWinner: n.isWinner
+        isWinner: n.isWinner,
+        historicalAwards: [], 
+        genres: [], 
+        backdropPath: "", 
+        productionCompanies: [], 
+        extendedCredits: { cast: [], crew: [] } 
       }))
     ).returning();
     console.log(`Inserted ${inserted2024.length} nominees for 2024`);
@@ -168,15 +173,20 @@ async function seed() {
         name: n.name,
         category: n.category,
         description: n.description,
-        poster: "", // Will be populated by TMDB
-        trailerUrl: "", // Will be populated by TMDB
+        poster: "",
+        trailerUrl: "",
         streamingPlatforms: n.streamingPlatforms,
-        awards: [], // Will be populated by TMDB
-        cast: [], // Will be populated by TMDB
-        crew: [], // Will be populated by TMDB
+        awards: [],
+        castMembers: [], 
+        crew: [],
         funFacts: [],
         ceremonyYear: 2025,
-        isWinner: false // 2025 winners not yet determined
+        isWinner: false,
+        historicalAwards: [], 
+        genres: [], 
+        backdropPath: "", 
+        productionCompanies: [], 
+        extendedCredits: { cast: [], crew: [] } 
       }))
     ).returning();
     console.log(`Inserted ${inserted2025.length} nominees for 2025`);
@@ -189,7 +199,7 @@ async function seed() {
       allNominees.map(async nominee => {
         const updated = await updateNomineeWithTMDBData(nominee);
         if (updated) {
-          console.log(`${nominee.name}: Category: ${nominee.category}, Year: ${nominee.ceremonyYear}`);
+          console.log(`Updated: ${nominee.name} (${nominee.category}, ${nominee.ceremonyYear})`);
         }
         return updated;
       })
