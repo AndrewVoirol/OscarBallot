@@ -30,7 +30,7 @@ const useLoginMutation = () => {
       queryClient.setQueryData(["/api/auth/user"], user);
       toast({
         title: "Welcome back!",
-        description: "You can now save your Oscar predictions.",
+        description: "You can now save your Oscar predictions and manage your watchlist.",
         variant: "default",
       });
     },
@@ -56,7 +56,7 @@ const useRegisterMutation = () => {
       queryClient.setQueryData(["/api/auth/user"], user);
       toast({
         title: "Welcome!",
-        description: "Your account has been created. Start tracking your Oscar picks!",
+        description: "Your account has been created. You can now save predictions and manage your watchlist!",
         variant: "default",
       });
     },
@@ -81,7 +81,7 @@ const useLogoutMutation = () => {
       queryClient.setQueryData(["/api/auth/user"], null);
       toast({
         title: "Logged out",
-        description: "You can still browse nominees, but predictions won't be saved.",
+        description: "You can still browse nominees, but predictions and watchlist won't be saved.",
         variant: "default",
       });
     },
@@ -106,8 +106,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     isLoading,
   } = useQuery<User | null>({
     queryKey: ["/api/auth/user"],
-    queryFn: getQueryFn({ on401: "returnNull" }), // Gracefully handle 401 by returning null
+    queryFn: getQueryFn({ 
+      on401: "returnNull", // Gracefully handle 401 by returning null without error
+      suppressErrors: true // Don't show error toasts for auth checks
+    }), 
     retry: false, // Don't retry on auth failures
+    refetchOnWindowFocus: false, // Prevent unnecessary auth checks
   });
 
   const loginMutation = useLoginMutation();
