@@ -11,18 +11,26 @@ import { Clock, Calendar, Star, Building2, User } from "lucide-react";
 import { DialogTitle } from "@/components/ui/dialog";
 import type { Nominee } from "@shared/schema";
 
+const TMDB_IMAGE_BASE_URL = "https://image.tmdb.org/t/p/original";
+
 interface NomineeDetailsProps {
   nominee: Nominee;
 }
 
 export function NomineeDetails({ nominee }: NomineeDetailsProps) {
+  // Helper function to construct full image URL
+  const getImageUrl = (path: string | null | undefined) => {
+    if (!path) return null;
+    return path.startsWith('http') ? path : `${TMDB_IMAGE_BASE_URL}${path}`;
+  };
+
   return (
     <div className="relative">
       {nominee.backdropPath && (
         <div className="relative h-64 md:h-80">
           <div className="absolute inset-0 bg-gradient-to-b from-transparent to-background z-10" />
           <img
-            src={nominee.backdropPath}
+            src={getImageUrl(nominee.backdropPath)}
             alt={`${nominee.name} backdrop`}
             className="absolute inset-0 w-full h-full object-cover"
           />
@@ -36,7 +44,7 @@ export function NomineeDetails({ nominee }: NomineeDetailsProps) {
           <div className="shrink-0 w-40 md:w-48">
             <div className="aspect-[2/3] relative bg-muted rounded-lg overflow-hidden shadow-lg">
               <img
-                src={nominee.posterPath}
+                src={getImageUrl(nominee.posterPath)}
                 alt={nominee.name}
                 className="absolute inset-0 w-full h-full object-cover"
               />
@@ -128,7 +136,7 @@ export function NomineeDetails({ nominee }: NomineeDetailsProps) {
                       <Avatar className="h-14 w-14 rounded-full overflow-hidden border-2 border-muted">
                         {member.profileImage ? (
                           <AvatarImage
-                            src={member.profileImage}
+                            src={getImageUrl(member.profileImage)}
                             alt={member.name}
                             className="object-cover w-full h-full"
                           />
@@ -163,7 +171,7 @@ export function NomineeDetails({ nominee }: NomineeDetailsProps) {
                         <Avatar className="h-14 w-14 rounded-full overflow-hidden border-2 border-muted">
                           {member.profileImage ? (
                             <AvatarImage
-                              src={member.profileImage}
+                              src={getImageUrl(member.profileImage)}
                               alt={member.name}
                               className="object-cover w-full h-full"
                             />
@@ -193,7 +201,7 @@ export function NomineeDetails({ nominee }: NomineeDetailsProps) {
                         {company.logoPath ? (
                           <div className="h-12 w-24 relative bg-white/5 rounded-lg p-2 flex items-center justify-center">
                             <img
-                              src={company.logoPath}
+                              src={getImageUrl(company.logoPath)}
                               alt={company.name}
                               className="max-h-full max-w-full object-contain"
                             />
