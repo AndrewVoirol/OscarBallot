@@ -9,23 +9,21 @@ import { AuthProvider } from "@/hooks/use-auth";
 
 function Router() {
   return (
-    <Switch>
-      <Route path="/" component={Home} />
-      <Route path="/auth" component={AuthPage} />
-      <Route component={NotFound} />
-    </Switch>
-  );
-}
-
-function App() {
-  return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <Router />
+        <Switch>
+          <Route path="/" component={Home} />
+          <Route path="/auth" component={AuthPage} />
+          <Route component={NotFound} />
+        </Switch>
         <Toaster />
       </AuthProvider>
     </QueryClientProvider>
   );
+}
+
+function App() {
+  return <Router />;
 }
 
 export default App;
