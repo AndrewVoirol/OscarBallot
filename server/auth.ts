@@ -9,7 +9,6 @@ import { type User } from "@shared/schema";
 
 declare global {
   namespace Express {
-    // Extend User interface with the schema-defined User type
     interface User {
       id: number;
       username: string;
@@ -92,7 +91,7 @@ export function setupAuth(app: Express) {
   });
 
   app.post("/api/auth/login", (req, res, next) => {
-    passport.authenticate("local", (err, user, info) => {
+    passport.authenticate("local", (err: Error | null, user: Express.User | false, info: { message: string } | undefined) => {
       if (err) return next(err);
       if (!user) {
         return res.status(401).json({ message: info?.message || "Invalid credentials" });
