@@ -95,11 +95,4 @@ app.use((req, res, next) => {
       process.exit(1);
     }
   });
-
-  try {
-    await startServer(PORT);
-  } catch (err) {
-    console.error('Failed to start server:', err);
-    process.exit(1);
-  }
 })();
