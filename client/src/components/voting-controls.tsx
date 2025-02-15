@@ -43,12 +43,7 @@ export function VotingControls({ nomineeId, isHistorical = false }: VotingContro
 
   const handleAction = (field: keyof Omit<Ballot, "id" | "nomineeId" | "userId">) => {
     if (!user) {
-      toast({
-        title: "Login Required",
-        description: "Sign in or register to save your Oscar predictions",
-        variant: "default",
-      });
-      setLocation("/auth");
+      return <AuthPromptDialog feature="voting" onContinueAsGuest={() => {}} />;
       return;
     }
     mutation.mutate({ [field]: !ballot?.[field] });
