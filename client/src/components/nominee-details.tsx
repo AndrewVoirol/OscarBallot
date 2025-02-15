@@ -136,16 +136,13 @@ export function NomineeDetails({ nominee }: NomineeDetailsProps) {
                   </AccordionTrigger>
                   <AccordionContent>
                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                      {nominee.extendedCredits.cast.slice(0, 12).map((member) => (
+                      {nominee.extendedCredits?.cast?.slice(0, 12)?.map((member) => (
                         <div key={`${nominee.id}-cast-${member.id}`} className="flex items-center gap-3">
                           <Avatar className="h-14 w-14">
-                            {member.profile_path && (
-                              <AvatarImage
-                                src={getImageUrl(member.profile_path)}
-                                alt={member.name}
-                                onError={handleImageError}
-                              />
-                            )}
+                            <AvatarImage
+                              src={getImageUrl(member.profile_path)}
+                              alt={member.name}
+                            />
                             <AvatarFallback>
                               <User className="h-6 w-6 text-muted-foreground" />
                             </AvatarFallback>
@@ -169,11 +166,11 @@ export function NomineeDetails({ nominee }: NomineeDetailsProps) {
                   </AccordionTrigger>
                   <AccordionContent>
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                      {nominee.extendedCredits.crew
-                        .filter((member) =>
+                      {nominee.extendedCredits?.crew
+                        ?.filter((member) =>
                           ["Director", "Producer", "Writer", "Director of Photography"].includes(member.job)
                         )
-                        .map((member) => (
+                        ?.map((member) => (
                           <div key={`${nominee.id}-crew-${member.id}-${member.job}`} className="flex items-center gap-3">
                             <Avatar className="h-14 w-14">
                               {member.profile_path && (
