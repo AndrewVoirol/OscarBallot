@@ -1,6 +1,6 @@
-
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
+import { Button } from "@/components/ui/button";
 
 export function useAuthPrompt() {
   const { toast } = useToast();
@@ -11,39 +11,46 @@ export function useAuthPrompt() {
       watchlist: {
         title: "Want to save your watchlist?",
         description: "Create an account to keep track of nominees you want to watch later.",
+        guestNote: "As a guest, your watchlist will only be saved for this session.",
       },
       voting: {
         title: "Want to save your predictions?",
         description: "Create an account to save your Oscar predictions permanently.",
+        guestNote: "As a guest, your predictions will only be saved for this session.",
       },
     };
 
     const { dismiss } = toast({
       title: messages[feature].title,
-      description: messages[feature].description,
+      description: (
+        <div>
+          <p>{messages[feature].description}</p>
+          <p className="text-sm text-muted-foreground mt-2">{messages[feature].guestNote}</p>
+        </div>
+      ),
       duration: 0,
       action: (
         <div className="flex gap-2 mt-2">
-          <button
+          <Button
             onClick={() => {
               dismiss();
-              setLocation("/auth");
+              setLocation("/auth?register=true");
             }}
-            className="bg-primary text-primary-foreground hover:bg-primary/90 inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 h-8 px-3"
+            variant="default"
+            size="sm"
           >
             Register
-          </button>
-          <button
+          </Button>
+          <Button
             onClick={() => {
               dismiss();
-              if (onContinueAsGuest) {
-                onContinueAsGuest();
-              }
+              onContinueAsGuest?.();
             }}
-            className="border border-input bg-background hover:bg-accent hover:text-accent-foreground inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 h-8 px-3"
+            variant="outline"
+            size="sm"
           >
             Skip for now
-          </button>
+          </Button>
         </div>
       ),
     });

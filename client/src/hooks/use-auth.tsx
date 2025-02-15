@@ -107,11 +107,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   } = useQuery<User | null>({
     queryKey: ["/api/auth/user"],
     queryFn: getQueryFn({ 
-      on401: "returnNull", // Gracefully handle 401 by returning null without error
-      suppressErrors: true // Don't show error toasts for auth checks
+      on401: "returnNull" 
     }), 
-    retry: false, // Don't retry on auth failures
-    refetchOnWindowFocus: false, // Prevent unnecessary auth checks
+    retry: false,
+    refetchOnWindowFocus: false,
   });
 
   const loginMutation = useLoginMutation();
