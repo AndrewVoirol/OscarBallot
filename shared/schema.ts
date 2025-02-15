@@ -26,13 +26,11 @@ export const nominees = pgTable("nominees", {
       result: "Won" | "Nominated";
     }>;
   }[]>().notNull().default([]),
-  cast: text("cast").array().notNull(),
+  castMembers: text("cast_members").array().notNull(),
   crew: text("crew").array().notNull(),
   funFacts: text("fun_facts").array().notNull(),
-  // New field to track ceremony year
   ceremonyYear: integer("ceremony_year").notNull().default(2025),
   isWinner: boolean("is_winner").notNull().default(false),
-  // TMDB specific fields
   tmdbId: integer("tmdb_id"),
   runtime: integer("runtime"),
   releaseDate: text("release_date"),

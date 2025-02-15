@@ -87,7 +87,7 @@ export async function updateNomineeWithTMDBData(nominee: Nominee) {
     );
 
     // Process cast and crew data
-    const cast = movieDetails.credits?.cast?.slice(0, 10).map((member: any) => ({
+    const castMembers = movieDetails.credits?.cast?.slice(0, 10).map((member: any) => ({
       id: member.id,
       name: member.name,
       character: member.character,
@@ -113,7 +113,7 @@ export async function updateNomineeWithTMDBData(nominee: Nominee) {
         releaseDate: movieDetails.release_date || null,
         voteAverage: movieDetails.vote_average ? Math.round(movieDetails.vote_average * 10) : null,
         poster: formatImageUrl(movieDetails.poster_path),
-        backdrop_path: formatImageUrl(movieDetails.backdrop_path, 'original'),
+        backdropPath: formatImageUrl(movieDetails.backdrop_path, 'original'),
         genres: movieDetails.genres?.map((g: { name: string }) => g.name) || [],
         productionCompanies: movieDetails.production_companies?.map((company: any) => ({
           id: company.id,
@@ -122,7 +122,7 @@ export async function updateNomineeWithTMDBData(nominee: Nominee) {
           originCountry: company.origin_country
         })) || [],
         extendedCredits: {
-          cast,
+          cast: castMembers,
           crew
         },
         ...(trailer && {
