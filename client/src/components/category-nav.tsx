@@ -21,15 +21,12 @@ export function CategoryNav({
     const container = scrollContainerRef.current;
 
     if (activeButton && container) {
-      // Calculate the center position for the active button
       const containerWidth = container.offsetWidth;
       const buttonLeft = activeButton.offsetLeft;
       const buttonWidth = activeButton.offsetWidth;
 
-      // Center the active button in the container
       const targetScroll = buttonLeft - (containerWidth / 2) + (buttonWidth / 2);
 
-      // Smooth scroll to the target position
       container.scrollTo({
         left: Math.max(0, targetScroll),
         behavior: "smooth"
@@ -43,7 +40,7 @@ export function CategoryNav({
         ref={scrollContainerRef}
         className="w-full overflow-x-auto scrollbar-hide py-2 sm:py-1"
       >
-        <div className="flex w-max min-w-full px-4">
+        <div className="flex w-max min-w-full px-4 transition-transform duration-300 ease-out">
           <div className="flex space-x-2 sm:space-x-1.5 mx-auto">
             {categories.map((category) => (
               <Button
@@ -53,7 +50,7 @@ export function CategoryNav({
                 size="sm"
                 onClick={() => onSelectCategory(category)}
                 className={cn(
-                  "whitespace-nowrap transition-all duration-300 ease-in-out min-h-[44px] sm:min-h-[36px] px-4 sm:px-3 py-2 sm:py-1.5 text-base sm:text-sm",
+                  "transition-all duration-300 ease-in-out min-h-[44px] sm:min-h-[36px] px-4 sm:px-3 py-2 sm:py-1.5 text-base sm:text-sm",
                   activeCategory === category
                     ? "bg-primary text-primary-foreground hover:bg-primary/90"
                     : "hover:bg-transparent hover:text-primary"

@@ -9,8 +9,6 @@ import { Badge } from "@/components/ui/badge";
 import { Trophy } from "lucide-react";
 import type { Nominee } from "@shared/schema";
 
-const TMDB_IMAGE_BASE_URL = "https://image.tmdb.org/t/p/original";
-
 interface NomineeCardProps {
   nominee: Nominee;
   isLoading?: boolean;
@@ -19,11 +17,6 @@ interface NomineeCardProps {
 
 export function NomineeCard({ nominee, isLoading, isHistorical }: NomineeCardProps) {
   const [isOpen, setIsOpen] = useState(false);
-
-  const getImageUrl = (path: string | null | undefined) => {
-    if (!path) return null;
-    return path.startsWith('http') ? path : `${TMDB_IMAGE_BASE_URL}${path}`;
-  };
 
   if (isLoading) {
     return (
@@ -54,7 +47,7 @@ export function NomineeCard({ nominee, isLoading, isHistorical }: NomineeCardPro
       <CardHeader className="relative p-0">
         <div className="relative aspect-[2/3] bg-muted">
           <img
-            src={getImageUrl(nominee.posterPath)}
+            src={nominee.poster}
             alt={nominee.name}
             className="absolute inset-0 w-full h-full object-cover"
             loading="lazy"
@@ -67,13 +60,13 @@ export function NomineeCard({ nominee, isLoading, isHistorical }: NomineeCardPro
               </Badge>
             </div>
           )}
-          <AwardsBadge awards={nominee.awards || {}} />
+          <AwardsBadge awards={nominee.awards} />
         </div>
       </CardHeader>
       <CardContent className="p-4 sm:p-6">
         <h3 className="text-xl sm:text-lg font-semibold mb-3 sm:mb-2 line-clamp-2">{nominee.name}</h3>
         <div className="flex flex-wrap gap-2 mb-6 sm:mb-4">
-          {nominee.streamingPlatforms?.map((platform) => (
+          {nominee.streamingPlatforms.map((platform) => (
             <span
               key={platform}
               className="text-sm sm:text-xs px-3 py-1.5 sm:py-1 rounded-full bg-primary/10 text-primary"

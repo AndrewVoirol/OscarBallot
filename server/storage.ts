@@ -1,7 +1,7 @@
-import { type Nominee, type InsertNominee, type Ballot, type InsertBallot, type User, type InsertUser, type Watchlist, type InsertWatchlist, nominees, ballots, users, watchlist } from "@shared/schema";
+import { type Nominee, type InsertNominee, type Ballot, type InsertBallot, type User, type InsertUser, nominees, ballots, users } from "@shared/schema";
 import session from "express-session";
 import { db } from "./db";
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import createMemoryStore from "memorystore";
 
 const MemoryStore = createMemoryStore(session);
@@ -15,12 +15,6 @@ export interface IStorage {
   getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
-
-  getWatchlist(userId: number): Promise<(Watchlist & { nominee: Nominee })[]>;
-  addToWatchlist(watchlistItem: InsertWatchlist): Promise<Watchlist>;
-  removeFromWatchlist(userId: number, nomineeId: number): Promise<void>;
-  updateWatchlistStatus(userId: number, nomineeId: number, status: string): Promise<Watchlist>;
-
   sessionStore: session.Store;
 }
 
@@ -29,33 +23,19 @@ export class DatabaseStorage implements IStorage {
 
   constructor() {
     this.sessionStore = new MemoryStore({
-      checkPeriod: 86400000,
-      stale: false,
+      checkPeriod: 86400000, // prune expired entries every 24h
+      stale: false, // Do not serve stale sessions
     });
   }
 
-  async getNominees(year?: number): Promise<Nominee[]> {
-    if (!year) {
-      return await db
-        .select()
-        .from(nominees)
-        .orderBy(desc(nominees.ceremonyYear));
-    }
+  async getNominees(year: number = 2025): Promise<Nominee[]> {
     return await db
       .select()
       .from(nominees)
-      .where(eq(nominees.ceremonyYear, year))
-      .orderBy(desc(nominees.ceremonyYear));
+      .where(eq(nominees.ceremonyYear, year));
   }
 
-  async getNomineesByCategory(category: string, year?: number): Promise<Nominee[]> {
-    if (!year) {
-      return await db
-        .select()
-        .from(nominees)
-        .where(eq(nominees.category, category))
-        .orderBy(desc(nominees.ceremonyYear));
-    }
+  async getNomineesByCategory(category: string, year: number = 2025): Promise<Nominee[]> {
     return await db
       .select()
       .from(nominees)
@@ -64,8 +44,7 @@ export class DatabaseStorage implements IStorage {
           eq(nominees.category, category),
           eq(nominees.ceremonyYear, year)
         )
-      )
-      .orderBy(desc(nominees.ceremonyYear));
+      );
   }
 
   async getNominee(id: number): Promise<Nominee | undefined> {
@@ -129,55 +108,7 @@ export class DatabaseStorage implements IStorage {
       .returning();
     return user;
   }
-
-  async getWatchlist(userId: number): Promise<(Watchlist & { nominee: Nominee })[]> {
-    const watchlistItems = await db
-      .select({
-        watchlist: watchlist,
-        nominee: nominees,
-      })
-      .from(watchlist)
-      .where(eq(watchlist.userId, userId))
-      .innerJoin(nominees, eq(watchlist.nomineeId, nominees.id));
-
-    return watchlistItems.map(item => ({
-      ...item.watchlist,
-      nominee: item.nominee,
-    }));
-  }
-
-  async addToWatchlist(insertWatchlist: InsertWatchlist): Promise<Watchlist> {
-    const [watchlistItem] = await db
-      .insert(watchlist)
-      .values(insertWatchlist)
-      .returning();
-    return watchlistItem;
-  }
-
-  async removeFromWatchlist(userId: number, nomineeId: number): Promise<void> {
-    await db
-      .delete(watchlist)
-      .where(
-        and(
-          eq(watchlist.userId, userId),
-          eq(watchlist.nomineeId, nomineeId)
-        )
-      );
-  }
-
-  async updateWatchlistStatus(userId: number, nomineeId: number, status: string): Promise<Watchlist> {
-    const [watchlistItem] = await db
-      .update(watchlist)
-      .set({ watchStatus: status })
-      .where(
-        and(
-          eq(watchlist.userId, userId),
-          eq(watchlist.nomineeId, nomineeId)
-        )
-      )
-      .returning();
-    return watchlistItem;
-  }
 }
 
+// Initialize storage with database implementation
 export const storage = new DatabaseStorage();
