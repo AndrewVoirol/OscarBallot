@@ -5,6 +5,7 @@ import { queryClient } from "@/lib/queryClient";
 import { apiRequest } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
 import { useLocation } from "wouter";
+import { AuthPromptDialog } from "@/components/auth-prompt-dialog";
 import type { Ballot } from "@shared/schema";
 
 interface VotingControlsProps {
@@ -44,7 +45,6 @@ export function VotingControls({ nomineeId, isHistorical = false }: VotingContro
   const handleAction = (field: keyof Omit<Ballot, "id" | "nomineeId" | "userId">) => {
     if (!user) {
       return <AuthPromptDialog feature="voting" onContinueAsGuest={() => {}} />;
-      return;
     }
     mutation.mutate({ [field]: !ballot?.[field] });
   };
