@@ -127,5 +127,15 @@ export function registerRoutes(app: Express): Server {
     res.json(ballot);
   });
 
+  // Add new route to get all ballots for a user
+  app.get("/api/ballots", requireAuth, async (req, res) => {
+    if (!req.user) {
+      res.status(401).json({ message: "Authentication required" });
+      return;
+    }
+    const ballots = await storage.getBallotsByUser(req.user.id);
+    res.json(ballots);
+  });
+
   return createServer(app);
 }

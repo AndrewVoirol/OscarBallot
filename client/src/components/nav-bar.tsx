@@ -42,6 +42,9 @@ export function NavBar({ selectedYear = 2025, onYearChange }: NavBarProps) {
           </Select>
           {user ? (
             <div className="flex items-center gap-4">
+              <Link href="/watchlist">
+                <Button variant="ghost">My Watchlist</Button>
+              </Link>
               <span className="text-sm text-muted-foreground">
                 Signed in as {user.username}
               </span>

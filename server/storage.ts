@@ -12,6 +12,7 @@ export interface IStorage {
   getNomineesByCategory(category: string, year?: number): Promise<Nominee[]>;
   getNominee(id: number): Promise<Nominee | undefined>;
   getBallot(nomineeId: number, userId: number): Promise<Ballot | undefined>;
+  getBallotsByUser(userId: number): Promise<Ballot[]>;
   updateBallot(ballot: InsertBallot & { userId: number }): Promise<Ballot>;
   getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
@@ -90,6 +91,17 @@ export class DatabaseStorage implements IStorage {
       return ballot;
     } catch (error) {
       this.handleDatabaseError(error, 'getBallot');
+    }
+  }
+
+  async getBallotsByUser(userId: number): Promise<Ballot[]> {
+    try {
+      return await db
+        .select()
+        .from(ballots)
+        .where(eq(ballots.userId, userId));
+    } catch (error) {
+      this.handleDatabaseError(error, 'getBallotsByUser');
     }
   }
 

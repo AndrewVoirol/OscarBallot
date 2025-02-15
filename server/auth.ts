@@ -7,9 +7,15 @@ import { promisify } from "util";
 import { storage } from "./storage";
 import { type User, type InsertUser } from "@shared/schema";
 
+// Extend Express Request type to include our User type
 declare global {
   namespace Express {
-    interface User extends Omit<User, 'password'> {}
+    // Only include non-sensitive user data in the session
+    interface User {
+      id: number;
+      username: string;
+      isAdmin: boolean;
+    }
   }
 }
 
@@ -125,7 +131,8 @@ export function setupAuth(app: Express): void {
 
 export function requireAuth(req: Request, res: Response, next: NextFunction): void {
   if (!req.isAuthenticated()) {
-    return res.status(401).json({ message: "Authentication required" });
+    res.status(401).json({ message: "Authentication required" });
+    return;
   }
   next();
 }
