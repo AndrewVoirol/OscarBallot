@@ -23,8 +23,8 @@ export function NomineeDetails({ nominee }: NomineeDetailsProps) {
     });
   };
 
-  const getImageUrl = (path: string | null) => {
-    if (!path) return null;
+  const getImageUrl = (path: string | null | undefined) => {
+    if (!path) return undefined;
     return `https://image.tmdb.org/t/p/w500${path}`;
   };
 
@@ -138,10 +138,9 @@ export function NomineeDetails({ nominee }: NomineeDetailsProps) {
                               <AvatarImage
                                 src={getImageUrl(member.profile_path)}
                                 alt={member.name}
-                                className="object-cover w-full h-full"
                               />
                             ) : (
-                              <AvatarFallback className="bg-muted">
+                              <AvatarFallback>
                                 <User className="h-6 w-6 text-muted-foreground" />
                               </AvatarFallback>
                             )}
@@ -174,10 +173,9 @@ export function NomineeDetails({ nominee }: NomineeDetailsProps) {
                                 <AvatarImage
                                   src={getImageUrl(member.profile_path)}
                                   alt={member.name}
-                                  className="object-cover w-full h-full"
                                 />
                               ) : (
-                                <AvatarFallback className="bg-muted">
+                                <AvatarFallback>
                                   <User className="h-6 w-6 text-muted-foreground" />
                                 </AvatarFallback>
                               )}
