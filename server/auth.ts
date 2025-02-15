@@ -5,28 +5,23 @@ import session from "express-session";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
 import { storage } from "./storage";
-import { type User } from "@shared/schema";
+import { type User, type InsertUser } from "@shared/schema";
 
 declare global {
   namespace Express {
-    interface User {
-      id: number;
-      username: string;
-      password: string;
-      isAdmin: boolean;
-    }
+    interface User extends Omit<User, 'password'> {}
   }
 }
 
 const scryptAsync = promisify(scrypt);
 
-async function hashPassword(password: string) {
+async function hashPassword(password: string): Promise<string> {
   const salt = randomBytes(16).toString("hex");
   const buf = (await scryptAsync(password, salt, 64)) as Buffer;
   return `${buf.toString("hex")}.${salt}`;
 }
 
-async function comparePasswords(supplied: string, stored: string) {
+async function comparePasswords(supplied: string, stored: string): Promise<boolean> {
   try {
     const [hashed, salt] = stored.split(".");
     if (!hashed || !salt) {
@@ -41,35 +36,41 @@ async function comparePasswords(supplied: string, stored: string) {
   }
 }
 
-export function setupAuth(app: Express) {
+export function setupAuth(app: Express): void {
   passport.use(
-    new LocalStrategy(async (username, password, done) => {
+    new LocalStrategy(async (username: string, password: string, done) => {
       try {
         const user = await storage.getUserByUsername(username);
         if (!user || !(await comparePasswords(password, user.password))) {
           return done(null, false, { message: "Invalid username or password" });
         }
-        return done(null, user);
+        // Omit password from session
+        const { password: _, ...userWithoutPassword } = user;
+        return done(null, userWithoutPassword);
       } catch (error) {
         return done(error);
       }
     }),
   );
 
-  passport.serializeUser((user, done) => done(null, user.id));
+  passport.serializeUser((user, done) => {
+    done(null, user.id);
+  });
+
   passport.deserializeUser(async (id: number, done) => {
     try {
       const user = await storage.getUser(id);
       if (!user) {
         return done(new Error('User not found'));
       }
-      done(null, user);
+      const { password: _, ...userWithoutPassword } = user;
+      done(null, userWithoutPassword);
     } catch (error) {
       done(error);
     }
   });
 
-  app.post("/api/auth/register", async (req, res, next) => {
+  app.post<{}, {}, InsertUser>("/api/auth/register", async (req, res, next) => {
     try {
       const existingUser = await storage.getUserByUsername(req.body.username);
       if (existingUser) {
@@ -81,9 +82,10 @@ export function setupAuth(app: Express) {
         password: await hashPassword(req.body.password),
       });
 
-      req.login(user, (err) => {
+      const { password: _, ...userWithoutPassword } = user;
+      req.login(userWithoutPassword, (err) => {
         if (err) return next(err);
-        res.status(201).json({ id: user.id, username: user.username, isAdmin: user.isAdmin });
+        res.status(201).json(userWithoutPassword);
       });
     } catch (error) {
       next(error);
@@ -98,7 +100,7 @@ export function setupAuth(app: Express) {
       }
       req.login(user, (err) => {
         if (err) return next(err);
-        res.json({ id: user.id, username: user.username, isAdmin: user.isAdmin });
+        res.json(user);
       });
     })(req, res, next);
   });
@@ -117,12 +119,11 @@ export function setupAuth(app: Express) {
     if (!req.isAuthenticated()) {
       return res.status(401).json({ message: "Not authenticated" });
     }
-    const user = req.user;
-    res.json({ id: user.id, username: user.username, isAdmin: user.isAdmin });
+    res.json(req.user);
   });
 }
 
-export function requireAuth(req: Request, res: Response, next: NextFunction) {
+export function requireAuth(req: Request, res: Response, next: NextFunction): void {
   if (!req.isAuthenticated()) {
     return res.status(401).json({ message: "Authentication required" });
   }
