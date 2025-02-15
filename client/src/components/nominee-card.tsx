@@ -3,11 +3,12 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { VotingControls } from "./voting-controls";
 import { NomineeDetails } from "./nominee-details";
 import { AwardsBadge } from "./awards-badge";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Trophy } from "lucide-react";
 import type { Nominee } from "@shared/schema";
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 
 interface NomineeCardProps {
   nominee: Nominee;
@@ -84,8 +85,16 @@ export function NomineeCard({ nominee, isLoading, isHistorical }: NomineeCardPro
           View Details
         </button>
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
-          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-            <NomineeDetails nominee={nominee} />
+          <DialogContent 
+            className="max-w-3xl max-h-[90vh] overflow-y-auto"
+            aria-describedby={`${nominee.id}-description`}
+          >
+            <VisuallyHidden>
+              <DialogTitle>{nominee.name}</DialogTitle>
+            </VisuallyHidden>
+            <div id={`${nominee.id}-description`}>
+              <NomineeDetails nominee={nominee} />
+            </div>
           </DialogContent>
         </Dialog>
       </CardContent>

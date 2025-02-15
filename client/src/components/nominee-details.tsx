@@ -114,6 +114,7 @@ export function NomineeDetails({ nominee }: NomineeDetailsProps) {
             <AwardsHistory nominee={nominee} />
 
             <Accordion type="single" collapsible className="mt-6">
+              {/* Cast Section */}
               <AccordionItem value="cast">
                 <AccordionTrigger>Cast</AccordionTrigger>
                 <AccordionContent>
@@ -121,9 +122,9 @@ export function NomineeDetails({ nominee }: NomineeDetailsProps) {
                     {nominee.extendedCredits?.cast.slice(0, 12).map((member) => (
                       <div key={`${nominee.id}-cast-${member.id}`} className="flex items-center gap-3">
                         <Avatar className="h-14 w-14 rounded-full overflow-hidden border-2 border-muted">
-                          {member.profileImage ? (
+                          {member.profile_path ? (
                             <AvatarImage
-                              src={member.profileImage}
+                              src={`https://image.tmdb.org/t/p/w500${member.profile_path}`}
                               alt={member.name}
                               className="object-cover w-full h-full"
                             />
@@ -143,6 +144,7 @@ export function NomineeDetails({ nominee }: NomineeDetailsProps) {
                 </AccordionContent>
               </AccordionItem>
 
+              {/* Crew Section */}
               <AccordionItem value="crew">
                 <AccordionTrigger>Crew</AccordionTrigger>
                 <AccordionContent>
@@ -154,9 +156,9 @@ export function NomineeDetails({ nominee }: NomineeDetailsProps) {
                       .map((member) => (
                         <div key={`${nominee.id}-crew-${member.id}-${member.job}`} className="flex items-center gap-3">
                           <Avatar className="h-14 w-14 rounded-full overflow-hidden border-2 border-muted">
-                            {member.profileImage ? (
+                            {member.profile_path ? (
                               <AvatarImage
-                                src={member.profileImage}
+                                src={`https://image.tmdb.org/t/p/w500${member.profile_path}`}
                                 alt={member.name}
                                 className="object-cover w-full h-full"
                               />
@@ -176,6 +178,7 @@ export function NomineeDetails({ nominee }: NomineeDetailsProps) {
                 </AccordionContent>
               </AccordionItem>
 
+              {/* Fun Facts Section */}
               {nominee.funFacts && nominee.funFacts.length > 0 && (
                 <AccordionItem value="funFacts">
                   <AccordionTrigger className="flex items-center gap-2">
@@ -195,6 +198,7 @@ export function NomineeDetails({ nominee }: NomineeDetailsProps) {
                 </AccordionItem>
               )}
 
+              {/* Production Companies Section */}
               {nominee.productionCompanies && nominee.productionCompanies.length > 0 && (
                 <AccordionItem value="production">
                   <AccordionTrigger>Production Companies</AccordionTrigger>
@@ -202,10 +206,10 @@ export function NomineeDetails({ nominee }: NomineeDetailsProps) {
                     <div className="grid grid-cols-2 gap-6">
                       {nominee.productionCompanies.map((company) => (
                         <div key={`${nominee.id}-company-${company.id}`} className="flex items-center gap-3">
-                          {company.logoPath ? (
+                          {company.logo_path ? (
                             <div className="h-12 w-24 relative bg-white/5 rounded-lg p-2 flex items-center justify-center">
                               <img
-                                src={company.logoPath}
+                                src={`https://image.tmdb.org/t/p/w500${company.logo_path}`}
                                 alt={company.name}
                                 className="max-h-full max-w-full object-contain"
                               />
@@ -223,6 +227,7 @@ export function NomineeDetails({ nominee }: NomineeDetailsProps) {
                 </AccordionItem>
               )}
             </Accordion>
+
           </div>
         </div>
       </div>
