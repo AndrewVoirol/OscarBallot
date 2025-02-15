@@ -48,7 +48,7 @@ export function setupAuth(app: Express) {
       try {
         const user = await storage.getUserByUsername(username);
         if (!user || !(await comparePasswords(password, user.password))) {
-          return done(null, false);
+          return done(null, false, { message: "Invalid username or password" });
         }
         return done(null, user);
       } catch (error) {
@@ -84,29 +84,42 @@ export function setupAuth(app: Express) {
 
       req.login(user, (err) => {
         if (err) return next(err);
-        res.status(201).json(user);
+        res.status(201).json({ id: user.id, username: user.username, isAdmin: user.isAdmin });
       });
     } catch (error) {
       next(error);
     }
   });
 
-  app.post("/api/auth/login", passport.authenticate("local"), (req, res) => {
-    res.json(req.user);
+  app.post("/api/auth/login", (req, res, next) => {
+    passport.authenticate("local", (err, user, info) => {
+      if (err) return next(err);
+      if (!user) {
+        return res.status(401).json({ message: info?.message || "Invalid credentials" });
+      }
+      req.login(user, (err) => {
+        if (err) return next(err);
+        res.json({ id: user.id, username: user.username, isAdmin: user.isAdmin });
+      });
+    })(req, res, next);
   });
 
   app.post("/api/auth/logout", (req, res, next) => {
     req.logout((err) => {
       if (err) return next(err);
-      res.sendStatus(200);
+      req.session.destroy((err) => {
+        if (err) return next(err);
+        res.sendStatus(200);
+      });
     });
   });
 
   app.get("/api/auth/user", (req, res) => {
     if (!req.isAuthenticated()) {
-      return res.sendStatus(401);
+      return res.status(401).json({ message: "Not authenticated" });
     }
-    res.json(req.user);
+    const user = req.user;
+    res.json({ id: user.id, username: user.username, isAdmin: user.isAdmin });
   });
 }
 

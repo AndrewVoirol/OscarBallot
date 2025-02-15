@@ -26,10 +26,10 @@ if (app.get("env") === "production") {
   app.set("trust proxy", 1);
 }
 
-// Only apply auth middleware to /api/auth/* and /api/ballots/* routes
-app.use(["/api/auth/*", "/api/ballots/*"], session(sessionSettings));
-app.use(["/api/auth/*", "/api/ballots/*"], passport.initialize());
-app.use(["/api/auth/*", "/api/ballots/*"], passport.session());
+// Apply auth middleware to all /api routes
+app.use("/api", session(sessionSettings));
+app.use("/api", passport.initialize());
+app.use("/api", passport.session());
 
 // Add request logging middleware
 app.use((req, res, next) => {
