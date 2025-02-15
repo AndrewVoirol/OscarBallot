@@ -1,11 +1,18 @@
-import type { Express } from "express";
+import type { Express, Request } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertBallotSchema } from "@shared/schema";
+import { insertBallotSchema, type User } from "@shared/schema";
 import { setupAuth, requireAuth } from "./auth";
 import { updateNomineeWithTMDBData } from "./tmdb";
 import rateLimit from 'express-rate-limit';
 import { eq } from "drizzle-orm";
+
+// Extend Express Request type to include our User type
+declare module "express" {
+  interface Request {
+    user?: User;
+  }
+}
 
 export function registerRoutes(app: Express): Server {
   // Rate limiter for TMDB endpoints
@@ -82,14 +89,18 @@ export function registerRoutes(app: Express): Server {
 
   // Protected routes for ballot operations
   app.get("/api/ballots/:nomineeId", requireAuth, async (req, res) => {
+    if (!req.user) {
+      res.status(401).json({ message: "Authentication required" });
+      return;
+    }
     const ballot = await storage.getBallot(
       parseInt(req.params.nomineeId),
-      req.user!.id
+      req.user.id
     );
     if (!ballot) {
       res.json({
         nomineeId: parseInt(req.params.nomineeId),
-        userId: req.user!.id,
+        userId: req.user.id,
         hasWatched: false,
         predictedWinner: false,
         wantToWin: false
@@ -100,6 +111,10 @@ export function registerRoutes(app: Express): Server {
   });
 
   app.post("/api/ballots", requireAuth, async (req, res) => {
+    if (!req.user) {
+      res.status(401).json({ message: "Authentication required" });
+      return;
+    }
     const result = insertBallotSchema.safeParse(req.body);
     if (!result.success) {
       res.status(400).json({ message: "Invalid ballot data" });
@@ -107,7 +122,7 @@ export function registerRoutes(app: Express): Server {
     }
     const ballot = await storage.updateBallot({
       ...result.data,
-      userId: req.user!.id
+      userId: req.user.id
     });
     res.json(ballot);
   });

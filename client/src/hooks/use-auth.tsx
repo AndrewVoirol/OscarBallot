@@ -80,8 +80,10 @@ const useLogoutMutation = () => {
   });
 };
 
-export const AuthContext = createContext<AuthContextType | null>(null);
+// Create context with a default value
+const AuthContext = createContext<AuthContextType | null>(null);
 
+// Export named component for better HMR compatibility
 export function AuthProvider({ children }: { children: ReactNode }) {
   const {
     data: user,
@@ -112,6 +114,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 }
 
+// Export hook as a named function
 export function useAuth() {
   const context = useContext(AuthContext);
   if (!context) {
@@ -119,3 +122,6 @@ export function useAuth() {
   }
   return context;
 }
+
+// Export context separately if needed by other components
+export { AuthContext };
