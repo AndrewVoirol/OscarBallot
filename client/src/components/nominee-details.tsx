@@ -39,20 +39,18 @@ export function NomineeDetails({ nominee }: NomineeDetailsProps) {
 
       <div className="relative z-20 p-6 -mt-16">
         <div className="flex flex-col md:flex-row gap-6">
-          <div className="shrink-0 w-40 md:w-48">
-            <div className="aspect-[2/3] relative bg-muted rounded-lg overflow-hidden shadow-lg">
+          {/* Left column with poster and metadata */}
+          <div className="md:w-72">
+            <div className="aspect-[2/3] relative bg-muted rounded-lg overflow-hidden shadow-lg mb-4">
               <img
                 src={nominee.poster}
                 alt={nominee.name}
                 className="absolute inset-0 w-full h-full object-cover"
               />
             </div>
-          </div>
 
-          <div className="flex-1">
-            <h2 className="text-2xl font-bold text-primary mb-4">{nominee.name}</h2>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            {/* Metadata cards */}
+            <div className="space-y-4">
               <Card>
                 <CardContent className="p-4 space-y-4">
                   {nominee.runtime && (
@@ -92,151 +90,155 @@ export function NomineeDetails({ nominee }: NomineeDetailsProps) {
                   </CardContent>
                 </Card>
               )}
-            </div>
 
+              {nominee.streamingPlatforms && nominee.streamingPlatforms.length > 0 && (
+                <Card>
+                  <CardContent className="p-4">
+                    <h3 className="text-sm font-semibold mb-2">Where to Watch</h3>
+                    <div className="flex flex-wrap gap-2">
+                      {nominee.streamingPlatforms.map((platform, index) => (
+                        <Badge key={`${nominee.id}-platform-${index}`} variant="outline">
+                          {platform}
+                        </Badge>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          </div>
+
+          {/* Right column with title, description, and accordions */}
+          <div className="flex-1">
+            <h2 className="text-2xl font-bold text-primary mb-4">{nominee.name}</h2>
             <p className="text-muted-foreground mb-6">{nominee.description}</p>
 
-            {nominee.streamingPlatforms && nominee.streamingPlatforms.length > 0 && (
-              <Card className="mb-6">
-                <CardContent className="p-4">
-                  <h3 className="text-sm font-semibold mb-2">Where to Watch</h3>
-                  <div className="flex flex-wrap gap-2">
-                    {nominee.streamingPlatforms.map((platform, index) => (
-                      <Badge key={`${nominee.id}-platform-${index}`} variant="outline">
-                        {platform}
-                      </Badge>
+            {nominee.trailerUrl && (
+              <div className="aspect-video w-full mb-6 rounded-lg overflow-hidden bg-muted">
+                <iframe
+                  src={nominee.trailerUrl}
+                  title={`${nominee.name} Trailer`}
+                  className="w-full h-full"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                />
+              </div>
+            )}
+
+            <AwardsHistory nominee={nominee} />
+
+            <Accordion type="single" collapsible className="mt-6">
+              <AccordionItem value="cast">
+                <AccordionTrigger>Cast</AccordionTrigger>
+                <AccordionContent>
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                    {nominee.extendedCredits?.cast.slice(0, 12).map((member) => (
+                      <div key={`${nominee.id}-cast-${member.id}`} className="flex items-center gap-3">
+                        <Avatar className="h-14 w-14 rounded-full overflow-hidden border-2 border-muted">
+                          {member.profileImage ? (
+                            <AvatarImage
+                              src={member.profileImage}
+                              alt={member.name}
+                              className="object-cover w-full h-full"
+                            />
+                          ) : (
+                            <AvatarFallback className="bg-muted">
+                              <User className="h-6 w-6 text-muted-foreground" />
+                            </AvatarFallback>
+                          )}
+                        </Avatar>
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium truncate">{member.name}</p>
+                          <p className="text-xs text-muted-foreground truncate">{member.character}</p>
+                        </div>
+                      </div>
                     ))}
                   </div>
-                </CardContent>
-              </Card>
-            )}
+                </AccordionContent>
+              </AccordionItem>
+
+              <AccordionItem value="crew">
+                <AccordionTrigger>Crew</AccordionTrigger>
+                <AccordionContent>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                    {nominee.extendedCredits?.crew
+                      .filter((member) =>
+                        ["Director", "Producer", "Writer", "Director of Photography"].includes(member.job)
+                      )
+                      .map((member) => (
+                        <div key={`${nominee.id}-crew-${member.id}-${member.job}`} className="flex items-center gap-3">
+                          <Avatar className="h-14 w-14 rounded-full overflow-hidden border-2 border-muted">
+                            {member.profileImage ? (
+                              <AvatarImage
+                                src={member.profileImage}
+                                alt={member.name}
+                                className="object-cover w-full h-full"
+                              />
+                            ) : (
+                              <AvatarFallback className="bg-muted">
+                                <User className="h-6 w-6 text-muted-foreground" />
+                              </AvatarFallback>
+                            )}
+                          </Avatar>
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium truncate">{member.name}</p>
+                            <p className="text-xs text-muted-foreground truncate">{member.job}</p>
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+
+              {nominee.funFacts && nominee.funFacts.length > 0 && (
+                <AccordionItem value="funFacts">
+                  <AccordionTrigger className="flex items-center gap-2">
+                    <LightbulbIcon className="h-4 w-4" />
+                    Fun Facts
+                  </AccordionTrigger>
+                  <AccordionContent>
+                    <ul className="space-y-2">
+                      {nominee.funFacts.map((fact, index) => (
+                        <li key={`${nominee.id}-fact-${index}`} className="flex items-start gap-2">
+                          <span className="text-primary">•</span>
+                          <span>{fact}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </AccordionContent>
+                </AccordionItem>
+              )}
+
+              {nominee.productionCompanies && nominee.productionCompanies.length > 0 && (
+                <AccordionItem value="production">
+                  <AccordionTrigger>Production Companies</AccordionTrigger>
+                  <AccordionContent>
+                    <div className="grid grid-cols-2 gap-6">
+                      {nominee.productionCompanies.map((company) => (
+                        <div key={`${nominee.id}-company-${company.id}`} className="flex items-center gap-3">
+                          {company.logoPath ? (
+                            <div className="h-12 w-24 relative bg-white/5 rounded-lg p-2 flex items-center justify-center">
+                              <img
+                                src={company.logoPath}
+                                alt={company.name}
+                                className="max-h-full max-w-full object-contain"
+                              />
+                            </div>
+                          ) : (
+                            <div className="h-12 w-12 rounded-lg bg-muted flex items-center justify-center">
+                              <Building2 className="h-6 w-6 text-muted-foreground" />
+                            </div>
+                          )}
+                          <span className="text-sm truncate">{company.name}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+              )}
+            </Accordion>
           </div>
         </div>
-
-        {nominee.trailerUrl && (
-          <div className="aspect-video w-full mt-6 rounded-lg overflow-hidden bg-muted">
-            <iframe
-              src={nominee.trailerUrl}
-              title={`${nominee.name} Trailer`}
-              className="w-full h-full"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              allowFullScreen
-            />
-          </div>
-        )}
-
-        <AwardsHistory nominee={nominee} />
-
-        <Accordion type="single" collapsible className="mt-6">
-          {nominee.funFacts && nominee.funFacts.length > 0 && (
-            <AccordionItem value="funFacts">
-              <AccordionTrigger className="flex items-center gap-2">
-                <LightbulbIcon className="h-4 w-4" />
-                Fun Facts
-              </AccordionTrigger>
-              <AccordionContent>
-                <ul className="space-y-2">
-                  {nominee.funFacts.map((fact, index) => (
-                    <li key={`${nominee.id}-fact-${index}`} className="flex items-start gap-2">
-                      <span className="text-primary">•</span>
-                      <span>{fact}</span>
-                    </li>
-                  ))}
-                </ul>
-              </AccordionContent>
-            </AccordionItem>
-          )}
-
-          <AccordionItem value="cast">
-            <AccordionTrigger>Cast</AccordionTrigger>
-            <AccordionContent>
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                {nominee.extendedCredits?.cast.slice(0, 12).map((member) => (
-                  <div key={`${nominee.id}-cast-${member.id}`} className="flex items-center gap-3">
-                    <Avatar className="h-14 w-14 rounded-full overflow-hidden border-2 border-muted">
-                      {member.profileImage ? (
-                        <AvatarImage
-                          src={member.profileImage}
-                          alt={member.name}
-                          className="object-cover w-full h-full"
-                        />
-                      ) : (
-                        <AvatarFallback className="bg-muted">
-                          <User className="h-6 w-6 text-muted-foreground" />
-                        </AvatarFallback>
-                      )}
-                    </Avatar>
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium truncate">{member.name}</p>
-                      <p className="text-xs text-muted-foreground truncate">{member.character}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </AccordionContent>
-          </AccordionItem>
-
-          <AccordionItem value="crew">
-            <AccordionTrigger>Crew</AccordionTrigger>
-            <AccordionContent>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                {nominee.extendedCredits?.crew
-                  .filter((member) =>
-                    ["Director", "Producer", "Writer", "Director of Photography"].includes(member.job)
-                  )
-                  .map((member) => (
-                    <div key={`${nominee.id}-crew-${member.id}`} className="flex items-center gap-3">
-                      <Avatar className="h-14 w-14 rounded-full overflow-hidden border-2 border-muted">
-                        {member.profileImage ? (
-                          <AvatarImage
-                            src={member.profileImage}
-                            alt={member.name}
-                            className="object-cover w-full h-full"
-                          />
-                        ) : (
-                          <AvatarFallback className="bg-muted">
-                            <User className="h-6 w-6 text-muted-foreground" />
-                          </AvatarFallback>
-                        )}
-                      </Avatar>
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium truncate">{member.name}</p>
-                        <p className="text-xs text-muted-foreground truncate">{member.job}</p>
-                      </div>
-                    </div>
-                  ))}
-              </div>
-            </AccordionContent>
-          </AccordionItem>
-
-          {nominee.productionCompanies && nominee.productionCompanies.length > 0 && (
-            <AccordionItem value="production">
-              <AccordionTrigger>Production Companies</AccordionTrigger>
-              <AccordionContent>
-                <div className="grid grid-cols-2 gap-6">
-                  {nominee.productionCompanies.map((company) => (
-                    <div key={`${nominee.id}-company-${company.id}`} className="flex items-center gap-3">
-                      {company.logoPath ? (
-                        <div className="h-12 w-24 relative bg-white/5 rounded-lg p-2 flex items-center justify-center">
-                          <img
-                            src={company.logoPath}
-                            alt={company.name}
-                            className="max-h-full max-w-full object-contain"
-                          />
-                        </div>
-                      ) : (
-                        <div className="h-12 w-12 rounded-lg bg-muted flex items-center justify-center">
-                          <Building2 className="h-6 w-6 text-muted-foreground" />
-                        </div>
-                      )}
-                      <span className="text-sm truncate">{company.name}</span>
-                    </div>
-                  ))}
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-          )}
-        </Accordion>
       </div>
     </div>
   );

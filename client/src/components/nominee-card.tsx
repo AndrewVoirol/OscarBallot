@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { VotingControls } from "./voting-controls";
 import { NomineeDetails } from "./nominee-details";
 import { AwardsBadge } from "./awards-badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Trophy } from "lucide-react";
@@ -60,15 +60,15 @@ export function NomineeCard({ nominee, isLoading, isHistorical }: NomineeCardPro
               </Badge>
             </div>
           )}
-          {nominee.awards && <AwardsBadge awards={nominee.awards as Record<string, boolean>} />}
+          {nominee.awards && <AwardsBadge awards={nominee.awards} />}
         </div>
       </CardHeader>
       <CardContent className="p-4 sm:p-6">
         <h3 className="text-xl sm:text-lg font-semibold mb-3 sm:mb-2 line-clamp-2">{nominee.name}</h3>
         <div className="flex flex-wrap gap-2 mb-6 sm:mb-4">
-          {nominee.streamingPlatforms.map((platform) => (
+          {nominee.streamingPlatforms.map((platform, index) => (
             <span
-              key={platform}
+              key={`${nominee.id}-platform-${index}`}
               className="text-sm sm:text-xs px-3 py-1.5 sm:py-1 rounded-full bg-primary/10 text-primary"
             >
               {platform}
@@ -85,9 +85,6 @@ export function NomineeCard({ nominee, isLoading, isHistorical }: NomineeCardPro
         </button>
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
           <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>{nominee.name}</DialogTitle>
-            </DialogHeader>
             <NomineeDetails nominee={nominee} />
           </DialogContent>
         </Dialog>
