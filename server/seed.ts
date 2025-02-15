@@ -10,35 +10,48 @@ const nominees2024 = [
     category: "Best Picture",
     isWinner: true,
     streamingPlatforms: ["Peacock", "Digital Purchase"],
-    description: "The story of American scientist J. Robert Oppenheimer and his role in the development of the atomic bomb."
+    description: "The story of American scientist J. Robert Oppenheimer and his role in the development of the atomic bomb.",
+    funFacts: [
+      "Shot entirely on IMAX cameras",
+      "Used practical effects instead of CGI for nuclear explosion sequences",
+      "Cillian Murphy lost significant weight for the role"
+    ]
   },
   { 
     name: "Poor Things",
     category: "Best Picture",
     isWinner: false,
     streamingPlatforms: ["Theaters"],
-    description: "The incredible tale about the fantastical evolution of Bella Baxter, a young woman brought back to life by the brilliant and unorthodox scientist Dr. Godwin Baxter."
+    description: "The incredible tale about the fantastical evolution of Bella Baxter, a young woman brought back to life by the brilliant and unorthodox scientist Dr. Godwin Baxter.",
+    funFacts: [
+      "Features unique Victorian-era steampunk aesthetics",
+      "Emma Stone also served as producer",
+      "Shot in black and white and color sequences"
+    ]
   },
   { 
     name: "Killers of the Flower Moon",
     category: "Best Picture",
     isWinner: false,
     streamingPlatforms: ["Apple TV+"],
-    description: "Members of the Osage tribe in the United States are murdered under mysterious circumstances in the 1920s, sparking a major F.B.I. investigation."
+    description: "Members of the Osage tribe in the United States are murdered under mysterious circumstances in the 1920s, sparking a major F.B.I. investigation.",
+    funFacts: []
   },
   { 
     name: "Barbie",
     category: "Best Picture",
     isWinner: false,
     streamingPlatforms: ["Max"],
-    description: "Barbie suffers a crisis that leads her to question her world and her existence."
+    description: "Barbie suffers a crisis that leads her to question her world and her existence.",
+    funFacts: []
   },
   { 
     name: "The Zone of Interest",
     category: "Best Picture",
     isWinner: false,
     streamingPlatforms: ["Theaters"],
-    description: "The commandant of Auschwitz, Rudolf Höss, and his wife Hedwig, strive to build a dream life for their family in a house and garden next to the camp."
+    description: "The commandant of Auschwitz, Rudolf Höss, and his wife Hedwig, strive to build a dream life for their family in a house and garden next to the camp.",
+    funFacts: []
   },
   // Best Director
   {
@@ -46,14 +59,16 @@ const nominees2024 = [
     category: "Best Director",
     isWinner: true,
     streamingPlatforms: ["Peacock", "Digital Purchase"],
-    description: "Christopher Nolan for his visionary direction of Oppenheimer"
+    description: "Christopher Nolan for his visionary direction of Oppenheimer",
+    funFacts: []
   },
   {
     name: "Poor Things",
     category: "Best Director",
     isWinner: false,
     streamingPlatforms: ["Theaters"],
-    description: "Yorgos Lanthimos for his innovative direction of Poor Things"
+    description: "Yorgos Lanthimos for his innovative direction of Poor Things",
+    funFacts: []
   },
   // Best International Feature
   {
@@ -61,14 +76,16 @@ const nominees2024 = [
     category: "Best International Feature",
     isWinner: true,
     streamingPlatforms: ["Theaters"],
-    description: "Jonathan Glazer's haunting exploration of the banality of evil"
+    description: "Jonathan Glazer's haunting exploration of the banality of evil",
+    funFacts: []
   },
   {
     name: "Perfect Days",
     category: "Best International Feature",
     isWinner: false,
     streamingPlatforms: ["Theaters"],
-    description: "Wim Wenders' meditation on finding beauty in the everyday"
+    description: "Wim Wenders' meditation on finding beauty in the everyday",
+    funFacts: []
   }
 ];
 
@@ -80,28 +97,36 @@ const nominees2025 = [
     category: "Best Picture",
     isWinner: false,
     streamingPlatforms: ["Theaters"],
-    description: "Paul Atreides unites with Chani and the Fremen while seeking revenge against the conspirators who destroyed his family."
+    description: "Paul Atreides unites with Chani and the Fremen while seeking revenge against the conspirators who destroyed his family.",
+    funFacts: [
+      "Filmed in real desert locations",
+      "Features over 1000 visual effects shots",
+      "Cast underwent extensive combat training"
+    ]
   },
   { 
     name: "Inside Out 2",
     category: "Best Picture",
     isWinner: false,
     streamingPlatforms: ["Theaters"],
-    description: "Follow Riley in her teenage years as new emotions join Joy, Sadness, Anger, Fear, and Disgust in Headquarters."
+    description: "Follow Riley in her teenage years as new emotions join Joy, Sadness, Anger, Fear, and Disgust in Headquarters.",
+    funFacts: []
   },
   { 
     name: "Joker: Folie à Deux",
     category: "Best Picture",
     isWinner: false,
     streamingPlatforms: ["Theaters"],
-    description: "The continuation of the story of Arthur Fleck, this time exploring his relationship with Harley Quinn."
+    description: "The continuation of the story of Arthur Fleck, this time exploring his relationship with Harley Quinn.",
+    funFacts: []
   },
   { 
     name: "Gladiator 2",
     category: "Best Picture",
     isWinner: false,
     streamingPlatforms: ["Theaters"],
-    description: "The sequel to Ridley Scott's epic historical drama, following a new generation of characters in ancient Rome."
+    description: "The sequel to Ridley Scott's epic historical drama, following a new generation of characters in ancient Rome.",
+    funFacts: []
   },
   // Best Director Contenders
   {
@@ -109,14 +134,16 @@ const nominees2025 = [
     category: "Best Director",
     isWinner: false,
     streamingPlatforms: ["Theaters"],
-    description: "Denis Villeneuve returns to direct the epic conclusion of the first Dune saga"
+    description: "Denis Villeneuve returns to direct the epic conclusion of the first Dune saga",
+    funFacts: []
   },
   {
     name: "Joker: Folie à Deux",
     category: "Best Director",
     isWinner: false,
     streamingPlatforms: ["Theaters"],
-    description: "Todd Phillips directs this musical psychological thriller"
+    description: "Todd Phillips directs this musical psychological thriller",
+    funFacts: []
   },
   // Best International Feature Contenders
   {
@@ -124,14 +151,16 @@ const nominees2025 = [
     category: "Best International Feature",
     isWinner: false,
     streamingPlatforms: ["Theaters"],
-    description: "Bertrand Bonello's futuristic romance starring Léa Seydoux"
+    description: "Bertrand Bonello's futuristic romance starring Léa Seydoux",
+    funFacts: []
   },
   {
     name: "Kinds of Kindness",
     category: "Best International Feature",
     isWinner: false,
     streamingPlatforms: ["Theaters"],
-    description: "Yorgos Lanthimos' anthology film exploring different realities"
+    description: "Yorgos Lanthimos' anthology film exploring different realities",
+    funFacts: []
   }
 ];
 
@@ -155,7 +184,7 @@ async function seed() {
         awards: [],
         castMembers: [], 
         crew: [],
-        funFacts: [],
+        funFacts: n.funFacts || [], 
         ceremonyYear: 2024,
         isWinner: n.isWinner,
         historicalAwards: [], 
@@ -179,7 +208,7 @@ async function seed() {
         awards: [],
         castMembers: [], 
         crew: [],
-        funFacts: [],
+        funFacts: n.funFacts || [], 
         ceremonyYear: 2025,
         isWinner: false,
         historicalAwards: [], 

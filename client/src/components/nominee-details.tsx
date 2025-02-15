@@ -58,9 +58,9 @@ export function NomineeDetails({ nominee }: NomineeDetailsProps) {
                   <Calendar className="h-4 w-4 text-primary" />
                   <span className="text-sm">
                     {new Date(nominee.releaseDate).toLocaleDateString(undefined, {
-                      year: 'numeric',
-                      month: 'short',
-                      day: 'numeric'
+                      year: "numeric",
+                      month: "short",
+                      day: "numeric",
                     })}
                   </span>
                 </div>
@@ -122,7 +122,7 @@ export function NomineeDetails({ nominee }: NomineeDetailsProps) {
               <AccordionContent>
                 <ul className="space-y-2">
                   {nominee.funFacts.map((fact, index) => (
-                    <li key={index} className="flex items-start gap-2">
+                    <li key={`fun-fact-${nominee.id}-${index}`} className="flex items-start gap-2">
                       <span className="text-primary">•</span>
                       <span>{fact}</span>
                     </li>
@@ -137,7 +137,7 @@ export function NomineeDetails({ nominee }: NomineeDetailsProps) {
             <AccordionContent>
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                 {nominee.extendedCredits?.cast.slice(0, 12).map((member) => (
-                  <div key={member.id} className="flex items-center gap-3">
+                  <div key={`cast-${nominee.id}-${member.id}`} className="flex items-center gap-3">
                     <Avatar className="h-14 w-14 rounded-full overflow-hidden border-2 border-muted">
                       {member.profile_path ? (
                         <AvatarImage
@@ -172,7 +172,7 @@ export function NomineeDetails({ nominee }: NomineeDetailsProps) {
                     ["Director", "Producer", "Writer", "Director of Photography"].includes(member.job)
                   )
                   .map((member) => (
-                    <div key={member.id} className="flex items-center gap-3">
+                    <div key={`crew-${nominee.id}-${member.id}`} className="flex items-center gap-3">
                       <Avatar className="h-14 w-14 rounded-full overflow-hidden border-2 border-muted">
                         {member.profile_path ? (
                           <AvatarImage
@@ -202,7 +202,7 @@ export function NomineeDetails({ nominee }: NomineeDetailsProps) {
               <AccordionContent>
                 <div className="grid grid-cols-2 gap-6">
                   {nominee.productionCompanies.map((company) => (
-                    <div key={company.id} className="flex items-center gap-3">
+                    <div key={`company-${nominee.id}-${company.id}`} className="flex items-center gap-3">
                       {company.logo_path ? (
                         <div className="h-12 w-24 relative bg-white/5 rounded-lg p-2 flex items-center justify-center">
                           <img
