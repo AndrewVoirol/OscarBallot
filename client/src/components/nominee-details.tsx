@@ -25,7 +25,14 @@ export function NomineeDetails({ nominee }: NomineeDetailsProps) {
 
   const getImageUrl = (path: string | null | undefined) => {
     if (!path) return undefined;
-    return `https://image.tmdb.org/t/p/w500${path}`;
+    // Ensure path starts with '/' for TMDB API
+    const cleanPath = path.startsWith('/') ? path : `/${path}`;
+    return `https://image.tmdb.org/t/p/w500${cleanPath}`;
+  };
+
+  const handleImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
+    console.error('Image failed to load:', e.currentTarget.src);
+    e.currentTarget.style.display = 'none';
   };
 
   return (
@@ -37,9 +44,7 @@ export function NomineeDetails({ nominee }: NomineeDetailsProps) {
             src={getImageUrl(nominee.backdropPath)}
             alt={`${nominee.name} backdrop`}
             className="absolute inset-0 w-full h-full object-cover"
-            onError={(e) => {
-              e.currentTarget.style.display = 'none';
-            }}
+            onError={handleImageError}
           />
         </div>
       )}
@@ -52,9 +57,7 @@ export function NomineeDetails({ nominee }: NomineeDetailsProps) {
                 src={nominee.poster}
                 alt={nominee.name}
                 className="absolute inset-0 w-full h-full object-cover"
-                onError={(e) => {
-                  e.currentTarget.style.display = 'none';
-                }}
+                onError={handleImageError}
               />
             </div>
           </div>
@@ -128,22 +131,24 @@ export function NomineeDetails({ nominee }: NomineeDetailsProps) {
               {/* Cast Section */}
               {nominee.extendedCredits?.cast && nominee.extendedCredits.cast.length > 0 && (
                 <AccordionItem value="cast">
-                  <AccordionTrigger>Cast</AccordionTrigger>
+                  <AccordionTrigger>
+                    Cast ({nominee.extendedCredits.cast.length})
+                  </AccordionTrigger>
                   <AccordionContent>
                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                       {nominee.extendedCredits.cast.slice(0, 12).map((member) => (
                         <div key={`${nominee.id}-cast-${member.id}`} className="flex items-center gap-3">
-                          <Avatar className="h-14 w-14 rounded-full overflow-hidden border-2 border-muted">
-                            {member.profile_path ? (
+                          <Avatar className="h-14 w-14">
+                            {member.profile_path && (
                               <AvatarImage
                                 src={getImageUrl(member.profile_path)}
                                 alt={member.name}
+                                onError={handleImageError}
                               />
-                            ) : (
-                              <AvatarFallback>
-                                <User className="h-6 w-6 text-muted-foreground" />
-                              </AvatarFallback>
                             )}
+                            <AvatarFallback>
+                              <User className="h-6 w-6 text-muted-foreground" />
+                            </AvatarFallback>
                           </Avatar>
                           <div className="min-w-0">
                             <p className="text-sm font-medium truncate">{member.name}</p>
@@ -159,7 +164,9 @@ export function NomineeDetails({ nominee }: NomineeDetailsProps) {
               {/* Crew Section */}
               {nominee.extendedCredits?.crew && nominee.extendedCredits.crew.length > 0 && (
                 <AccordionItem value="crew">
-                  <AccordionTrigger>Crew</AccordionTrigger>
+                  <AccordionTrigger>
+                    Crew ({nominee.extendedCredits.crew.length})
+                  </AccordionTrigger>
                   <AccordionContent>
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                       {nominee.extendedCredits.crew
@@ -168,17 +175,17 @@ export function NomineeDetails({ nominee }: NomineeDetailsProps) {
                         )
                         .map((member) => (
                           <div key={`${nominee.id}-crew-${member.id}-${member.job}`} className="flex items-center gap-3">
-                            <Avatar className="h-14 w-14 rounded-full overflow-hidden border-2 border-muted">
-                              {member.profile_path ? (
+                            <Avatar className="h-14 w-14">
+                              {member.profile_path && (
                                 <AvatarImage
                                   src={getImageUrl(member.profile_path)}
                                   alt={member.name}
+                                  onError={handleImageError}
                                 />
-                              ) : (
-                                <AvatarFallback>
-                                  <User className="h-6 w-6 text-muted-foreground" />
-                                </AvatarFallback>
                               )}
+                              <AvatarFallback>
+                                <User className="h-6 w-6 text-muted-foreground" />
+                              </AvatarFallback>
                             </Avatar>
                             <div className="min-w-0">
                               <p className="text-sm font-medium truncate">{member.name}</p>
@@ -225,9 +232,7 @@ export function NomineeDetails({ nominee }: NomineeDetailsProps) {
                                 src={getImageUrl(company.logo_path)}
                                 alt={company.name}
                                 className="max-h-full max-w-full object-contain"
-                                onError={(e) => {
-                                  e.currentTarget.style.display = 'none';
-                                }}
+                                onError={handleImageError}
                               />
                             </div>
                           ) : (
@@ -243,7 +248,6 @@ export function NomineeDetails({ nominee }: NomineeDetailsProps) {
                 </AccordionItem>
               )}
             </Accordion>
-
           </div>
         </div>
       </div>
