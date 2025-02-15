@@ -80,31 +80,21 @@ app.use((req, res, next) => {
   }
 
   const PORT = process.env.PORT ? parseInt(process.env.PORT) : 5000;
-  const MAX_PORT_ATTEMPTS = 10;
 
-  const startServer = async (initialPort: number) => {
-    for (let port = initialPort; port < initialPort + MAX_PORT_ATTEMPTS; port++) {
-      try {
-        await new Promise<void>((resolve, reject) => {
-          server.listen(port, "0.0.0.0", () => {
-            log(`Server running on port ${port}`);
-            resolve();
-          }).on('error', (err: any) => {
-            if (err.code === 'EADDRINUSE') {
-              log(`Port ${port} is in use, trying next port...`);
-            } else {
-              reject(err);
-            }
-          });
-        });
-        return; // Successfully started server
-      } catch (err) {
-        if (port === initialPort + MAX_PORT_ATTEMPTS - 1) {
-          throw new Error(`Could not find an available port after ${MAX_PORT_ATTEMPTS} attempts`);
-        }
-      }
+  server.listen(PORT, "0.0.0.0", () => {
+    log(`Server running on port ${PORT}`);
+  }).on('error', (err: any) => {
+    if (err.code === 'EADDRINUSE') {
+      const newPort = PORT + 1;
+      log(`Port ${PORT} is in use, trying port ${newPort}`);
+      server.listen(newPort, "0.0.0.0", () => {
+        log(`Server running on port ${newPort}`);
+      });
+    } else {
+      console.error('Server error:', err);
+      process.exit(1);
     }
-  };
+  });
 
   try {
     await startServer(PORT);
