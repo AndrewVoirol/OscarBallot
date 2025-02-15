@@ -7,7 +7,7 @@ import {
 import { AwardsHistory } from "./awards-history";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { Clock, Calendar, Star, Building2, User } from "lucide-react";
+import { Clock, Calendar, Star, Building2, User, LightbulbIcon } from "lucide-react";
 import type { Nominee } from "@shared/schema";
 
 interface NomineeDetailsProps {
@@ -112,18 +112,71 @@ export function NomineeDetails({ nominee }: NomineeDetailsProps) {
 
         <AwardsHistory nominee={nominee} />
 
-        {nominee.extendedCredits && (
-          <Accordion type="single" collapsible className="mt-6">
-            <AccordionItem value="cast">
-              <AccordionTrigger>Cast</AccordionTrigger>
+        <Accordion type="single" collapsible className="mt-6">
+          {nominee.funFacts && nominee.funFacts.length > 0 && (
+            <AccordionItem value="funFacts">
+              <AccordionTrigger className="flex items-center gap-2">
+                <LightbulbIcon className="h-4 w-4" />
+                Fun Facts
+              </AccordionTrigger>
               <AccordionContent>
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                  {nominee.extendedCredits.cast.slice(0, 12).map((member) => (
+                <ul className="space-y-2">
+                  {nominee.funFacts.map((fact, index) => (
+                    <li key={index} className="flex items-start gap-2">
+                      <span className="text-primary">•</span>
+                      <span>{fact}</span>
+                    </li>
+                  ))}
+                </ul>
+              </AccordionContent>
+            </AccordionItem>
+          )}
+
+          <AccordionItem value="cast">
+            <AccordionTrigger>Cast</AccordionTrigger>
+            <AccordionContent>
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                {nominee.extendedCredits?.cast.slice(0, 12).map((member) => (
+                  <div key={member.id} className="flex items-center gap-3">
+                    <Avatar className="h-14 w-14 rounded-full overflow-hidden border-2 border-muted">
+                      {member.profile_path ? (
+                        <AvatarImage
+                          src={`https://image.tmdb.org/t/p/w500${member.profile_path}`}
+                          alt={member.name}
+                          className="object-cover w-full h-full"
+                        />
+                      ) : (
+                        <AvatarFallback className="bg-muted">
+                          <User className="h-6 w-6 text-muted-foreground" />
+                        </AvatarFallback>
+                      )}
+                    </Avatar>
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium truncate">{member.name}</p>
+                      <p className="text-xs text-muted-foreground truncate">
+                        {member.character}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+
+          <AccordionItem value="crew">
+            <AccordionTrigger>Crew</AccordionTrigger>
+            <AccordionContent>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                {nominee.extendedCredits?.crew
+                  .filter((member) =>
+                    ["Director", "Producer", "Writer", "Director of Photography"].includes(member.job)
+                  )
+                  .map((member) => (
                     <div key={member.id} className="flex items-center gap-3">
                       <Avatar className="h-14 w-14 rounded-full overflow-hidden border-2 border-muted">
-                        {member.profileImage ? (
+                        {member.profile_path ? (
                           <AvatarImage
-                            src={member.profileImage}
+                            src={`https://image.tmdb.org/t/p/w500${member.profile_path}`}
                             alt={member.name}
                             className="object-cover w-full h-full"
                           />
@@ -135,78 +188,42 @@ export function NomineeDetails({ nominee }: NomineeDetailsProps) {
                       </Avatar>
                       <div className="min-w-0">
                         <p className="text-sm font-medium truncate">{member.name}</p>
-                        <p className="text-xs text-muted-foreground truncate">
-                          {member.character}
-                        </p>
+                        <p className="text-xs text-muted-foreground truncate">{member.job}</p>
                       </div>
+                    </div>
+                  ))}
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+
+          {nominee.productionCompanies && nominee.productionCompanies.length > 0 && (
+            <AccordionItem value="production">
+              <AccordionTrigger>Production Companies</AccordionTrigger>
+              <AccordionContent>
+                <div className="grid grid-cols-2 gap-6">
+                  {nominee.productionCompanies.map((company) => (
+                    <div key={company.id} className="flex items-center gap-3">
+                      {company.logo_path ? (
+                        <div className="h-12 w-24 relative bg-white/5 rounded-lg p-2 flex items-center justify-center">
+                          <img
+                            src={`https://image.tmdb.org/t/p/w500${company.logo_path}`}
+                            alt={company.name}
+                            className="max-h-full max-w-full object-contain"
+                          />
+                        </div>
+                      ) : (
+                        <div className="h-12 w-12 rounded-lg bg-muted flex items-center justify-center">
+                          <Building2 className="h-6 w-6 text-muted-foreground" />
+                        </div>
+                      )}
+                      <span className="text-sm truncate">{company.name}</span>
                     </div>
                   ))}
                 </div>
               </AccordionContent>
             </AccordionItem>
-
-            <AccordionItem value="crew">
-              <AccordionTrigger>Crew</AccordionTrigger>
-              <AccordionContent>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                  {nominee.extendedCredits.crew
-                    .filter((member) =>
-                      ["Director", "Producer", "Writer", "Director of Photography"].includes(member.job)
-                    )
-                    .map((member) => (
-                      <div key={member.id} className="flex items-center gap-3">
-                        <Avatar className="h-14 w-14 rounded-full overflow-hidden border-2 border-muted">
-                          {member.profileImage ? (
-                            <AvatarImage
-                              src={member.profileImage}
-                              alt={member.name}
-                              className="object-cover w-full h-full"
-                            />
-                          ) : (
-                            <AvatarFallback className="bg-muted">
-                              <User className="h-6 w-6 text-muted-foreground" />
-                            </AvatarFallback>
-                          )}
-                        </Avatar>
-                        <div className="min-w-0">
-                          <p className="text-sm font-medium truncate">{member.name}</p>
-                          <p className="text-xs text-muted-foreground truncate">{member.job}</p>
-                        </div>
-                      </div>
-                    ))}
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-
-            {nominee.productionCompanies && nominee.productionCompanies.length > 0 && (
-              <AccordionItem value="production">
-                <AccordionTrigger>Production Companies</AccordionTrigger>
-                <AccordionContent>
-                  <div className="grid grid-cols-2 gap-6">
-                    {nominee.productionCompanies.map((company) => (
-                      <div key={company.id} className="flex items-center gap-3">
-                        {company.logoPath ? (
-                          <div className="h-12 w-24 relative bg-white/5 rounded-lg p-2 flex items-center justify-center">
-                            <img
-                              src={company.logoPath}
-                              alt={company.name}
-                              className="max-h-full max-w-full object-contain"
-                            />
-                          </div>
-                        ) : (
-                          <div className="h-12 w-12 rounded-lg bg-muted flex items-center justify-center">
-                            <Building2 className="h-6 w-6 text-muted-foreground" />
-                          </div>
-                        )}
-                        <span className="text-sm truncate">{company.name}</span>
-                      </div>
-                    ))}
-                  </div>
-                </AccordionContent>
-              </AccordionItem>
-            )}
-          </Accordion>
-        )}
+          )}
+        </Accordion>
       </div>
     </div>
   );

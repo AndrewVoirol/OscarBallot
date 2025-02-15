@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { VotingControls } from "./voting-controls";
 import { NomineeDetails } from "./nominee-details";
 import { AwardsBadge } from "./awards-badge";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Trophy } from "lucide-react";
@@ -60,7 +60,7 @@ export function NomineeCard({ nominee, isLoading, isHistorical }: NomineeCardPro
               </Badge>
             </div>
           )}
-          <AwardsBadge awards={nominee.awards} />
+          {nominee.awards && <AwardsBadge awards={nominee.awards as Record<string, boolean>} />}
         </div>
       </CardHeader>
       <CardContent className="p-4 sm:p-6">
@@ -84,7 +84,10 @@ export function NomineeCard({ nominee, isLoading, isHistorical }: NomineeCardPro
           View Details
         </button>
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
-          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto p-0">
+          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>{nominee.name}</DialogTitle>
+            </DialogHeader>
             <NomineeDetails nominee={nominee} />
           </DialogContent>
         </Dialog>
