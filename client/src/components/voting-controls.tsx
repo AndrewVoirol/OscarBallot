@@ -5,7 +5,7 @@ import { queryClient } from "@/lib/queryClient";
 import { apiRequest } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
 import { useLocation } from "wouter";
-import { AuthPromptDialog } from "@/components/auth-prompt-dialog";
+import { useAuthPrompt } from "@/hooks/use-auth-prompt";
 import type { Ballot } from "@shared/schema";
 
 interface VotingControlsProps {
@@ -42,9 +42,19 @@ export function VotingControls({ nomineeId, isHistorical = false }: VotingContro
     },
   });
 
+  const { promptAuth } = useAuthPrompt();
+  
   const handleAction = (field: keyof Omit<Ballot, "id" | "nomineeId" | "userId">) => {
     if (!user) {
-      return <AuthPromptDialog feature="voting" onContinueAsGuest={() => {}} />;
+      promptAuth("voting", () => {
+        // This will be called if user clicks "Skip for now"
+        toast({
+          title: "Continuing as guest",
+          description: "Your actions won't be saved",
+          duration: 3000,
+        });
+      });
+      return;
     }
     mutation.mutate({ [field]: !ballot?.[field] });
   };
