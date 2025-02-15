@@ -28,6 +28,11 @@ const useLoginMutation = () => {
     },
     onSuccess: (user: User) => {
       queryClient.setQueryData(["/api/auth/user"], user);
+      toast({
+        title: "Welcome back!",
+        description: "You can now save your Oscar predictions.",
+        variant: "default",
+      });
     },
     onError: (error: Error) => {
       toast({
@@ -49,6 +54,11 @@ const useRegisterMutation = () => {
     },
     onSuccess: (user: User) => {
       queryClient.setQueryData(["/api/auth/user"], user);
+      toast({
+        title: "Welcome!",
+        description: "Your account has been created. Start tracking your Oscar picks!",
+        variant: "default",
+      });
     },
     onError: (error: Error) => {
       toast({
@@ -69,6 +79,11 @@ const useLogoutMutation = () => {
     },
     onSuccess: () => {
       queryClient.setQueryData(["/api/auth/user"], null);
+      toast({
+        title: "Logged out",
+        description: "You can still browse nominees, but predictions won't be saved.",
+        variant: "default",
+      });
     },
     onError: (error: Error) => {
       toast({
@@ -91,7 +106,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     isLoading,
   } = useQuery<User | null>({
     queryKey: ["/api/auth/user"],
-    queryFn: getQueryFn({ on401: "returnNull" }),
+    queryFn: getQueryFn({ on401: "returnNull" }), // Gracefully handle 401 by returning null
+    retry: false, // Don't retry on auth failures
   });
 
   const loginMutation = useLoginMutation();
