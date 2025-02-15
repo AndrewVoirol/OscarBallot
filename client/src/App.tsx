@@ -6,6 +6,7 @@ import NotFound from "@/pages/not-found";
 import Home from "@/pages/home";
 import AuthPage from "@/pages/auth-page";
 import WatchlistPage from "@/pages/watchlist";
+import NomineePage from "@/pages/nominee-page";
 import { AuthProvider } from "@/hooks/use-auth";
 import { ProtectedRoute } from "@/lib/protected-route";
 
@@ -16,6 +17,7 @@ function Router() {
         <Switch>
           <Route path="/" component={Home} />
           <Route path="/auth" component={AuthPage} />
+          <Route path="/nominees/:id" component={NomineePage} />
           <ProtectedRoute path="/watchlist" component={WatchlistPage} />
           <Route component={NotFound} />
         </Switch>
