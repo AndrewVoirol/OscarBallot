@@ -1,14 +1,18 @@
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { type Ballot, type Nominee } from "@shared/schema";
-import { Link } from "wouter";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Clock, CheckCircle2 } from "lucide-react";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { NomineeDetails } from "@/components/nominee-details";
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
+import { useState } from "react";
 
 export default function WatchlistPage() {
   const { user } = useAuth();
+  const [selectedNominee, setSelectedNominee] = useState<Nominee | null>(null);
 
   const { data: nominees } = useQuery<Nominee[]>({
     queryKey: ["/api/nominees"],
@@ -58,7 +62,11 @@ export default function WatchlistPage() {
         <TabsContent value="watched">
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {watchedNominees.map((nominee) => (
-              <Link key={nominee.id} href={`/nominees/${nominee.id}`}>
+              <button
+                key={nominee.id}
+                onClick={() => setSelectedNominee(nominee)}
+                className="text-left w-full"
+              >
                 <Card className="h-full hover:bg-muted/50 transition-colors cursor-pointer">
                   <CardContent className="p-4">
                     <div className="flex items-start gap-4">
@@ -72,9 +80,7 @@ export default function WatchlistPage() {
                         </div>
                       </div>
                       <div>
-                        <h3 className="font-semibold mb-1 line-clamp-2">
-                          {nominee.name}
-                        </h3>
+                        <h3 className="font-semibold mb-1 line-clamp-2">{nominee.name}</h3>
                         <Badge variant="secondary" className="mb-2">
                           {nominee.category}
                         </Badge>
@@ -86,7 +92,7 @@ export default function WatchlistPage() {
                     </div>
                   </CardContent>
                 </Card>
-              </Link>
+              </button>
             ))}
           </div>
         </TabsContent>
@@ -94,7 +100,11 @@ export default function WatchlistPage() {
         <TabsContent value="watchlist">
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {unwatchedNominees.map((nominee) => (
-              <Link key={nominee.id} href={`/nominees/${nominee.id}`}>
+              <button
+                key={nominee.id}
+                onClick={() => setSelectedNominee(nominee)}
+                className="text-left w-full"
+              >
                 <Card className="h-full hover:bg-muted/50 transition-colors cursor-pointer">
                   <CardContent className="p-4">
                     <div className="flex items-start gap-4">
@@ -108,9 +118,7 @@ export default function WatchlistPage() {
                         </div>
                       </div>
                       <div>
-                        <h3 className="font-semibold mb-1 line-clamp-2">
-                          {nominee.name}
-                        </h3>
+                        <h3 className="font-semibold mb-1 line-clamp-2">{nominee.name}</h3>
                         <Badge variant="secondary" className="mb-2">
                           {nominee.category}
                         </Badge>
@@ -122,11 +130,27 @@ export default function WatchlistPage() {
                     </div>
                   </CardContent>
                 </Card>
-              </Link>
+              </button>
             ))}
           </div>
         </TabsContent>
       </Tabs>
+
+      <Dialog open={!!selectedNominee} onOpenChange={() => setSelectedNominee(null)}>
+        <DialogContent 
+          className="max-w-3xl max-h-[90vh] overflow-y-auto"
+          aria-describedby={selectedNominee ? `nominee-${selectedNominee.id}-description` : undefined}
+        >
+          <VisuallyHidden>
+            <h2>{selectedNominee?.name}</h2>
+          </VisuallyHidden>
+          {selectedNominee && (
+            <div id={`nominee-${selectedNominee.id}-description`}>
+              <NomineeDetails nominee={selectedNominee} />
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
