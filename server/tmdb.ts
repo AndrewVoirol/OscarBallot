@@ -2,7 +2,7 @@ import { db } from "./db";
 import { nominees, type Nominee } from "@shared/schema";
 import { eq } from "drizzle-orm";
 
-const TMDB_BASE_URL = "https://api.themoviedb.org/4";
+const TMDB_BASE_URL = "https://api.themoviedb.org/3"; // Changed to v3
 const TMDB_IMAGE_BASE_URL = "https://image.tmdb.org/t/p";
 
 if (!process.env.TMDB_ACCESS_TOKEN) {
@@ -18,15 +18,14 @@ async function searchMovie(query: string, year?: number) {
       'Content-Type': 'application/json;charset=utf-8'
     };
 
-    // Search using v4 API
+    // Search using v3 API
     const response = await fetch(
       `${TMDB_BASE_URL}/search/movie?` + 
       new URLSearchParams({
         query: query,
         language: 'en-US',
         include_adult: 'false',
-        ...(year && { year: year.toString() }),
-        region: 'US'
+        ...(year && { primary_release_year: year.toString() }),
       }),
       { headers }
     );
@@ -136,9 +135,9 @@ export async function updateNomineeWithTMDBData(nominee: Nominee) {
       .update(nominees)
       .set({
         tmdbId: movieDetails.id,
-        runtime: movieDetails.runtime || null,
-        releaseDate: movieDetails.release_date || null,
-        voteAverage: movieDetails.vote_average ? Math.round(movieDetails.vote_average * 10) : null,
+        runtime: movieDetails.runtime || 0,
+        releaseDate: movieDetails.release_date,
+        voteAverage: movieDetails.vote_average ? Math.round(movieDetails.vote_average * 10) : 0,
         poster: formatImageUrl(movieDetails.poster_path),
         backdropPath: formatImageUrl(movieDetails.backdrop_path, 'original'),
         genres: movieDetails.genres?.map((g: { name: string }) => g.name) || [],
