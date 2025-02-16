@@ -5,6 +5,7 @@ import { sql } from "drizzle-orm";
 
 // 2024 Oscar nominees (96th Academy Awards)
 const oscar2024Nominees = [
+  // Best Picture Nominees
   {
     name: "American Fiction",
     category: "Best Picture",
@@ -27,22 +28,7 @@ const oscar2024Nominees = [
     crew: ["Cord Jefferson - Director", "Cord Jefferson - Screenplay"],
     funFacts: ["Based on the novel 'Erasure' by Percival Everett"],
     ceremonyYear: 2024,
-    isWinner: false,
-    tmdbId: null,
-    runtime: null,
-    releaseDate: null,
-    voteAverage: null,
-    backdropPath: "",
-    genres: [],
-    productionCompanies: [],
-    extendedCredits: { cast: [], crew: [] },
-    aiGeneratedDescription: "",
-    aiMatchConfidence: 100,
-    dataSource: {
-      tmdb: null,
-      imdb: null,
-      wikidata: null
-    }
+    isWinner: false
   },
   {
     name: "Barbie",
@@ -66,26 +52,12 @@ const oscar2024Nominees = [
     crew: ["Greta Gerwig - Director", "Greta Gerwig - Screenplay"],
     funFacts: ["Highest-grossing film of 2023"],
     ceremonyYear: 2024,
-    isWinner: false,
-    tmdbId: null,
-    runtime: null,
-    releaseDate: null,
-    voteAverage: null,
-    backdropPath: "",
-    genres: [],
-    productionCompanies: [],
-    extendedCredits: { cast: [], crew: [] },
-    aiGeneratedDescription: "",
-    aiMatchConfidence: 100,
-    dataSource: {
-      tmdb: null,
-      imdb: null,
-      wikidata: null
-    }
+    isWinner: false
   },
+  // Best Director Nominees
   {
     name: "Poor Things",
-    category: "Best Picture",
+    category: "Best Director",
     description: "The incredible tale about the fantastical evolution of Bella Baxter, a young woman brought back to life by the brilliant and unorthodox scientist Dr. Godwin Baxter.",
     poster: "",
     trailerUrl: "",
@@ -96,7 +68,7 @@ const oscar2024Nominees = [
       awards: [{
         ceremonyId: 96,
         name: "Academy Awards",
-        type: "Best Picture",
+        type: "Best Director",
         result: "Nominated" as const,
         dateAwarded: "2024-03-10"
       }]
@@ -105,26 +77,11 @@ const oscar2024Nominees = [
     crew: ["Yorgos Lanthimos - Director"],
     funFacts: ["Based on the novel by Alasdair Gray"],
     ceremonyYear: 2024,
-    isWinner: false,
-    tmdbId: null,
-    runtime: null,
-    releaseDate: null,
-    voteAverage: null,
-    backdropPath: "",
-    genres: [],
-    productionCompanies: [],
-    extendedCredits: { cast: [], crew: [] },
-    aiGeneratedDescription: "",
-    aiMatchConfidence: 100,
-    dataSource: {
-      tmdb: null,
-      imdb: null,
-      wikidata: null
-    }
+    isWinner: false
   },
   {
     name: "Oppenheimer",
-    category: "Best Picture",
+    category: "Best Director",
     description: "The story of J. Robert Oppenheimer's role in the development of the atomic bomb.",
     poster: "",
     trailerUrl: "",
@@ -135,8 +92,8 @@ const oscar2024Nominees = [
       awards: [{
         ceremonyId: 96,
         name: "Academy Awards",
-        type: "Best Picture",
-        result: "Won" as const,
+        type: "Best Director",
+        result: "Nominated" as const,
         dateAwarded: "2024-03-10"
       }]
     }],
@@ -144,24 +101,51 @@ const oscar2024Nominees = [
     crew: ["Christopher Nolan - Director", "Christopher Nolan - Screenplay"],
     funFacts: ["Shot entirely in IMAX"],
     ceremonyYear: 2024,
-    isWinner: true,
-    tmdbId: null,
-    runtime: null,
-    releaseDate: null,
-    voteAverage: null,
-    backdropPath: "",
-    genres: [],
-    productionCompanies: [],
-    extendedCredits: { cast: [], crew: [] },
-    aiGeneratedDescription: "",
-    aiMatchConfidence: 100,
-    dataSource: {
-      tmdb: null,
-      imdb: null,
-      wikidata: null
-    }
+    isWinner: false
+  },
+  // Best Actor Nominees
+  {
+    name: "Maestro",
+    category: "Best Actor",
+    description: "A biopic of Leonard Bernstein, one of the greatest musicians of the 20th century.",
+    poster: "",
+    trailerUrl: "",
+    streamingPlatforms: ["Netflix"],
+    awards: {},
+    historicalAwards: [{
+      year: 2024,
+      awards: [{
+        ceremonyId: 96,
+        name: "Academy Awards",
+        type: "Best Actor",
+        result: "Nominated" as const,
+        dateAwarded: "2024-03-10"
+      }]
+    }],
+    castMembers: ["Bradley Cooper", "Carey Mulligan"],
+    crew: ["Bradley Cooper - Director"],
+    funFacts: ["Cooper spent six years learning to conduct for this role"],
+    ceremonyYear: 2024,
+    isWinner: false
   }
-];
+].map(nominee => ({
+  ...nominee,
+  tmdbId: null,
+  runtime: null,
+  releaseDate: null,
+  voteAverage: null,
+  backdropPath: "",
+  genres: [],
+  productionCompanies: [],
+  extendedCredits: { cast: [], crew: [] },
+  aiGeneratedDescription: "",
+  aiMatchConfidence: 100,
+  dataSource: {
+    tmdb: null,
+    imdb: null,
+    wikidata: null
+  }
+}));
 
 export async function seed() {
   try {
@@ -187,7 +171,7 @@ export async function seed() {
         try {
           const result = await updateNomineeWithTMDBData(nominee);
           if (!result) {
-            console.log(`Failed to update TMDB data for ${nominee.name}, retrying...`);
+            console.log(`Failed to update TMDB data for ${nominee.name}, retrying once more...`);
             // Wait 1 second before retry
             await new Promise(resolve => setTimeout(resolve, 1000));
             return await updateNomineeWithTMDBData(nominee);
@@ -203,7 +187,9 @@ export async function seed() {
     const successful = tmdbUpdates.filter(
       (r) => r.status === "fulfilled" && r.value
     ).length;
-    const failed = tmdbUpdates.filter((r) => r.status === "rejected").length;
+    const failed = tmdbUpdates.filter(
+      (r) => r.status === "rejected" || (r.status === "fulfilled" && !r.value)
+    ).length;
 
     console.log("\nSeeding Summary:");
     console.log(`- Total nominees inserted: ${insertedNominees.length}`);
