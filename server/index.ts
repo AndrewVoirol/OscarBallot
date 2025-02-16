@@ -4,6 +4,7 @@ import { setupVite, serveStatic, log } from "./vite";
 import { storage } from "./storage";
 import session from "express-session";
 import passport from "passport";
+import { seed } from "./seed";
 
 const app = express();
 app.use(express.json());
@@ -63,36 +64,46 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  const server = registerRoutes(app);
+  try {
+    // Seed the database on startup
+    console.log("Seeding database...");
+    await seed();
+    console.log("Database seeding completed");
 
-  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-    const status = err.status || err.statusCode || 500;
-    const message = err.message || "Internal Server Error";
-    console.error("Error:", err);
+    const server = registerRoutes(app);
 
-    res.status(status).json({ message });
-  });
+    app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
+      const status = (err as any).status || (err as any).statusCode || 500;
+      const message = err.message || "Internal Server Error";
+      console.error("Error:", err);
 
-  if (app.get("env") === "development") {
-    await setupVite(app, server);
-  } else {
-    serveStatic(app);
-  }
+      res.status(status).json({ message });
+    });
 
-  const PORT = process.env.PORT ? parseInt(process.env.PORT) : 5000;
-
-  server.listen(PORT, "0.0.0.0", () => {
-    log(`Server running on port ${PORT}`);
-  }).on('error', (err: any) => {
-    if (err.code === 'EADDRINUSE') {
-      const newPort = PORT + 1;
-      log(`Port ${PORT} is in use, trying port ${newPort}`);
-      server.listen(newPort, "0.0.0.0", () => {
-        log(`Server running on port ${newPort}`);
-      });
+    if (app.get("env") === "development") {
+      await setupVite(app, server);
     } else {
-      console.error('Server error:', err);
-      process.exit(1);
+      serveStatic(app);
     }
-  });
+
+    const PORT = process.env.PORT ? parseInt(process.env.PORT) : 5000;
+
+    server.listen(PORT, "0.0.0.0", () => {
+      log(`Server running on port ${PORT}`);
+    }).on('error', (err: any) => {
+      if (err.code === 'EADDRINUSE') {
+        const newPort = PORT + 1;
+        log(`Port ${PORT} is in use, trying port ${newPort}`);
+        server.listen(newPort, "0.0.0.0", () => {
+          log(`Server running on port ${newPort}`);
+        });
+      } else {
+        console.error('Server error:', err);
+        process.exit(1);
+      }
+    });
+  } catch (error) {
+    console.error("Startup error:", error);
+    process.exit(1);
+  }
 })();

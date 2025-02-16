@@ -19,7 +19,7 @@ const oscar2024Nominees = [
         ceremonyId: 96,
         name: "Academy Awards",
         type: "Best Picture",
-        result: "Nominated",
+        result: "Nominated" as const,
         dateAwarded: "2024-03-10"
       }]
     }],
@@ -42,48 +42,7 @@ const oscar2024Nominees = [
       tmdb: null,
       imdb: null,
       wikidata: null
-    },
-    lastUpdated: new Date()
-  },
-  {
-    name: "Barbie",
-    category: "Best Picture",
-    description: "Barbie and Ken go on a journey of self-discovery following an existential crisis.",
-    poster: "",
-    trailerUrl: "",
-    streamingPlatforms: ["Max"],
-    awards: {},
-    historicalAwards: [{
-      year: 2024,
-      awards: [{
-        ceremonyId: 96,
-        name: "Academy Awards",
-        type: "Best Picture",
-        result: "Nominated",
-        dateAwarded: "2024-03-10"
-      }]
-    }],
-    castMembers: ["Margot Robbie", "Ryan Gosling", "America Ferrera"],
-    crew: ["Greta Gerwig - Director", "Greta Gerwig - Screenplay"],
-    funFacts: ["Highest-grossing film of 2023"],
-    ceremonyYear: 2024,
-    isWinner: false,
-    tmdbId: null,
-    runtime: null,
-    releaseDate: null,
-    voteAverage: null,
-    backdropPath: "",
-    genres: [],
-    productionCompanies: [],
-    extendedCredits: { cast: [], crew: [] },
-    aiGeneratedDescription: "",
-    aiMatchConfidence: 100,
-    dataSource: {
-      tmdb: null,
-      imdb: null,
-      wikidata: null
-    },
-    lastUpdated: new Date()
+    }
   },
   {
     name: "Oppenheimer",
@@ -99,7 +58,7 @@ const oscar2024Nominees = [
         ceremonyId: 96,
         name: "Academy Awards",
         type: "Best Picture",
-        result: "Nominated",
+        result: "Won" as const,
         dateAwarded: "2024-03-10"
       }]
     }],
@@ -107,7 +66,7 @@ const oscar2024Nominees = [
     crew: ["Christopher Nolan - Director", "Christopher Nolan - Screenplay"],
     funFacts: ["Shot entirely in IMAX"],
     ceremonyYear: 2024,
-    isWinner: false,
+    isWinner: true,
     tmdbId: null,
     runtime: null,
     releaseDate: null,
@@ -122,8 +81,7 @@ const oscar2024Nominees = [
       tmdb: null,
       imdb: null,
       wikidata: null
-    },
-    lastUpdated: new Date()
+    }
   }
 ];
 

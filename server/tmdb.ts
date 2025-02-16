@@ -2,12 +2,11 @@ import { db } from "./db";
 import { nominees, type Nominee } from "@shared/schema";
 import { eq } from "drizzle-orm";
 
-const TMDB_BASE_URL = "https://api.themoviedb.org/3";
+const TMDB_BASE_URL = "https://api.themoviedb.org/4";
 const TMDB_IMAGE_BASE_URL = "https://image.tmdb.org/t/p";
-const TMDB_API_KEY = process.env.TMDB_API_KEY;
 
-if (!TMDB_API_KEY) {
-  throw new Error("TMDB_API_KEY environment variable is not set");
+if (!process.env.TMDB_ACCESS_TOKEN) {
+  throw new Error("TMDB_ACCESS_TOKEN environment variable is not set");
 }
 
 async function searchMovie(query: string, year?: number) {
@@ -15,7 +14,7 @@ async function searchMovie(query: string, year?: number) {
     console.log(`Searching for movie: ${query}${year ? ` (${year})` : ''}`);
 
     const headers = {
-      'Authorization': `Bearer ${TMDB_API_KEY}`,
+      'Authorization': `Bearer ${process.env.TMDB_ACCESS_TOKEN}`,
       'Content-Type': 'application/json;charset=utf-8'
     };
 
@@ -59,7 +58,7 @@ async function getMovieDetails(movieId: number) {
     console.log(`Fetching details for movie ID: ${movieId}`);
 
     const headers = {
-      'Authorization': `Bearer ${TMDB_API_KEY}`,
+      'Authorization': `Bearer ${process.env.TMDB_ACCESS_TOKEN}`,
       'Content-Type': 'application/json;charset=utf-8'
     };
 

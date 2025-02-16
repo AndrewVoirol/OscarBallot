@@ -63,27 +63,11 @@ export function registerRoutes(app: Express): Server {
         message: `Updated ${updatedCount} out of ${nominees.length} nominees with TMDB data`,
         updatedNominees: updates.filter(Boolean)
       });
-    } catch (error: any) {
-      console.error('Error updating nominees with TMDB data:', error);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      console.error('Error updating nominees with TMDB data:', errorMessage);
       res.status(500).json({ message: "Failed to update nominees with TMDB data" });
     }
-  });
-
-  // Public endpoint to update single nominee TMDB data
-  app.post("/api/nominees/:id/update-tmdb", tmdbLimiter, async (req, res) => {
-    const nominee = await storage.getNominee(parseInt(req.params.id));
-    if (!nominee) {
-      res.status(404).json({ message: "Nominee not found" });
-      return;
-    }
-
-    const updatedNominee = await updateNomineeWithTMDBData(nominee);
-    if (!updatedNominee) {
-      res.status(500).json({ message: "Failed to update TMDB data" });
-      return;
-    }
-
-    res.json(updatedNominee);
   });
 
   // Setup auth routes
@@ -91,21 +75,15 @@ export function registerRoutes(app: Express): Server {
 
   // Protected routes for ballot operations
   app.get("/api/ballots/:nomineeId", requireAuth, async (req: Request, res) => {
-    const user = req.user as User;
-    if (!user) {
-      res.status(401).json({ message: "Authentication required" });
-      return;
-    }
-
     const ballot = await storage.getBallot(
       parseInt(req.params.nomineeId),
-      user.id
+      req.user!.id
     );
 
     if (!ballot) {
       res.json({
         nomineeId: parseInt(req.params.nomineeId),
-        userId: user.id,
+        userId: req.user!.id,
         ceremonyId: 96, // Default to 96th Academy Awards
         hasWatched: false,
         predictedWinner: false,
@@ -117,12 +95,6 @@ export function registerRoutes(app: Express): Server {
   });
 
   app.post("/api/ballots", requireAuth, async (req: Request, res) => {
-    const user = req.user as User;
-    if (!user) {
-      res.status(401).json({ message: "Authentication required" });
-      return;
-    }
-
     const result = insertBallotSchema.safeParse(req.body);
     if (!result.success) {
       res.status(400).json({ 
@@ -134,20 +106,28 @@ export function registerRoutes(app: Express): Server {
 
     const ballot = await storage.updateBallot({
       ...result.data,
-      userId: user.id
+      userId: req.user!.id
     });
     res.json(ballot);
   });
 
   app.get("/api/ballots", requireAuth, async (req: Request, res) => {
-    const user = req.user as User;
-    if (!user) {
-      res.status(401).json({ message: "Authentication required" });
-      return;
-    }
-
-    const ballots = await storage.getBallotsByUser(user.id);
+    const ballots = await storage.getBallotsByUser(req.user!.id);
     res.json(ballots);
+  });
+
+  // Add admin route for seeding
+  app.post("/api/admin/seed", requireAuth, async (req: Request, res) => {
+    try {
+      await seed();
+      res.json({ message: "Database seeding completed successfully" });
+    } catch (error: any) {
+      console.error("Error in seed endpoint:", error);
+      res.status(500).json({ 
+        error: "Failed to seed database",
+        message: error.message 
+      });
+    }
   });
 
   // Test route for Oscar data sync
@@ -188,25 +168,6 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // Add admin route for seeding
-  app.post("/api/admin/seed", requireAuth, async (req: Request, res) => {
-    const user = req.user as User;
-    if (!user?.isAdmin) {
-      res.status(403).json({ message: "Admin access required" });
-      return;
-    }
-
-    try {
-      await seed();
-      res.json({ message: "Database seeding completed successfully" });
-    } catch (error: any) {
-      console.error("Error in seed endpoint:", error);
-      res.status(500).json({ 
-        error: "Failed to seed database",
-        message: error.message 
-      });
-    }
-  });
 
   return createServer(app);
 }
