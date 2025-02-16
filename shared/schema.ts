@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, jsonb, boolean } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, jsonb, boolean, timestamp, foreignKey } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -7,6 +7,22 @@ export const users = pgTable("users", {
   username: text("username").notNull().unique(),
   password: text("password").notNull(),
   isAdmin: boolean("is_admin").notNull().default(false),
+});
+
+export const awardCeremonies = pgTable("award_ceremonies", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  year: integer("year").notNull(),
+  dateHeld: timestamp("date_held"),
+  description: text("description"),
+  categories: jsonb("categories").$type<{
+    name: string;
+    description: string;
+    eligibilityRules: string;
+  }[]>().notNull(),
+  venue: text("venue"),
+  host: text("host"),
+  broadcastPartner: text("broadcast_partner"),
 });
 
 export const nominees = pgTable("nominees", {
@@ -21,9 +37,11 @@ export const nominees = pgTable("nominees", {
   historicalAwards: jsonb("historical_awards").$type<{
     year: number;
     awards: Array<{
+      ceremonyId: number;
       name: string;
       type: string;
       result: "Won" | "Nominated";
+      dateAwarded: string;
     }>;
   }[]>().notNull().default([]),
   castMembers: text("cast_members").array().notNull(),
@@ -58,23 +76,35 @@ export const nominees = pgTable("nominees", {
       profile_path: string | null;
     }>;
   }>(),
+  dataSource: jsonb("data_source").$type<{
+    tmdb: { lastUpdated: string; version: string; } | null;
+    imdb: { lastUpdated: string; version: string; } | null;
+    wikidata: { lastUpdated: string; version: string; } | null;
+  }>(),
+  lastUpdated: timestamp("last_updated").notNull().defaultNow(),
 });
 
 export const ballots = pgTable("ballots", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").notNull(),
   nomineeId: integer("nominee_id").notNull(),
+  ceremonyId: integer("ceremony_id").notNull(),
   hasWatched: boolean("has_watched").notNull().default(false),
   predictedWinner: boolean("predicted_winner").notNull().default(false),
   wantToWin: boolean("want_to_win").notNull().default(false),
+  notes: text("notes"),
+  lastModified: timestamp("last_modified").notNull().defaultNow(),
 });
 
 export const insertUserSchema = createInsertSchema(users).omit({ id: true });
+export const insertAwardCeremonySchema = createInsertSchema(awardCeremonies).omit({ id: true });
 export const insertNomineeSchema = createInsertSchema(nominees);
 export const insertBallotSchema = createInsertSchema(ballots);
 
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
+export type InsertAwardCeremony = z.infer<typeof insertAwardCeremonySchema>;
+export type AwardCeremony = typeof awardCeremonies.$inferSelect;
 export type InsertNominee = z.infer<typeof insertNomineeSchema>;
 export type Nominee = typeof nominees.$inferSelect;
 export type InsertBallot = z.infer<typeof insertBallotSchema>;

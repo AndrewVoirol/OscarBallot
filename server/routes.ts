@@ -6,6 +6,7 @@ import { setupAuth, requireAuth } from "./auth";
 import { updateNomineeWithTMDBData } from "./tmdb";
 import rateLimit from 'express-rate-limit';
 import { eq } from "drizzle-orm";
+import { OscarSyncService } from "./services/oscarSync";
 
 // Extend Express Request type to include our User type
 declare module "express" {
@@ -135,6 +136,44 @@ export function registerRoutes(app: Express): Server {
     }
     const ballots = await storage.getBallotsByUser(req.user.id);
     res.json(ballots);
+  });
+
+  // Test route for Oscar data sync
+  app.get("/api/test/oscar-sync", async (req, res) => {
+    try {
+      const oscarService = new OscarSyncService();
+      const oscarData = await oscarService.fetchOscarData(93, 96); // 2020-2023
+
+      console.log(`Fetched ${oscarData.length} Oscar nominees`);
+
+      // Process first 5 nominees as a test
+      const results = await Promise.all(
+        oscarData.slice(0, 5).map(async nominee => {
+          const result = await oscarService.syncNominee(nominee);
+          return {
+            oscarTitle: nominee.Film,
+            category: nominee.Category,
+            matched: !!result,
+            tmdbData: result ? {
+              title: result.name,
+              tmdbId: result.tmdbId,
+              releaseDate: result.releaseDate,
+            } : null
+          };
+        })
+      );
+
+      res.json({
+        totalNominees: oscarData.length,
+        testResults: results
+      });
+    } catch (error) {
+      console.error("Error in Oscar sync test:", error);
+      res.status(500).json({ 
+        error: "Failed to test Oscar sync",
+        message: error.message 
+      });
+    }
   });
 
   return createServer(app);
