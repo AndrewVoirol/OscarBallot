@@ -13,7 +13,7 @@ type BaseSeedNominee = {
   funFacts: string[];
 };
 
-// 2024 Oscar nominees (96th Academy Awards)
+// 2024 Oscar nominees (96th Academy Awards) - keeping the same data structure
 const nominees2024: BaseSeedNominee[] = [
   // Best Picture
   { 
@@ -188,7 +188,7 @@ async function seed() {
       ...nominee,
       poster: "",
       trailerUrl: "",
-      awards: [],
+      awards: {},
       castMembers: [],
       crew: [],
       ceremonyYear: year,
@@ -196,7 +196,14 @@ async function seed() {
       genres: [],
       backdropPath: "",
       productionCompanies: [],
-      extendedCredits: { cast: [], crew: [] }
+      extendedCredits: { cast: [], crew: [] },
+      aiGeneratedDescription: "",
+      aiMatchConfidence: 0,
+      dataSource: {
+        tmdb: null,
+        imdb: null,
+        wikidata: null
+      }
     });
 
     // Batch insert nominees for both years
@@ -229,7 +236,7 @@ async function seed() {
 
   } catch (error) {
     console.error("Error seeding database:", error);
-    throw error; // Re-throw to ensure the error is properly handled by the calling code
+    throw error;
   }
 }
 

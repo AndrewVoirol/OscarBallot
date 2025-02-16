@@ -58,29 +58,35 @@ export const nominees = pgTable("nominees", {
   productionCompanies: jsonb("production_companies").$type<{
     id: number;
     name: string;
-    logo_path: string | null;
-    origin_country: string;
+    logoPath: string | null;
+    originCountry: string;
   }[]>(),
   extendedCredits: jsonb("extended_credits").$type<{
     cast: Array<{
       id: number;
       name: string;
       character: string;
-      profile_path: string | null;
+      profileImage: string | null;
     }>;
     crew: Array<{
       id: number;
       name: string;
       job: string;
       department: string;
-      profile_path: string | null;
+      profileImage: string | null;
     }>;
   }>(),
+  aiGeneratedDescription: text("ai_generated_description"),
+  aiMatchConfidence: integer("ai_match_confidence"),
   dataSource: jsonb("data_source").$type<{
     tmdb: { lastUpdated: string; version: string; } | null;
     imdb: { lastUpdated: string; version: string; } | null;
     wikidata: { lastUpdated: string; version: string; } | null;
-  }>(),
+  }>().notNull().default({
+    tmdb: null,
+    imdb: null,
+    wikidata: null
+  }),
   lastUpdated: timestamp("last_updated").notNull().defaultNow(),
 });
 
