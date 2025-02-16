@@ -20,12 +20,12 @@ async function searchMovie(query: string, year?: number) {
 
     // Search using v4 API
     const response = await fetch(
-      `${TMDB_BASE_URL}/search/movies?` + 
+      `${TMDB_BASE_URL}/search/movie?` + 
       new URLSearchParams({
         query: query,
         language: 'en-US',
         include_adult: 'false',
-        ...(year && { primary_release_year: year.toString() }),
+        ...(year && { year: year.toString() }),
         region: 'US'
       }),
       { headers }
@@ -97,14 +97,14 @@ export async function updateNomineeWithTMDBData(nominee: Nominee) {
     // Search for the movie using the ceremony year - 1 (movies typically released the year before)
     const searchResult = await searchMovie(nominee.name, nominee.ceremonyYear - 1);
     if (!searchResult) {
-      console.error(`No TMDB results found for: ${nominee.name}`);
+      console.log(`No TMDB results found for: ${nominee.name}`);
       return null;
     }
 
     // Get detailed movie information
     const movieDetails = await getMovieDetails(searchResult.id);
     if (!movieDetails) {
-      console.error(`Failed to get movie details for: ${nominee.name}`);
+      console.log(`Failed to get movie details for: ${nominee.name}`);
       return null;
     }
 
