@@ -1,0 +1,56 @@
+Warning: validateDOMNesting(...): %s cannot appear as a descendant of <%s>.%s <a> a 
+    at a
+    at https://7867f46e-d1e9-4e03-8821-a0e1c16699de-00-293ocdl92wr5e.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-CPFL7ZFD.js?v=c7f130c1:41:13
+    at https://7867f46e-d1e9-4e03-8821-a0e1c16699de-00-293ocdl92wr5e.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-DKHUMOWT.js?v=c7f130c1:52:11
+    at https://7867f46e-d1e9-4e03-8821-a0e1c16699de-00-293ocdl92wr5e.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-DKHUMOWT.js?v=c7f130c1:33:11
+    at https://7867f46e-d1e9-4e03-8821-a0e1c16699de-00-293ocdl92wr5e.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-CPFL7ZFD.js?v=c7f130c1:41:13
+    at https://7867f46e-d1e9-4e03-8821-a0e1c16699de-00-293ocdl92wr5e.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-DKHUMOWT.js?v=c7f130c1:52:11
+    at https://7867f46e-d1e9-4e03-8821-a0e1c16699de-00-293ocdl92wr5e.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-DKHUMOWT.js?v=c7f130c1:33:11
+    at https://7867f46e-d1e9-4e03-8821-a0e1c16699de-00-293ocdl92wr5e.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-OKX5DAGM.js?v=c7f130c1:109:15
+    at https://7867f46e-d1e9-4e03-8821-a0e1c16699de-00-293ocdl92wr5e.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-navigation-menu.js?v=c7f130c1:731:13
+    at https://7867f46e-d1e9-4e03-8821-a0e1c16699de-00-293ocdl92wr5e.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-navigation-menu.js?v=c7f130c1:409:13
+    at a
+    at https://7867f46e-d1e9-4e03-8821-a0e1c16699de-00-293ocdl92wr5e.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=c7f130c1:337:18
+    at li
+    at https://7867f46e-d1e9-4e03-8821-a0e1c16699de-00-293ocdl92wr5e.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-CPFL7ZFD.js?v=c7f130c1:41:13
+    at Provider (https://7867f46e-d1e9-4e03-8821-a0e1c16699de-00-293ocdl92wr5e.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-LSQNWB54.js?v=c7f130c1:38:15)
+    at https://7867f46e-d1e9-4e03-8821-a0e1c16699de-00-293ocdl92wr5e.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-navigation-menu.js?v=c7f130c1:282:13
+    at ul
+    at https://7867f46e-d1e9-4e03-8821-a0e1c16699de-00-293ocdl92wr5e.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-CPFL7ZFD.js?v=c7f130c1:41:13
+    at https://7867f46e-d1e9-4e03-8821-a0e1c16699de-00-293ocdl92wr5e.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-DKHUMOWT.js?v=c7f130c1:52:11
+    at https://7867f46e-d1e9-4e03-8821-a0e1c16699de-00-293ocdl92wr5e.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-DKHUMOWT.js?v=c7f130c1:33:11
+    at https://7867f46e-d1e9-4e03-8821-a0e1c16699de-00-293ocdl92wr5e.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-CPFL7ZFD.js?v=c7f130c1:41:13
+    at https://7867f46e-d1e9-4e03-8821-a0e1c16699de-00-293ocdl92wr5e.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-DKHUMOWT.js?v=c7f130c1:52:11
+    at https://7867f46e-d1e9-4e03-8821-a0e1c16699de-00-293ocdl92wr5e.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-DKHUMOWT.js?v=c7f130c1:33:11
+    at https://7867f46e-d1e9-4e03-8821-a0e1c16699de-00-293ocdl92wr5e.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-OKX5DAGM.js?v=c7f130c1:98:15
+    at Provider (https://7867f46e-d1e9-4e03-8821-a0e1c16699de-00-293ocdl92wr5e.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-OKX5DAGM.js?v=c7f130c1:28:15)
+    at CollectionProvider (https://7867f46e-d1e9-4e03-8821-a0e1c16699de-00-293ocdl92wr5e.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-OKX5DAGM.js?v=c7f130c1:89:13)
+    at https://7867f46e-d1e9-4e03-8821-a0e1c16699de-00-293ocdl92wr5e.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-navigation-menu.js?v=c7f130c1:722:13
+    at https://7867f46e-d1e9-4e03-8821-a0e1c16699de-00-293ocdl92wr5e.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-DKHUMOWT.js?v=c7f130c1:52:11
+    at https://7867f46e-d1e9-4e03-8821-a0e1c16699de-00-293ocdl92wr5e.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-DKHUMOWT.js?v=c7f130c1:33:11
+    at https://7867f46e-d1e9-4e03-8821-a0e1c16699de-00-293ocdl92wr5e.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-OKX5DAGM.js?v=c7f130c1:98:15
+    at div
+    at https://7867f46e-d1e9-4e03-8821-a0e1c16699de-00-293ocdl92wr5e.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-CPFL7ZFD.js?v=c7f130c1:41:13
+    at https://7867f46e-d1e9-4e03-8821-a0e1c16699de-00-293ocdl92wr5e.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-navigation-menu.js?v=c7f130c1:271:13
+    at _c3 (https://7867f46e-d1e9-4e03-8821-a0e1c16699de-00-293ocdl92wr5e.janeway.replit.dev/src/components/ui/navigation-menu.tsx:54:12)
+    at nav
+    at https://7867f46e-d1e9-4e03-8821-a0e1c16699de-00-293ocdl92wr5e.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-CPFL7ZFD.js?v=c7f130c1:41:13
+    at Provider (https://7867f46e-d1e9-4e03-8821-a0e1c16699de-00-293ocdl92wr5e.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-LSQNWB54.js?v=c7f130c1:38:15)
+    at Provider (https://7867f46e-d1e9-4e03-8821-a0e1c16699de-00-293ocdl92wr5e.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-OKX5DAGM.js?v=c7f130c1:28:15)
+    at CollectionProvider (https://7867f46e-d1e9-4e03-8821-a0e1c16699de-00-293ocdl92wr5e.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-OKX5DAGM.js?v=c7f130c1:89:13)
+    at Provider (https://7867f46e-d1e9-4e03-8821-a0e1c16699de-00-293ocdl92wr5e.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-LSQNWB54.js?v=c7f130c1:38:15)
+    at NavigationMenuProvider (https://7867f46e-d1e9-4e03-8821-a0e1c16699de-00-293ocdl92wr5e.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-navigation-menu.js?v=c7f130c1:213:5)
+    at https://7867f46e-d1e9-4e03-8821-a0e1c16699de-00-293ocdl92wr5e.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-navigation-menu.js?v=c7f130c1:69:7
+    at _c (https://7867f46e-d1e9-4e03-8821-a0e1c16699de-00-293ocdl92wr5e.janeway.replit.dev/src/components/ui/navigation-menu.tsx:23:11)
+    at div
+    at div
+    at nav
+    at NavBar (https://7867f46e-d1e9-4e03-8821-a0e1c16699de-00-293ocdl92wr5e.janeway.replit.dev/src/components/nav-bar.tsx:37:26)
+    at div
+    at Home (https://7867f46e-d1e9-4e03-8821-a0e1c16699de-00-293ocdl92wr5e.janeway.replit.dev/src/pages/home.tsx:32:43)
+    at Route (https://7867f46e-d1e9-4e03-8821-a0e1c16699de-00-293ocdl92wr5e.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=c7f130c1:323:16)
+    at Switch (https://7867f46e-d1e9-4e03-8821-a0e1c16699de-00-293ocdl92wr5e.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=c7f130c1:379:17)
+    at AuthProvider (https://7867f46e-d1e9-4e03-8821-a0e1c16699de-00-293ocdl92wr5e.janeway.replit.dev/src/hooks/use-auth.tsx:109:32)
+    at QueryClientProvider (https://7867f46e-d1e9-4e03-8821-a0e1c16699de-00-293ocdl92wr5e.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=c7f130c1:2805:3)
+    at Router
+    at App

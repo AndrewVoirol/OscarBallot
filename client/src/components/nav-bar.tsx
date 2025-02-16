@@ -1,6 +1,6 @@
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
-import { Link, useLocation } from "wouter";
+import { useLocation } from "wouter";
 import {
   Select,
   SelectContent,
@@ -10,12 +10,8 @@ import {
 } from "@/components/ui/select";
 import {
   NavigationMenu,
-  NavigationMenuContent,
   NavigationMenuItem,
-  NavigationMenuLink,
   NavigationMenuList,
-  NavigationMenuTrigger,
-  navigationMenuTriggerStyle,
 } from "@/components/ui/navigation-menu";
 import { cn } from "@/lib/utils";
 import { Home, Film, User } from "lucide-react";
@@ -27,49 +23,51 @@ interface NavBarProps {
 
 export function NavBar({ selectedYear = 2025, onYearChange }: NavBarProps) {
   const { user, logoutMutation } = useAuth();
-  const [location] = useLocation();
+  const [location, navigate] = useLocation();
 
   return (
     <nav className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-14 max-w-screen-2xl items-center justify-between">
         <div className="flex items-center gap-6">
-          <Link href="/" className="flex items-center space-x-2">
-            <span className="font-bold sm:inline-block">
-              Awards Insider
-            </span>
-          </Link>
+          <Button
+            variant="link"
+            className="font-bold px-0 sm:inline-block"
+            onClick={() => navigate("/")}
+          >
+            Awards Insider
+          </Button>
 
           <NavigationMenu className="hidden md:flex">
             <NavigationMenuList>
               <NavigationMenuItem>
-                <Link href="/">
-                  <NavigationMenuLink
-                    className={cn(
-                      navigationMenuTriggerStyle(),
-                      "gap-2",
-                      location === "/" && "bg-accent text-accent-foreground"
-                    )}
-                  >
-                    <Home className="h-4 w-4" />
-                    <span>Home</span>
-                  </NavigationMenuLink>
-                </Link>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className={cn(
+                    "gap-2",
+                    location === "/" && "bg-accent text-accent-foreground"
+                  )}
+                  onClick={() => navigate("/")}
+                >
+                  <Home className="h-4 w-4" />
+                  <span>Home</span>
+                </Button>
               </NavigationMenuItem>
 
               {user && (
                 <NavigationMenuItem>
-                  <Link href="/watchlist">
-                    <NavigationMenuLink
-                      className={cn(
-                        navigationMenuTriggerStyle(),
-                        "gap-2",
-                        location === "/watchlist" && "bg-accent text-accent-foreground"
-                      )}
-                    >
-                      <Film className="h-4 w-4" />
-                      <span>My Watchlist</span>
-                    </NavigationMenuLink>
-                  </Link>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className={cn(
+                      "gap-2",
+                      location === "/watchlist" && "bg-accent text-accent-foreground"
+                    )}
+                    onClick={() => navigate("/watchlist")}
+                  >
+                    <Film className="h-4 w-4" />
+                    <span>My Watchlist</span>
+                  </Button>
                 </NavigationMenuItem>
               )}
             </NavigationMenuList>
@@ -92,18 +90,18 @@ export function NavBar({ selectedYear = 2025, onYearChange }: NavBarProps) {
 
           {user ? (
             <div className="flex items-center gap-4">
-              <Link href="/watchlist" className="md:hidden">
-                <Button 
-                  variant="ghost" 
-                  size="icon"
-                  className={cn(
-                    location === "/watchlist" && "bg-accent text-accent-foreground"
-                  )}
-                >
-                  <Film className="h-4 w-4" />
-                  <span className="sr-only">My Watchlist</span>
-                </Button>
-              </Link>
+              <Button
+                variant="ghost"
+                size="icon"
+                className={cn(
+                  "md:hidden",
+                  location === "/watchlist" && "bg-accent text-accent-foreground"
+                )}
+                onClick={() => navigate("/watchlist")}
+              >
+                <Film className="h-4 w-4" />
+                <span className="sr-only">My Watchlist</span>
+              </Button>
               <div className="hidden md:flex items-center gap-2">
                 <User className="h-4 w-4" />
                 <span className="text-sm text-muted-foreground">
@@ -121,12 +119,20 @@ export function NavBar({ selectedYear = 2025, onYearChange }: NavBarProps) {
             </div>
           ) : (
             <div className="flex items-center gap-2">
-              <Link href="/auth">
-                <Button variant="outline" size="sm">Login</Button>
-              </Link>
-              <Link href="/auth?register=true">
-                <Button variant="default" size="sm">Register</Button>
-              </Link>
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => navigate("/auth")}
+              >
+                Login
+              </Button>
+              <Button 
+                variant="default" 
+                size="sm"
+                onClick={() => navigate("/auth?register=true")}
+              >
+                Register
+              </Button>
             </div>
           )}
         </div>
