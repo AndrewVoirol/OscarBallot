@@ -18,13 +18,14 @@ async function searchMovie(query: string, year?: number) {
       'Content-Type': 'application/json;charset=utf-8'
     };
 
+    // Search using v4 API
     const response = await fetch(
-      `${TMDB_BASE_URL}/search/movie?` + 
+      `${TMDB_BASE_URL}/search/movies?` + 
       new URLSearchParams({
         query: query,
         language: 'en-US',
         include_adult: 'false',
-        ...(year && { year: year.toString() }),
+        ...(year && { primary_release_year: year.toString() }),
         region: 'US'
       }),
       { headers }
@@ -153,7 +154,8 @@ export async function updateNomineeWithTMDBData(nominee: Nominee) {
         },
         ...(trailer && {
           trailerUrl: `https://www.youtube.com/embed/${trailer.key}`
-        })
+        }),
+        lastUpdated: new Date().toISOString()
       })
       .where(eq(nominees.id, nominee.id))
       .returning();

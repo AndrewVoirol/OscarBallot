@@ -1,8 +1,8 @@
 import axios from "axios";
 
-const TMDB_BASE_URL = "https://api.themoviedb.org/3";
+const TMDB_BASE_URL = "https://api.themoviedb.org/4";
 const TMDB_IMAGE_BASE_URL = "https://image.tmdb.org/t/p";
-const TMDB_API_KEY = import.meta.env.VITE_TMDB_API_KEY;
+const TMDB_ACCESS_TOKEN = import.meta.env.VITE_TMDB_ACCESS_TOKEN;
 
 interface TMDBMovie {
   id: number;
@@ -46,10 +46,15 @@ interface TMDBSearchResult {
   }>;
 }
 
+const headers = {
+  'Authorization': `Bearer ${TMDB_ACCESS_TOKEN}`,
+  'Content-Type': 'application/json;charset=utf-8'
+};
+
 export async function searchMovie(query: string): Promise<TMDBSearchResult> {
   const response = await axios.get(`${TMDB_BASE_URL}/search/movie`, {
+    headers,
     params: {
-      api_key: TMDB_API_KEY,
       query,
       language: "en-US",
       include_adult: false,
@@ -60,8 +65,8 @@ export async function searchMovie(query: string): Promise<TMDBSearchResult> {
 
 export async function getMovieDetails(movieId: number): Promise<TMDBMovie> {
   const response = await axios.get(`${TMDB_BASE_URL}/movie/${movieId}`, {
+    headers,
     params: {
-      api_key: TMDB_API_KEY,
       language: "en-US",
       append_to_response: "credits",
     },

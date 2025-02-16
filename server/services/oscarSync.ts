@@ -109,12 +109,17 @@ If no good match exists, return "null".`;
     try {
       console.log(`Searching TMDB for: ${title} (${year})`);
 
+      const headers = {
+        'Authorization': `Bearer ${this.tmdbToken}`,
+        'Content-Type': 'application/json;charset=utf-8'
+      };
+
       // Try exact year first
       const exactYearResponse = await axios.get(`${this.tmdbBaseUrl}/search/movie`, {
-        headers: { 'Authorization': `Bearer ${this.tmdbToken}` },
+        headers,
         params: {
           query: title,
-          year: new Date(year).getFullYear(),
+          year: parseInt(year),
           include_adult: false
         }
       });
@@ -122,10 +127,10 @@ If no good match exists, return "null".`;
       // If no results, try year-1 (movies often release year before Oscar nomination)
       if (!exactYearResponse.data.results.length) {
         const previousYearResponse = await axios.get(`${this.tmdbBaseUrl}/search/movie`, {
-          headers: { 'Authorization': `Bearer ${this.tmdbToken}` },
+          headers,
           params: {
             query: title,
-            year: new Date(year).getFullYear() - 1,
+            year: parseInt(year) - 1,
             include_adult: false
           }
         });
