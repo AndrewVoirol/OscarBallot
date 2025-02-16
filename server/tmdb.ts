@@ -2,7 +2,7 @@ import { db } from "./db";
 import { nominees, type Nominee } from "@shared/schema";
 import { eq } from "drizzle-orm";
 
-const TMDB_BASE_URL = "https://api.themoviedb.org/3"; // Changed to v3
+const TMDB_BASE_URL = "https://api.themoviedb.org/4";
 const TMDB_IMAGE_BASE_URL = "https://image.tmdb.org/t/p";
 
 if (!process.env.TMDB_ACCESS_TOKEN) {
@@ -18,20 +18,23 @@ async function searchMovie(query: string, year?: number) {
       'Content-Type': 'application/json;charset=utf-8'
     };
 
-    // Search using v3 API
+    // Use v4 API for search
     const response = await fetch(
-      `${TMDB_BASE_URL}/search/movie?` + 
-      new URLSearchParams({
-        query: query,
-        language: 'en-US',
-        include_adult: 'false',
-        ...(year && { primary_release_year: year.toString() }),
-      }),
-      { headers }
+      `${TMDB_BASE_URL}/search/movie`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          query: query,
+          include_adult: false,
+          primary_release_year: year,
+          language: 'en-US'
+        })
+      }
     );
 
     if (!response.ok) {
-      throw new Error(`TMDB API error: ${response.status} ${response.statusText}`);
+      const error = await response.json();
+      throw new Error(`TMDB API error: ${error.status_message}`);
     }
 
     const data = await response.json();
@@ -62,17 +65,17 @@ async function getMovieDetails(movieId: number) {
       'Content-Type': 'application/json;charset=utf-8'
     };
 
+    // Use v4 API for movie details
     const response = await fetch(
-      `${TMDB_BASE_URL}/movie/${movieId}?` + 
-      new URLSearchParams({
-        language: 'en-US',
-        append_to_response: 'credits,videos,images'
-      }),
-      { headers }
+      `${TMDB_BASE_URL}/movie/${movieId}`, {
+        headers,
+        method: 'GET'
+      }
     );
 
     if (!response.ok) {
-      throw new Error(`TMDB API error: ${response.status} ${response.statusText}`);
+      const error = await response.json();
+      throw new Error(`TMDB API error: ${error.status_message}`);
     }
 
     const movieData = await response.json();
@@ -93,7 +96,7 @@ export async function updateNomineeWithTMDBData(nominee: Nominee) {
   try {
     console.log(`Processing nominee: ${nominee.name}`);
 
-    // Search for the movie using the ceremony year - 1 (movies typically released the year before)
+    // Search for the movie
     const searchResult = await searchMovie(nominee.name, nominee.ceremonyYear - 1);
     if (!searchResult) {
       console.log(`No TMDB results found for: ${nominee.name}`);

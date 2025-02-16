@@ -180,10 +180,24 @@ export async function seed() {
 
     console.log(`Successfully inserted ${insertedNominees.length} nominees`);
 
-    // Update TMDB data for all inserted nominees
+    // Update TMDB data for all inserted nominees with retry logic
     console.log("Fetching TMDB data for nominees...");
     const tmdbUpdates = await Promise.allSettled(
-      insertedNominees.map((nominee) => updateNomineeWithTMDBData(nominee))
+      insertedNominees.map(async (nominee) => {
+        try {
+          const result = await updateNomineeWithTMDBData(nominee);
+          if (!result) {
+            console.log(`Failed to update TMDB data for ${nominee.name}, retrying...`);
+            // Wait 1 second before retry
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            return await updateNomineeWithTMDBData(nominee);
+          }
+          return result;
+        } catch (error) {
+          console.error(`Error updating ${nominee.name}:`, error);
+          return null;
+        }
+      })
     );
 
     const successful = tmdbUpdates.filter(
