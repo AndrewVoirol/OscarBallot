@@ -2,7 +2,7 @@ import { db } from "./db";
 import { nominees, type Nominee } from "@shared/schema";
 import { eq } from "drizzle-orm";
 
-const TMDB_BASE_URL = "https://api.themoviedb.org/4";
+const TMDB_BASE_URL = "https://api.themoviedb.org/3";  // Changed to v3 API for better compatibility
 const TMDB_IMAGE_BASE_URL = "https://image.tmdb.org/t/p";
 
 if (!process.env.TMDB_ACCESS_TOKEN) {
@@ -18,21 +18,17 @@ async function searchMovie(query: string, year?: number) {
       'Content-Type': 'application/json;charset=utf-8'
     };
 
-    // TMDb v4 movie search with proper parameters
-    const searchParams = {
+    // Create URL with search parameters
+    const searchParams = new URLSearchParams({
       query,
-      include_adult: false,
+      include_adult: 'false',
       language: 'en-US',
-    };
+      ...(year && { year: year.toString() })
+    });
 
-    if (year) {
-      searchParams['primary_release_year'] = year;
-    }
-
-    const response = await fetch(`${TMDB_BASE_URL}/search/movie`, {
+    const response = await fetch(`${TMDB_BASE_URL}/search/movie?${searchParams}`, {
       method: 'GET',
-      headers,
-      body: JSON.stringify(searchParams)
+      headers
     });
 
     if (!response.ok) {
@@ -49,9 +45,25 @@ async function searchMovie(query: string, year?: number) {
       return null;
     }
 
-    const bestMatch = data.results.find((movie: any) => 
+    // Improved matching logic
+    const results = data.results;
+    let bestMatch = null;
+
+    // First try exact title match
+    bestMatch = results.find(movie => 
       movie.title.toLowerCase() === query.toLowerCase()
-    ) || data.results[0];
+    );
+
+    // If no exact match, try partial match with year
+    if (!bestMatch && year) {
+      bestMatch = results.find(movie => {
+        const movieYear = new Date(movie.release_date).getFullYear();
+        return movieYear === year || movieYear === year - 1;
+      });
+    }
+
+    // If still no match, take the first result
+    bestMatch = bestMatch || results[0];
 
     console.log(`Selected match: ${bestMatch.title} (ID: ${bestMatch.id})`);
     return bestMatch;
@@ -78,7 +90,10 @@ async function getMovieDetails(movieId: number) {
 
     const response = await fetch(
       `${TMDB_BASE_URL}/movie/${movieId}?append_to_response=videos,credits&language=en-US`, 
-      { headers }
+      { 
+        method: 'GET',
+        headers 
+      }
     );
 
     if (!response.ok) {
@@ -101,7 +116,12 @@ export async function updateNomineeWithTMDBData(nominee: Nominee) {
   try {
     console.log(`Processing nominee: ${nominee.name}`);
 
-    const searchResult = await searchMovie(nominee.name, nominee.ceremonyYear - 1);
+    // Search in both ceremony year and previous year
+    let searchResult = await searchMovie(nominee.name, nominee.ceremonyYear);
+    if (!searchResult) {
+      searchResult = await searchMovie(nominee.name, nominee.ceremonyYear - 1);
+    }
+
     if (!searchResult) {
       console.log(`No TMDB results found for: ${nominee.name}`);
       return null;
@@ -131,7 +151,8 @@ export async function updateNomineeWithTMDBData(nominee: Nominee) {
     })) || [];
 
     const trailerVideo = movieDetails.videos?.results?.find((video: any) => 
-      video.site === "YouTube" && video.type === "Trailer"
+      video.site === "YouTube" && 
+      (video.type === "Trailer" || video.type === "Teaser")
     );
 
     const [updatedNominee] = await db
@@ -158,7 +179,7 @@ export async function updateNomineeWithTMDBData(nominee: Nominee) {
         dataSource: {
           tmdb: { 
             lastUpdated: new Date().toISOString(), 
-            version: "4.0" 
+            version: "3.0"  // Updated to v3 API version
           },
           imdb: null,
           wikidata: null

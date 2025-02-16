@@ -31,9 +31,33 @@ const oscar2024Nominees = [
     isWinner: false
   },
   {
+    name: "Anatomy of a Fall",
+    category: "Best Picture",
+    description: "A woman is suspected of her husband's murder, and their blind son faces a moral dilemma as the main witness.",
+    poster: "",
+    trailerUrl: "",
+    streamingPlatforms: ["Prime Video"],
+    awards: {},
+    historicalAwards: [{
+      year: 2024,
+      awards: [{
+        ceremonyId: 96,
+        name: "Academy Awards",
+        type: "Best Picture",
+        result: "Nominated" as const,
+        dateAwarded: "2024-03-10"
+      }]
+    }],
+    castMembers: ["Sandra Hüller", "Swann Arlaud", "Milo Machado Graner"],
+    crew: ["Justine Triet - Director", "Justine Triet - Screenplay"],
+    funFacts: ["Won Palme d'Or at 2023 Cannes Film Festival"],
+    ceremonyYear: 2024,
+    isWinner: false
+  },
+  {
     name: "Barbie",
     category: "Best Picture",
-    description: "To live in Barbie Land is to be a perfect being in a perfect place. Unless you have a full-on existential crisis. Or you're a Ken.",
+    description: "Barbie and Ken go on a journey of self-discovery following an existential crisis.",
     poster: "",
     trailerUrl: "",
     streamingPlatforms: ["Max"],
@@ -54,35 +78,10 @@ const oscar2024Nominees = [
     ceremonyYear: 2024,
     isWinner: false
   },
-  // Best Director Nominees
   {
-    name: "Poor Things",
-    category: "Best Director",
-    description: "The incredible tale about the fantastical evolution of Bella Baxter, a young woman brought back to life by the brilliant and unorthodox scientist Dr. Godwin Baxter.",
-    poster: "",
-    trailerUrl: "",
-    streamingPlatforms: ["Hulu"],
-    awards: {},
-    historicalAwards: [{
-      year: 2024,
-      awards: [{
-        ceremonyId: 96,
-        name: "Academy Awards",
-        type: "Best Director",
-        result: "Nominated" as const,
-        dateAwarded: "2024-03-10"
-      }]
-    }],
-    castMembers: ["Emma Stone", "Mark Ruffalo", "Willem Dafoe"],
-    crew: ["Yorgos Lanthimos - Director"],
-    funFacts: ["Based on the novel by Alasdair Gray"],
-    ceremonyYear: 2024,
-    isWinner: false
-  },
-  {
-    name: "Oppenheimer",
-    category: "Best Director",
-    description: "The story of J. Robert Oppenheimer's role in the development of the atomic bomb.",
+    name: "The Holdovers",
+    category: "Best Picture",
+    description: "A cranky teacher, a grieving cook, and a headstrong student form an unlikely family during Christmas break at a boarding school.",
     poster: "",
     trailerUrl: "",
     streamingPlatforms: ["Peacock"],
@@ -92,22 +91,45 @@ const oscar2024Nominees = [
       awards: [{
         ceremonyId: 96,
         name: "Academy Awards",
-        type: "Best Director",
+        type: "Best Picture",
         result: "Nominated" as const,
         dateAwarded: "2024-03-10"
       }]
     }],
-    castMembers: ["Cillian Murphy", "Emily Blunt", "Robert Downey Jr."],
-    crew: ["Christopher Nolan - Director", "Christopher Nolan - Screenplay"],
-    funFacts: ["Shot entirely in IMAX"],
+    castMembers: ["Paul Giamatti", "Da'Vine Joy Randolph", "Dominic Sessa"],
+    crew: ["Alexander Payne - Director"],
+    funFacts: ["Set in 1970s New England"],
     ceremonyYear: 2024,
     isWinner: false
   },
-  // Best Actor Nominees
+  {
+    name: "Killers of the Flower Moon",
+    category: "Best Picture",
+    description: "Members of the Osage tribe in Oklahoma are murdered under mysterious circumstances in the 1920s, sparking a major FBI investigation.",
+    poster: "",
+    trailerUrl: "",
+    streamingPlatforms: ["Apple TV+"],
+    awards: {},
+    historicalAwards: [{
+      year: 2024,
+      awards: [{
+        ceremonyId: 96,
+        name: "Academy Awards",
+        type: "Best Picture",
+        result: "Nominated" as const,
+        dateAwarded: "2024-03-10"
+      }]
+    }],
+    castMembers: ["Leonardo DiCaprio", "Robert De Niro", "Lily Gladstone"],
+    crew: ["Martin Scorsese - Director"],
+    funFacts: ["Based on David Grann's non-fiction book"],
+    ceremonyYear: 2024,
+    isWinner: false
+  },
   {
     name: "Maestro",
-    category: "Best Actor",
-    description: "A biopic of Leonard Bernstein, one of the greatest musicians of the 20th century.",
+    category: "Best Picture",
+    description: "A biopic of composer Leonard Bernstein, focusing on his relationship with his wife Felicia Montealegre.",
     poster: "",
     trailerUrl: "",
     streamingPlatforms: ["Netflix"],
@@ -117,14 +139,38 @@ const oscar2024Nominees = [
       awards: [{
         ceremonyId: 96,
         name: "Academy Awards",
-        type: "Best Actor",
+        type: "Best Picture",
         result: "Nominated" as const,
         dateAwarded: "2024-03-10"
       }]
     }],
-    castMembers: ["Bradley Cooper", "Carey Mulligan"],
+    castMembers: ["Bradley Cooper", "Carey Mulligan", "Matt Bomer"],
     crew: ["Bradley Cooper - Director"],
-    funFacts: ["Cooper spent six years learning to conduct for this role"],
+    funFacts: ["Cooper spent six years learning to conduct"],
+    ceremonyYear: 2024,
+    isWinner: false
+  },
+  {
+    name: "Oppenheimer",
+    category: "Best Picture",
+    description: "The story of American scientist J. Robert Oppenheimer and his role in the development of the atomic bomb.",
+    poster: "",
+    trailerUrl: "",
+    streamingPlatforms: ["Peacock"],
+    awards: {},
+    historicalAwards: [{
+      year: 2024,
+      awards: [{
+        ceremonyId: 96,
+        name: "Academy Awards",
+        type: "Best Picture",
+        result: "Nominated" as const,
+        dateAwarded: "2024-03-10"
+      }]
+    }],
+    castMembers: ["Cillian Murphy", "Emily Blunt", "Robert Downey Jr."],
+    crew: ["Christopher Nolan - Director"],
+    funFacts: ["Shot entirely on IMAX cameras"],
     ceremonyYear: 2024,
     isWinner: false
   }
