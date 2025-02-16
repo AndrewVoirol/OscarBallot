@@ -5,7 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Clock, CheckCircle2 } from "lucide-react";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { NomineeDetails } from "@/components/nominee-details";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { useState } from "react";
@@ -66,6 +66,7 @@ export default function WatchlistPage() {
                 key={nominee.id}
                 onClick={() => setSelectedNominee(nominee)}
                 className="text-left w-full"
+                aria-label={`View details for ${nominee.name}`}
               >
                 <Card className="h-full hover:bg-muted/50 transition-colors cursor-pointer">
                   <CardContent className="p-4">
@@ -104,6 +105,7 @@ export default function WatchlistPage() {
                 key={nominee.id}
                 onClick={() => setSelectedNominee(nominee)}
                 className="text-left w-full"
+                aria-label={`View details for ${nominee.name}`}
               >
                 <Card className="h-full hover:bg-muted/50 transition-colors cursor-pointer">
                   <CardContent className="p-4">
@@ -139,15 +141,12 @@ export default function WatchlistPage() {
       <Dialog open={!!selectedNominee} onOpenChange={() => setSelectedNominee(null)}>
         <DialogContent 
           className="max-w-3xl max-h-[90vh] overflow-y-auto"
-          aria-describedby={selectedNominee ? `nominee-${selectedNominee.id}-description` : undefined}
         >
-          <VisuallyHidden>
-            <h2>{selectedNominee?.name}</h2>
-          </VisuallyHidden>
+          <DialogTitle className="sr-only">
+            {selectedNominee?.name}
+          </DialogTitle>
           {selectedNominee && (
-            <div id={`nominee-${selectedNominee.id}-description`}>
-              <NomineeDetails nominee={selectedNominee} />
-            </div>
+            <NomineeDetails nominee={selectedNominee} />
           )}
         </DialogContent>
       </Dialog>
