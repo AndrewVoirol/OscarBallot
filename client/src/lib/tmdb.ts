@@ -1,8 +1,13 @@
 import axios from "axios";
 
-const TMDB_BASE_URL = "https://api.themoviedb.org/3";
+const TMDB_BASE_URL = "https://api.themoviedb.org/4";
 const TMDB_IMAGE_BASE_URL = "https://image.tmdb.org/t/p";
 const TMDB_ACCESS_TOKEN = import.meta.env.VITE_TMDB_ACCESS_TOKEN;
+
+const headers = {
+  'Authorization': `Bearer ${TMDB_ACCESS_TOKEN}`,
+  'Content-Type': 'application/json;charset=utf-8'
+};
 
 interface TMDBMovie {
   id: number;
@@ -44,22 +49,17 @@ interface TMDBSearchResult {
     release_date: string;
     poster_path: string | null;
   }>;
+  total_results: number;
+  total_pages: number;
 }
 
-const headers = {
-  'Authorization': `Bearer ${TMDB_ACCESS_TOKEN}`,
-  'Content-Type': 'application/json;charset=utf-8'
-};
-
 export async function searchMovie(query: string): Promise<TMDBSearchResult> {
-  const response = await axios.get(`${TMDB_BASE_URL}/search/movie`, {
-    headers,
-    params: {
-      query,
-      language: "en-US",
-      include_adult: false,
-    },
-  });
+  const response = await axios.post(`${TMDB_BASE_URL}/search/movie`, {
+    query,
+    include_adult: false,
+    language: "en-US",
+    page: 1
+  }, { headers });
   return response.data;
 }
 
@@ -67,8 +67,8 @@ export async function getMovieDetails(movieId: number): Promise<TMDBMovie> {
   const response = await axios.get(`${TMDB_BASE_URL}/movie/${movieId}`, {
     headers,
     params: {
+      append_to_response: "credits,videos",
       language: "en-US",
-      append_to_response: "credits",
     },
   });
   return response.data;
