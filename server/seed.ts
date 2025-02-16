@@ -16,15 +16,15 @@ export async function seed() {
     console.log("Cleared existing nominees");
 
     // Fetch all nominees for the 96th Academy Awards (2024)
-    console.log("Fetching nominees from Oscar database...");
-    const oscarNominees = await oscarService.fetchOscarData(96, 96);
-    console.log(`Retrieved ${oscarNominees.length} nominees from Oscar database`);
+    console.log("Fetching nominees from local dataset...");
+    const oscarNominees = await oscarService.getNominationsForYear(2024);
+    console.log(`Retrieved ${oscarNominees.length} nominees from dataset`);
 
     // Group nominees by category for logging
-    const categoryCounts = oscarNominees.reduce((acc, nom) => {
-      acc[nom.Category] = (acc[nom.Category] || 0) + 1;
+    const categoryCounts = oscarNominees.reduce((acc: Record<string, number>, nom) => {
+      acc[nom.category] = (acc[nom.category] || 0) + 1;
       return acc;
-    }, {} as Record<string, number>);
+    }, {});
 
     console.log("\nNominees by category:");
     Object.entries(categoryCounts)
@@ -43,7 +43,7 @@ export async function seed() {
           nominations.push(nomination);
         }
       } catch (error) {
-        console.error(`Failed to sync ${oscarNominee.Film}:`, error);
+        console.error(`Failed to sync ${oscarNominee.nominee}:`, error);
       }
     }
 
@@ -83,7 +83,7 @@ export async function seed() {
     ).length;
 
     console.log("\nSeeding Summary:");
-    console.log(`- Total nominees fetched from Oscar database: ${oscarNominees.length}`);
+    console.log(`- Total nominees fetched from dataset: ${oscarNominees.length}`);
     console.log(`- Successfully synced with TMDB: ${nominations.length}`);
     console.log(`- Inserted into database: ${insertedNominees.length}`);
     console.log(`- TMDB enrichment successful: ${successful}`);

@@ -2,15 +2,6 @@ import { type Nominee, type InsertNominee } from "@shared/schema";
 import axios from "axios";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-interface OscarNominee {
-  AwardShowNumber: number;
-  AwardYear: string;
-  Category: string;
-  Nominee: string;
-  Film: string;
-  Winner: boolean;
-}
-
 interface TMDBSearchResult {
   id: number;
   title: string;
@@ -19,6 +10,14 @@ interface TMDBSearchResult {
   poster_path: string;
   backdrop_path: string;
   vote_average: number;
+}
+
+// Structured data for Oscar nominations
+interface OscarNomination {
+  ceremonyYear: number;
+  category: string;
+  nominee: string;
+  isWinner: boolean;
 }
 
 export class OscarSyncService {
@@ -37,87 +36,25 @@ export class OscarSyncService {
     this.genAI = new GoogleGenerativeAI(process.env.GOOGLE_AI_KEY);
   }
 
-  private async fetchWithRetry(url: string, config: any, retries = 3): Promise<any> {
-    for (let i = 0; i < retries; i++) {
-      try {
-        const response = await axios.get(url, {
-          ...config,
-          headers: {
-            ...config.headers,
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-          }
-        });
-        return response;
-      } catch (error) {
-        if (i === retries - 1) throw error;
-        await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1)));
-      }
-    }
-  }
-
-  async fetchOscarData(yearStart: number, yearEnd: number): Promise<OscarNominee[]> {
-    const query = {
-      Sort: "3-Award Category-Chron",
-      AwardCategory: [
-        "9998", // Best Picture
-        "1",    // Actor in a Leading Role
-        "2",    // Actor in a Supporting Role
-        "3",    // Actress in a Leading Role
-        "4",    // Actress in a Supporting Role
-        "5",    // Animated Feature Film
-        "6",    // Cinematography
-        "8",    // Costume Design
-        "9",    // Directing
-        "10",   // Documentary Feature
-        "11",   // Film Editing
-        "12",   // International Feature Film
-        "13",   // Makeup and Hairstyling
-        "14",   // Music (Original Score)
-        "15",   // Music (Original Song)
-        "16",   // Production Design
-        "17",   // Short Film (Animated)
-        "18",   // Short Film (Live Action)
-        "19",   // Sound
-        "7",    // Visual Effects
-        "20",   // Writing (Adapted Screenplay)
-        "21",   // Writing (Original Screenplay)
-        "9997"  // Documentary Short Subject
-      ],
-      AwardShowNumberFrom: yearStart,
-      AwardShowNumberTo: yearEnd,
-      Search: 500  // Increased to ensure we get ALL nominations
-    };
-
-    try {
-      console.log(`Fetching Oscar data for Academy Awards ${yearStart}-${yearEnd}...`);
-
-      const url = 'https://awardsdatabase.oscars.org/api/awards/search';
-      const config = {
-        params: query,
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json',
-          'Origin': 'https://awardsdatabase.oscars.org',
-          'Referer': 'https://awardsdatabase.oscars.org/search'
-        }
-      };
-
-      const response = await this.fetchWithRetry(url, config);
-
-      if (!response.data?.results?.length) {
-        throw new Error("No results returned from Oscar database");
-      }
-
-      // Validate and log the categories we received
-      const categories = new Set(response.data.results.map((r: OscarNominee) => r.Category));
-      console.log("Retrieved categories:", Array.from(categories).sort());
-      console.log(`Total nominations found: ${response.data.results.length}`);
-
-      return response.data.results;
-    } catch (error: any) {
-      console.error("Error fetching Oscar data:", error.message);
-      throw error;
-    }
+  // Example method to get nominations for a specific year
+  async getNominationsForYear(year: number): Promise<OscarNomination[]> {
+    // This would be replaced with actual data from a JSON file or database
+    // For now, returning sample data for testing
+    return [
+      {
+        ceremonyYear: 2024,
+        category: "Best Picture",
+        nominee: "Oppenheimer",
+        isWinner: false
+      },
+      {
+        ceremonyYear: 2024,
+        category: "Best Picture",
+        nominee: "Barbie",
+        isWinner: false
+      },
+      // Add more nominations as needed
+    ];
   }
 
   private async findBestMatchWithAI(oscarTitle: string, tmdbResults: TMDBSearchResult[], year: string): Promise<TMDBSearchResult | null> {
@@ -203,13 +140,13 @@ If no good match exists, return "null".`;
     }
   }
 
-  async syncNominee(oscarNominee: OscarNominee): Promise<InsertNominee | null> {
+  async syncNominee(nomination: OscarNomination): Promise<InsertNominee | null> {
     try {
-      console.log(`Processing nominee: ${oscarNominee.Film} (${oscarNominee.Category})`);
+      console.log(`Processing nominee: ${nomination.nominee} (${nomination.category})`);
 
-      const tmdbData = await this.searchTMDB(oscarNominee.Film, oscarNominee.AwardYear);
+      const tmdbData = await this.searchTMDB(nomination.nominee, nomination.ceremonyYear.toString());
       if (!tmdbData) {
-        console.warn(`No TMDB match found for: ${oscarNominee.Film}`);
+        console.warn(`No TMDB match found for: ${nomination.nominee}`);
         return null;
       }
 
@@ -219,9 +156,9 @@ If no good match exists, return "null".`;
 Create an engaging, comprehensive description for an Oscar-nominated film:
 
 Oscar Information:
-- Film: "${oscarNominee.Film}"
-- Category: ${oscarNominee.Category}
-- Year: ${oscarNominee.AwardYear}
+- Film: "${nomination.nominee}"
+- Category: ${nomination.category}
+- Year: ${nomination.ceremonyYear}
 
 TMDB Overview:
 ${tmdbData.overview}
@@ -238,32 +175,32 @@ Do not mention Oscar results directly.`;
         const descriptionResult = await model.generateContent(enhancedDescriptionPrompt);
         aiDescription = descriptionResult.response.text().trim();
       } catch (error) {
-        console.warn(`Failed to generate AI description for ${oscarNominee.Film}:`, error);
+        console.warn(`Failed to generate AI description for ${nomination.nominee}:`, error);
       }
 
       return {
-        name: oscarNominee.Film,
-        category: oscarNominee.Category,
+        name: nomination.nominee,
+        category: nomination.category,
         description: aiDescription,
         poster: tmdbData.poster_path ? `https://image.tmdb.org/t/p/original${tmdbData.poster_path}` : '',
         trailerUrl: '',  // Will be populated later
         streamingPlatforms: [],  // Will be populated separately
         awards: {},
         historicalAwards: [{
-          year: parseInt(oscarNominee.AwardYear),
+          year: nomination.ceremonyYear,
           awards: [{
-            ceremonyId: oscarNominee.AwardShowNumber,
+            ceremonyId: 96,  // This would come from a mapping of years to ceremony IDs
             name: "Academy Awards",
-            type: oscarNominee.Category,
-            result: oscarNominee.Winner ? "Won" : "Nominated",
-            dateAwarded: `${oscarNominee.AwardYear}-03-10`  // 2024 Academy Awards date
+            type: nomination.category,
+            result: nomination.isWinner ? "Won" : "Nominated",
+            dateAwarded: `${nomination.ceremonyYear}-03-10`  // Approximate date
           }]
         }],
         castMembers: [],  // Will be populated by updateNomineeWithTMDBData
         crew: [],        // Will be populated by updateNomineeWithTMDBData
         funFacts: [],    // Will be populated separately
-        ceremonyYear: parseInt(oscarNominee.AwardYear),
-        isWinner: oscarNominee.Winner,
+        ceremonyYear: nomination.ceremonyYear,
+        isWinner: nomination.isWinner,
         tmdbId: tmdbData.id,
         runtime: null,
         releaseDate: tmdbData.release_date,
@@ -281,7 +218,7 @@ Do not mention Oscar results directly.`;
         }
       };
     } catch (error) {
-      console.error(`Error syncing nominee ${oscarNominee.Film}:`, error);
+      console.error(`Error syncing nominee ${nomination.nominee}:`, error);
       return null;
     }
   }

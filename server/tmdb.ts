@@ -2,6 +2,12 @@ import { db } from "./db";
 import { nominees, type Nominee } from "@shared/schema";
 import { eq } from "drizzle-orm";
 
+interface TMDBMovieResult {
+  id: number;
+  title: string;
+  release_date: string;
+}
+
 const TMDB_BASE_URL = "https://api.themoviedb.org/3";  // Changed to v3 API for better compatibility
 const TMDB_IMAGE_BASE_URL = "https://image.tmdb.org/t/p";
 
@@ -50,13 +56,13 @@ async function searchMovie(query: string, year?: number) {
     let bestMatch = null;
 
     // First try exact title match
-    bestMatch = results.find(movie => 
+    bestMatch = results.find((movie: TMDBMovieResult) => 
       movie.title.toLowerCase() === query.toLowerCase()
     );
 
     // If no exact match, try partial match with year
     if (!bestMatch && year) {
-      bestMatch = results.find(movie => {
+      bestMatch = results.find((movie: TMDBMovieResult) => {
         const movieYear = new Date(movie.release_date).getFullYear();
         return movieYear === year || movieYear === year - 1;
       });
