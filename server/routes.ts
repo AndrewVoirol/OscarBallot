@@ -7,6 +7,7 @@ import { updateNomineeWithTMDBData } from "./tmdb";
 import rateLimit from 'express-rate-limit';
 import { eq } from "drizzle-orm";
 import { OscarSyncService } from "./services/oscarSync";
+import { seed } from "./seed";
 
 // Extend Express Request type to include our User type
 declare module "express" {
@@ -89,19 +90,23 @@ export function registerRoutes(app: Express): Server {
   setupAuth(app);
 
   // Protected routes for ballot operations
-  app.get("/api/ballots/:nomineeId", requireAuth, async (req, res) => {
-    if (!req.user) {
+  app.get("/api/ballots/:nomineeId", requireAuth, async (req: Request, res) => {
+    const user = req.user as User;
+    if (!user) {
       res.status(401).json({ message: "Authentication required" });
       return;
     }
+
     const ballot = await storage.getBallot(
       parseInt(req.params.nomineeId),
-      req.user.id
+      user.id
     );
+
     if (!ballot) {
       res.json({
         nomineeId: parseInt(req.params.nomineeId),
-        userId: req.user.id,
+        userId: user.id,
+        ceremonyId: 96, // Default to 96th Academy Awards
         hasWatched: false,
         predictedWinner: false,
         wantToWin: false
@@ -111,30 +116,37 @@ export function registerRoutes(app: Express): Server {
     res.json(ballot);
   });
 
-  app.post("/api/ballots", requireAuth, async (req, res) => {
-    if (!req.user) {
+  app.post("/api/ballots", requireAuth, async (req: Request, res) => {
+    const user = req.user as User;
+    if (!user) {
       res.status(401).json({ message: "Authentication required" });
       return;
     }
+
     const result = insertBallotSchema.safeParse(req.body);
     if (!result.success) {
-      res.status(400).json({ message: "Invalid ballot data" });
+      res.status(400).json({ 
+        message: "Invalid ballot data",
+        errors: result.error.errors 
+      });
       return;
     }
+
     const ballot = await storage.updateBallot({
       ...result.data,
-      userId: req.user.id
+      userId: user.id
     });
     res.json(ballot);
   });
 
-  // Add new route to get all ballots for a user
-  app.get("/api/ballots", requireAuth, async (req, res) => {
-    if (!req.user) {
+  app.get("/api/ballots", requireAuth, async (req: Request, res) => {
+    const user = req.user as User;
+    if (!user) {
       res.status(401).json({ message: "Authentication required" });
       return;
     }
-    const ballots = await storage.getBallotsByUser(req.user.id);
+
+    const ballots = await storage.getBallotsByUser(user.id);
     res.json(ballots);
   });
 
@@ -171,6 +183,26 @@ export function registerRoutes(app: Express): Server {
       console.error("Error in Oscar sync test:", error);
       res.status(500).json({ 
         error: "Failed to test Oscar sync",
+        message: error.message 
+      });
+    }
+  });
+
+  // Add admin route for seeding
+  app.post("/api/admin/seed", requireAuth, async (req: Request, res) => {
+    const user = req.user as User;
+    if (!user?.isAdmin) {
+      res.status(403).json({ message: "Admin access required" });
+      return;
+    }
+
+    try {
+      await seed();
+      res.json({ message: "Database seeding completed successfully" });
+    } catch (error: any) {
+      console.error("Error in seed endpoint:", error);
+      res.status(500).json({ 
+        error: "Failed to seed database",
         message: error.message 
       });
     }

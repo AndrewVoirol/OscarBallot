@@ -47,12 +47,19 @@ export class OscarSyncService {
     };
 
     try {
+      console.log(`Fetching Oscar data for Academy Awards ${yearStart}-${yearEnd}...`);
       const response = await axios.get("https://awardsdatabase.oscars.org/search/getresults", {
         params: { query: JSON.stringify(query) }
       });
+
+      if (!response.data?.results?.length) {
+        throw new Error("No results returned from Oscar database");
+      }
+
+      console.log(`Retrieved ${response.data.results.length} nominations`);
       return response.data.results;
-    } catch (error) {
-      console.error("Error fetching Oscar data:", error);
+    } catch (error: any) {
+      console.error("Error fetching Oscar data:", error.message);
       throw error;
     }
   }
@@ -65,22 +72,29 @@ export class OscarSyncService {
 Oscar Movie: "${oscarTitle}" (Year: ${year})
 
 TMDB Results:
-${tmdbResults.map(movie => `- "${movie.title}" (${movie.release_date})`).join('\n')}
+${tmdbResults.map((movie, index) => 
+  `${index}. "${movie.title}" (${movie.release_date})\n   Overview: ${movie.overview}`
+).join('\n')}
 
-Return only the index number (0-based) of the best match. Consider:
-1. Title similarity
-2. Release year proximity
-3. Common variations in movie titles
+Analyze each result considering:
+1. Title similarity (exact matches, variations, international titles)
+2. Release date proximity to Oscar year
+3. Plot/overview relevance
+4. Common variations in movie titles between databases
 
-Response format: Just the number, e.g. "2" for the third movie.`;
+Return only the index number (0-based) of the best match. Just the number, e.g. "2".
+If no good match exists, return "null".`;
 
     try {
       const result = await model.generateContent(prompt);
       const response = result.response;
-      const index = parseInt(response.text().trim());
+      const text = response.text().trim();
 
+      if (text === "null") return null;
+
+      const index = parseInt(text);
       if (isNaN(index) || index < 0 || index >= tmdbResults.length) {
-        console.warn(`Invalid AI response for ${oscarTitle}: ${response.text()}`);
+        console.warn(`Invalid AI response for ${oscarTitle}: ${text}`);
         return null;
       }
 
@@ -93,10 +107,11 @@ Response format: Just the number, e.g. "2" for the third movie.`;
 
   async searchTMDB(title: string, year: string): Promise<TMDBSearchResult | null> {
     try {
-      const response = await axios.get(`${this.tmdbBaseUrl}/search/movie`, {
-        headers: {
-          'Authorization': `Bearer ${this.tmdbToken}`
-        },
+      console.log(`Searching TMDB for: ${title} (${year})`);
+
+      // Try exact year first
+      const exactYearResponse = await axios.get(`${this.tmdbBaseUrl}/search/movie`, {
+        headers: { 'Authorization': `Bearer ${this.tmdbToken}` },
         params: {
           query: title,
           year: new Date(year).getFullYear(),
@@ -104,14 +119,29 @@ Response format: Just the number, e.g. "2" for the third movie.`;
         }
       });
 
-      if (response.data.results.length === 0) {
-        return null;
+      // If no results, try year-1 (movies often release year before Oscar nomination)
+      if (!exactYearResponse.data.results.length) {
+        const previousYearResponse = await axios.get(`${this.tmdbBaseUrl}/search/movie`, {
+          headers: { 'Authorization': `Bearer ${this.tmdbToken}` },
+          params: {
+            query: title,
+            year: new Date(year).getFullYear() - 1,
+            include_adult: false
+          }
+        });
+
+        if (!previousYearResponse.data.results.length) {
+          console.log(`No TMDB results found for: ${title}`);
+          return null;
+        }
+
+        return await this.findBestMatchWithAI(title, previousYearResponse.data.results, year);
       }
 
-      return await this.findBestMatchWithAI(title, response.data.results, year);
+      return await this.findBestMatchWithAI(title, exactYearResponse.data.results, year);
 
-    } catch (error) {
-      console.error("Error searching TMDB:", error);
+    } catch (error: any) {
+      console.error("Error searching TMDB:", error.message);
       return null;
     }
   }
@@ -123,12 +153,41 @@ Response format: Just the number, e.g. "2" for the third movie.`;
       return null;
     }
 
+    // Generate AI-enhanced description using both Oscar and TMDB data
+    const model = this.genAI.getGenerativeModel({ model: "gemini-pro" });
+    const enhancedDescriptionPrompt = `
+Create an engaging, informative description for an Oscar-nominated film by combining:
+
+Oscar Information:
+- Film: "${oscarNominee.Film}"
+- Category: ${oscarNominee.Category}
+- Year: ${oscarNominee.AwardYear}
+- Result: ${oscarNominee.Winner ? "Won" : "Nominated"}
+
+TMDB Overview:
+${tmdbData.overview}
+
+Generate a comprehensive 2-3 sentence description that highlights:
+1. The film's artistic/technical achievements
+2. Its Oscar recognition
+3. Key plot elements
+Do not mention the Oscar result directly in the description.
+`;
+
+    let aiDescription = tmdbData.overview;
+    try {
+      const descriptionResult = await model.generateContent(enhancedDescriptionPrompt);
+      aiDescription = descriptionResult.response.text().trim();
+    } catch (error) {
+      console.warn(`Failed to generate AI description for ${oscarNominee.Film}:`, error);
+    }
+
     return {
       name: oscarNominee.Film,
       category: oscarNominee.Category,
-      description: tmdbData.overview,
+      description: aiDescription,
       poster: tmdbData.poster_path ? `https://image.tmdb.org/t/p/original${tmdbData.poster_path}` : '',
-      trailerUrl: '',
+      trailerUrl: '',  // Will be populated by updateNomineeWithTMDBData
       streamingPlatforms: [],
       awards: {},
       historicalAwards: [{
@@ -138,7 +197,7 @@ Response format: Just the number, e.g. "2" for the third movie.`;
           name: "Academy Awards",
           type: oscarNominee.Category,
           result: oscarNominee.Winner ? "Won" : "Nominated",
-          dateAwarded: oscarNominee.AwardYear
+          dateAwarded: new Date(parseInt(oscarNominee.AwardYear), 1, 1).toISOString().split('T')[0]
         }]
       }],
       castMembers: [],
@@ -149,9 +208,13 @@ Response format: Just the number, e.g. "2" for the third movie.`;
       tmdbId: tmdbData.id,
       runtime: 0,
       releaseDate: tmdbData.release_date,
-      voteAverage: Math.round(tmdbData.vote_average),
+      voteAverage: Math.round(tmdbData.vote_average * 10),
       backdropPath: tmdbData.backdrop_path ? `https://image.tmdb.org/t/p/original${tmdbData.backdrop_path}` : '',
       genres: [],
+      productionCompanies: [],
+      extendedCredits: { cast: [], crew: [] },
+      aiGeneratedDescription: aiDescription,
+      aiMatchConfidence: 100,  // We're using AI for matching
       dataSource: {
         tmdb: { lastUpdated: new Date().toISOString(), version: "4.0" },
         imdb: null,
