@@ -5,10 +5,11 @@ import { type TMDBSearchResult, type OscarNomination } from "@shared/schema";
 
 export class OscarSyncService {
   private readonly tmdbToken: string;
-  private readonly tmdbBaseUrl = "https://api.themoviedb.org/3";
+  private readonly tmdbBaseUrl = "https://api.themoviedb.org/4";
   private readonly genAI: GoogleGenerativeAI;
-  private readonly RETRY_ATTEMPTS = 3;
-  private readonly RETRY_DELAY = 1000;
+  private readonly BATCH_SIZE = 3;
+  private readonly RATE_LIMIT_DELAY = 1000; // 1 second between requests
+  private readonly headers: Record<string, string>;
 
   constructor() {
     if (!process.env.TMDB_ACCESS_TOKEN) {
@@ -19,34 +20,49 @@ export class OscarSyncService {
     }
     this.tmdbToken = process.env.TMDB_ACCESS_TOKEN;
     this.genAI = new GoogleGenerativeAI(process.env.GOOGLE_AI_KEY);
+    this.headers = {
+      'Authorization': `Bearer ${this.tmdbToken}`,
+      'Content-Type': 'application/json;charset=utf-8'
+    };
   }
 
   private async searchTMDBWithConfig(config: {
     query: string,
     year?: number,
     searchType: 'movie' | 'person' | 'multi',
-    language?: string
-  }): Promise<any> {
-    const headers = {
-      'Authorization': `Bearer ${this.tmdbToken}`,
-      'Content-Type': 'application/json;charset=utf-8'
-    };
-
+    language?: string,
+    region?: string
+  }): Promise<TMDBSearchResult[]> {
     try {
+      // Use v4 search endpoint
       const response = await axios.get(`${this.tmdbBaseUrl}/search/${config.searchType}`, {
-        headers,
+        headers: this.headers,
         params: {
           query: config.query,
           year: config.year,
           include_adult: false,
-          language: config.language || 'en-US'
+          language: config.language || 'en-US',
+          region: config.region || 'US',
+          page: 1
         }
       });
+
+      await this.handleRateLimit();
       return response.data.results;
     } catch (error) {
+      if (axios.isAxiosError(error) && error.response?.status === 429) {
+        // Handle rate limiting
+        const retryAfter = parseInt(error.response.headers['retry-after'] || '1');
+        await new Promise(resolve => setTimeout(resolve, retryAfter * 1000));
+        return this.searchTMDBWithConfig(config);
+      }
       console.error(`TMDB search failed for ${config.query}:`, error);
       return [];
     }
+  }
+
+  private async handleRateLimit() {
+    await new Promise(resolve => setTimeout(resolve, this.RATE_LIMIT_DELAY));
   }
 
   private async searchTMDB(title: string, year: string, category: string): Promise<TMDBSearchResult | null> {
@@ -65,10 +81,10 @@ export class OscarSyncService {
 
     // Search strategies in order of preference, considering eligibility window
     const searchStrategies = [
-      { query: movieTitle, year: eligibilityYear },           // Primary eligibility year
-      { query: movieTitle, year: eligibilityYear - 1 },       // Late previous year releases
-      { query: this.getAlternativeTitle(movieTitle), year: eligibilityYear },
-      { query: movieTitle }                                   // Fallback without year
+      { query: movieTitle, year: eligibilityYear, region: 'US' },           // Primary eligibility year
+      { query: movieTitle, year: eligibilityYear - 1, region: 'US' },       // Late previous year releases
+      { query: this.getAlternativeTitle(movieTitle), year: eligibilityYear, region: 'US' },
+      { query: movieTitle, region: 'US' }                                   // Fallback without year
     ];
 
     for (let attempt = 0; attempt < this.RETRY_ATTEMPTS; attempt++) {
@@ -289,7 +305,7 @@ Include critical reception and any notable achievements. Keep it under 200 words
           const detailsResponse = await axios.get(
             `${this.tmdbBaseUrl}/movie/${tmdbData.id}`,
             {
-              headers: { 'Authorization': `Bearer ${this.tmdbToken}` },
+              headers: this.headers,
               params: { append_to_response: 'credits,alternative_titles' }
             }
           );
@@ -320,7 +336,7 @@ Include critical reception and any notable achievements. Keep it under 200 words
         originalLanguage: (details as any)?.original_language || baseNominee.originalLanguage,
         originalTitle: (details as any)?.original_title || baseNominee.originalTitle,
         dataSource: {
-          tmdb: { lastUpdated: new Date().toISOString(), version: "3.0" },
+          tmdb: { lastUpdated: new Date().toISOString(), version: "4.0" },
           imdb: null,
           wikidata: null
         }
@@ -941,8 +957,7 @@ Include critical reception and any notable achievements. Keep it under 200 words
         category: "Music (Original Song)",
         nominee: "It Never Went Away (American Symphony)",
         isWinner: false,
-        eligibilityYear: year -1
-      },
+        eligibilityYear: year -1},
       {
         ceremonyYear: year,
         category: "Music (Original Song)",

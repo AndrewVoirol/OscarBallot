@@ -22,6 +22,25 @@ export interface OscarNomination {
   isWinner: boolean;
 }
 
+// New sync status table to track TMDB syncs
+export const syncStatus = pgTable("sync_status", {
+  id: serial("id").primaryKey(),
+  lastSyncStarted: timestamp("last_sync_started").notNull(),
+  lastSyncCompleted: timestamp("last_sync_completed"),
+  syncType: text("sync_type").notNull(), // 'initial', 'current_year', 'historical'
+  totalItems: integer("total_items"),
+  processedItems: integer("processed_items"),
+  failedItems: integer("failed_items"),
+  status: text("status").notNull(), // 'in_progress', 'completed', 'failed'
+  error: text("error"),
+  metadata: jsonb("metadata").$type<{
+    ceremonyYears?: number[];
+    currentBatch?: number;
+    totalBatches?: number;
+    lastProcessedId?: number;
+  }>(),
+});
+
 // Database schema definitions
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
@@ -132,6 +151,7 @@ export const insertUserSchema = createInsertSchema(users).omit({ id: true });
 export const insertAwardCeremonySchema = createInsertSchema(awardCeremonies).omit({ id: true });
 export const insertNomineeSchema = createInsertSchema(nominees);
 export const insertBallotSchema = createInsertSchema(ballots);
+export const insertSyncStatusSchema = createInsertSchema(syncStatus);
 
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
@@ -141,3 +161,5 @@ export type InsertNominee = z.infer<typeof insertNomineeSchema>;
 export type Nominee = typeof nominees.$inferSelect;
 export type InsertBallot = z.infer<typeof insertBallotSchema>;
 export type Ballot = typeof ballots.$inferSelect;
+export type InsertSyncStatus = z.infer<typeof insertSyncStatusSchema>;
+export type SyncStatus = typeof syncStatus.$inferSelect;
