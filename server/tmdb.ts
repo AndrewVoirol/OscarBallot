@@ -11,9 +11,27 @@ interface TMDBMovieResult {
 
 const TMDB_BASE_URL = "https://api.themoviedb.org/3";
 const TMDB_IMAGE_BASE_URL = "https://image.tmdb.org/t/p";
+const RETRY_DELAYS = [1000, 2000, 4000]; // Retry delays in milliseconds
 
 if (!process.env.TMDB_ACCESS_TOKEN) {
   throw new Error("TMDB_ACCESS_TOKEN environment variable is not set");
+}
+
+// Cache for successful movie matches
+const movieCache = new Map<string, TMDBMovieResult>();
+const failedMatches = new Set<string>();
+
+function extractMovieTitle(nomineeString: string): { title: string; person?: string } {
+  // Handle format: "Person Name (Movie Title)"
+  const match = nomineeString.match(/^(.*?)\s*\((.*?)\)$/);
+  if (match) {
+    return {
+      person: match[1].trim(),
+      title: match[2].trim()
+    };
+  }
+  // If no parentheses, treat the whole string as the title
+  return { title: nomineeString };
 }
 
 function normalizeTitle(title: string): string {
@@ -53,16 +71,55 @@ function calculateTitleSimilarity(str1: string, str2: string): number {
   return 1 - (dp[m][n] / maxLength);
 }
 
+async function fetchWithRetry(url: string, options: RequestInit, retryCount = 0): Promise<Response> {
+  try {
+    const response = await fetch(url, options);
+    if (!response.ok && retryCount < RETRY_DELAYS.length) {
+      const delay = RETRY_DELAYS[retryCount];
+      console.log(`Retrying after ${delay}ms (attempt ${retryCount + 1})`);
+      await new Promise(resolve => setTimeout(resolve, delay));
+      return fetchWithRetry(url, options, retryCount + 1);
+    }
+    return response;
+  } catch (error) {
+    if (retryCount < RETRY_DELAYS.length) {
+      const delay = RETRY_DELAYS[retryCount];
+      console.log(`Network error, retrying after ${delay}ms (attempt ${retryCount + 1})`);
+      await new Promise(resolve => setTimeout(resolve, delay));
+      return fetchWithRetry(url, options, retryCount + 1);
+    }
+    throw error;
+  }
+}
+
 async function searchMovie(query: string, year?: number) {
   try {
-    console.log(`Searching for movie: ${query}${year ? ` (${year})` : ''}`);
+    // Check cache first
+    const cacheKey = `${query}:${year || ''}`;
+    if (movieCache.has(cacheKey)) {
+      console.log(`Cache hit for: ${query}`);
+      return movieCache.get(cacheKey)!;
+    }
+
+    // Check if this query previously failed
+    if (failedMatches.has(cacheKey)) {
+      console.log(`Skipping known failed match: ${query}`);
+      return null;
+    }
+
+    // Extract movie title from nominee string
+    const { title, person } = extractMovieTitle(query);
+    console.log(`Searching for movie: ${title}${year ? ` (${year})` : ''}`);
+    if (person) {
+      console.log(`Associated person: ${person}`);
+    }
 
     const searchStrategies = [
-      { query, year },
-      { query: query.split('(')[0].trim(), year }, // Try without parenthetical content
-      { query, year: year ? year - 1 : undefined }, // Try previous year
-      { query: query.split(':')[0].trim(), year }, // Try without subtitle
-      { query } // Try without year constraint
+      { query: title, year },
+      { query: title.split('(')[0].trim(), year }, // Try without parenthetical content
+      { query: title, year: year ? year - 1 : undefined }, // Try previous year
+      { query: title.split(':')[0].trim(), year }, // Try without subtitle
+      { query: title } // Try without year constraint
     ];
 
     const headers = {
@@ -80,10 +137,10 @@ async function searchMovie(query: string, year?: number) {
         ...(strategy.year && { year: strategy.year.toString() })
       });
 
-      const response = await fetch(`${TMDB_BASE_URL}/search/movie?${searchParams}`, {
-        method: 'GET',
-        headers
-      });
+      const response = await fetchWithRetry(
+        `${TMDB_BASE_URL}/search/movie?${searchParams}`,
+        { method: 'GET', headers }
+      );
 
       if (!response.ok) {
         const error = await response.json();
@@ -120,11 +177,15 @@ async function searchMovie(query: string, year?: number) {
       if (bestMatches.length > 0) {
         const bestMatch = bestMatches[0].movie;
         console.log(`Found match: ${bestMatch.title} (ID: ${bestMatch.id}) with score ${bestMatches[0].score}`);
+        // Cache successful match
+        movieCache.set(cacheKey, bestMatch);
         return bestMatch;
       }
     }
 
     console.log(`No suitable matches found for: ${query}`);
+    // Track failed match
+    failedMatches.add(cacheKey);
     return null;
 
   } catch (error: any) {
