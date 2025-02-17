@@ -51,21 +51,23 @@ export class OscarSyncService {
       await this.handleRateLimit();
       return response.data.results;
     } catch (error) {
-      if (axios.isAxiosError(error) && error.response?.status === 429) {
-        const retryAfter = parseInt(error.response.headers['retry-after'] || '1');
-        await new Promise(resolve => setTimeout(resolve, retryAfter * 1000));
-        return this.searchTMDBWithConfig(config);
-      }
-      // Only log actual errors, not just no results found
-      if (!(axios.isAxiosError(error) && error.response?.status === 404)) {
-        console.error(`TMDB API error for ${config.query}:`, error.message);
+      if (axios.isAxiosError(error)) {
+        if (error.response?.status === 429) {
+          console.log('Rate limit hit, waiting before retry...');
+          const retryAfter = parseInt(error.response.headers['retry-after'] || '1');
+          await new Promise(resolve => setTimeout(resolve, (retryAfter + 1) * 1000));
+          return this.searchTMDBWithConfig(config);
+        }
+        if (error.response?.status !== 404) {
+          console.error(`TMDB API error for ${config.query}:`, error.message);
+        }
       }
       return [];
     }
   }
 
   private async handleRateLimit() {
-    await new Promise(resolve => setTimeout(resolve, this.RATE_LIMIT_DELAY));
+    await new Promise(resolve => setTimeout(resolve, this.RATE_LIMIT_DELAY * 2));
   }
 
   private async searchTMDB(title: string, year: string, category: string): Promise<TMDBSearchResult | null> {
@@ -214,7 +216,7 @@ Explanation: The selected movie should be the Oscar-nominated work that was rele
 
 
   // Method to sync a nominee with TMDB data
-  async syncNominee(nomination: OscarNomination): Promise<InsertNominee> {
+  async syncNominee(nomination: OscarNomination): Promise<InsertNominee | null> {
     try {
       console.log(`Syncing nominee: ${nomination.nominee} (${nomination.category})`);
 
@@ -248,7 +250,7 @@ Explanation: The selected movie should be the Oscar-nominated work that was rele
         runtime: null,
         releaseDate: null,
         voteAverage: null,
-        backdropPath: "",
+        backdropPath: null,
         genres: [],
         productionCompanies: [],
         extendedCredits: {
@@ -268,7 +270,7 @@ Explanation: The selected movie should be the Oscar-nominated work that was rele
         lastUpdated: new Date()
       };
 
-      // Try to get TMDB data
+      // Try to get TMDB data with retries
       const tmdbData = await this.searchTMDB(
         nomination.nominee,
         nomination.ceremonyYear.toString(),
@@ -276,71 +278,76 @@ Explanation: The selected movie should be the Oscar-nominated work that was rele
       );
 
       if (!tmdbData) {
-        console.log(`No TMDB match found for ${nomination.nominee}, using base nominee data`);
+        console.log(`No TMDB match found for ${nomination.nominee}`);
         return baseNominee;
       }
 
-      // Generate AI description using Gemini
-      const model = this.genAI.getGenerativeModel({ model: "gemini-pro" });
-      const descriptionPrompt = `Generate a concise description for the Oscar-nominated ${
-        nomination.category.includes("Actor") || nomination.category.includes("Actress") ?
-          "performance in" : "work"} "${nomination.nominee}" (${nomination.ceremonyYear}).
-Focus on its Oscar-nominated aspects for the category "${nomination.category}".
-Include critical reception and any notable achievements. Keep it under 200 words.`;
+      try {
+        // Generate AI description using Gemini
+        const model = this.genAI.getGenerativeModel({ model: "gemini-pro" });
+        const descriptionPrompt = `Generate a concise description for the Oscar-nominated ${
+          nomination.category.includes("Actor") || nomination.category.includes("Actress") ?
+            "performance in" : "work"} "${nomination.nominee}" (${nomination.ceremonyYear}).
+      Focus on its Oscar-nominated aspects for the category "${nomination.category}".
+      Include critical reception and any notable achievements. Keep it under 200 words.`;
 
-      const aiDescription = await model.generateContent(descriptionPrompt)
-        .then(result => result.response.text())
-        .catch(error => {
-          console.error("Error generating AI description:", error);
-          return "";
-        });
+        const aiDescription = await model.generateContent(descriptionPrompt)
+          .then(result => result.response.text())
+          .catch(error => {
+            console.error("Error generating AI description:", error);
+            return "";
+          });
 
-      // Get additional details if it's a movie
-      let details = {};
-      if (!nomination.category.includes("Actor") && !nomination.category.includes("Actress")) {
-        try {
-          const detailsResponse = await axios.get(
-            `${this.tmdbBaseUrl}/movie/${tmdbData.id}`,
-            {
-              headers: this.headers,
-              params: { append_to_response: 'credits,alternative_titles' }
-            }
-          );
-          details = detailsResponse.data;
-        } catch (error) {
-          console.error(`Error fetching details for ${nomination.nominee}:`, error);
+        // Get additional details if it's a movie
+        let details = {};
+        if (!nomination.category.includes("Actor") && !nomination.category.includes("Actress")) {
+          try {
+            const detailsResponse = await axios.get(
+              `${this.tmdbBaseUrl}/movie/${tmdbData.id}`,
+              {
+                headers: this.headers,
+                params: { append_to_response: 'credits,alternative_titles' }
+              }
+            );
+            details = detailsResponse.data;
+            await this.handleRateLimit();
+          } catch (error) {
+            console.error(`Error fetching details for ${nomination.nominee}:`, error);
+          }
         }
+
+        return {
+          ...baseNominee,
+          description: tmdbData.overview || baseNominee.description,
+          poster: tmdbData.poster_path ? `https://image.tmdb.org/t/p/w500${tmdbData.poster_path}` : baseNominee.poster,
+          tmdbId: tmdbData.id,
+          runtime: (details as any)?.runtime || baseNominee.runtime,
+          releaseDate: tmdbData.release_date || baseNominee.releaseDate,
+          voteAverage: Math.round(tmdbData.vote_average * 10),
+          backdropPath: tmdbData.backdrop_path ? `https://image.tmdb.org/t/p/original${tmdbData.backdrop_path}` : baseNominee.backdropPath,
+          genres: (details as any)?.genres?.map((g: any) => g.name) || baseNominee.genres,
+          productionCompanies: (details as any)?.production_companies || baseNominee.productionCompanies,
+          extendedCredits: {
+            cast: (details as any)?.credits?.cast || [],
+            crew: (details as any)?.credits?.crew || []
+          },
+          aiGeneratedDescription: aiDescription || baseNominee.aiGeneratedDescription,
+          aiMatchConfidence: 100,
+          alternativeTitles: (details as any)?.alternative_titles?.titles?.map((t: any) => t.title) || baseNominee.alternativeTitles,
+          originalLanguage: (details as any)?.original_language || baseNominee.originalLanguage,
+          originalTitle: (details as any)?.original_title || baseNominee.originalTitle,
+          dataSource: {
+            tmdb: { lastUpdated: new Date().toISOString(), version: "4.0" },
+            imdb: null,
+            wikidata: null
+          }
+        };
+      } catch (error) {
+        console.error(`Error enriching nominee data for ${nomination.nominee}:`, error);
+        return baseNominee;
       }
-
-      return {
-        ...baseNominee,
-        description: tmdbData.overview || baseNominee.description,
-        poster: tmdbData.poster_path ? `https://image.tmdb.org/t/p/w500${tmdbData.poster_path}` : baseNominee.poster,
-        tmdbId: tmdbData.id,
-        runtime: (details as any)?.runtime || baseNominee.runtime,
-        releaseDate: tmdbData.release_date || baseNominee.releaseDate,
-        voteAverage: Math.round(tmdbData.vote_average * 10),
-        backdropPath: tmdbData.backdrop_path ? `https://image.tmdb.org/t/p/original${tmdbData.backdrop_path}` : baseNominee.backdropPath,
-        genres: (details as any)?.genres?.map((g: any) => g.name) || baseNominee.genres,
-        productionCompanies: (details as any)?.production_companies || baseNominee.productionCompanies,
-        extendedCredits: {
-          cast: (details as any)?.credits?.cast || [],
-          crew: (details as any)?.credits?.crew || []
-        },
-        aiGeneratedDescription: aiDescription || baseNominee.aiGeneratedDescription,
-        aiMatchConfidence: 100,
-        alternativeTitles: (details as any)?.alternative_titles?.titles?.map((t: any) => t.title) || baseNominee.alternativeTitles,
-        originalLanguage: (details as any)?.original_language || baseNominee.originalLanguage,
-        originalTitle: (details as any)?.original_title || baseNominee.originalTitle,
-        dataSource: {
-          tmdb: { lastUpdated: new Date().toISOString(), version: "4.0" },
-          imdb: null,
-          wikidata: null
-        }
-      };
     } catch (error) {
       console.error(`Error syncing nominee ${nomination.nominee}:`, error);
-      // Return base nominee data if sync fails
       return baseNominee;
     }
   }
@@ -952,7 +959,7 @@ Include critical reception and any notable achievements. Keep it under 200 words
       {
         ceremonyYear: year,
         category: "Music (Original Song)",
-        nominee: "It Never Went Away (American Symphony)",
+        nomminee: "It Never Went Away (American Symphony)",
         isWinner: false,
         eligibilityYear: year - 1
       },

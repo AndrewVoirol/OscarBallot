@@ -38,7 +38,24 @@ async function shouldStartSync(): Promise<boolean> {
     return hoursSinceLastSync >= SYNC_INTERVAL_HOURS;
   } catch (error) {
     console.error("Error checking sync status:", error);
-    return false;
+    return true; // If we can't check sync status, try to sync anyway
+  }
+}
+
+async function insertNominee(nominee: any, db: any) {
+  try {
+    const [inserted] = await db
+      .insert(nominees)
+      .values(nominee)
+      .onConflictDoUpdate({
+        target: [nominees.name, nominees.category, nominees.ceremonyYear],
+        set: nominee
+      })
+      .returning();
+    return inserted;
+  } catch (error) {
+    console.error(`Error inserting nominee ${nominee.name}:`, error);
+    throw error;
   }
 }
 
@@ -72,61 +89,26 @@ async function runBackgroundSync() {
 
     let processedCount = 0;
     let failedCount = 0;
-    const totalBatches = Math.ceil(currentYearNominees.length / 5); // Increased batch size to 5
+    const batchSize = 3; // Reduced batch size to avoid rate limits
+    const totalBatches = Math.ceil(currentYearNominees.length / batchSize);
 
-    for (let i = 0; i < currentYearNominees.length; i += 5) {
-      const currentBatch = Math.floor(i / 5) + 1;
+    for (let i = 0; i < currentYearNominees.length; i += batchSize) {
+      const currentBatch = Math.floor(i / batchSize) + 1;
       console.log(`\nProcessing batch ${currentBatch}/${totalBatches}...`);
 
-      const batch = currentYearNominees.slice(i, i + 5);
+      const batch = currentYearNominees.slice(i, i + batchSize);
       const results = await Promise.allSettled(
         batch.map(async nominee => {
           try {
             const syncedNominee = await oscarService.syncNominee(nominee);
             if (syncedNominee) {
-              // Ensure the data matches the schema exactly
-              const nomineeData = {
-                name: syncedNominee.name,
-                description: syncedNominee.description || "",
-                category: syncedNominee.category,
-                poster: syncedNominee.poster || "",
-                trailerUrl: syncedNominee.trailerUrl || "",
-                streamingPlatforms: syncedNominee.streamingPlatforms || [],
-                awards: syncedNominee.awards || {},
-                historicalAwards: syncedNominee.historicalAwards || [],
-                castMembers: syncedNominee.castMembers || [],
-                crew: syncedNominee.crew || [],
-                funFacts: syncedNominee.funFacts || [],
-                ceremonyYear: syncedNominee.ceremonyYear,
-                eligibilityYear: syncedNominee.eligibilityYear,
-                isWinner: syncedNominee.isWinner,
-                tmdbId: syncedNominee.tmdbId,
-                runtime: syncedNominee.runtime,
-                releaseDate: syncedNominee.releaseDate,
-                voteAverage: syncedNominee.voteAverage,
-                backdropPath: syncedNominee.backdropPath || "",
-                genres: syncedNominee.genres || [],
-                productionCompanies: syncedNominee.productionCompanies || [],
-                extendedCredits: syncedNominee.extendedCredits || { cast: [], crew: [] },
-                aiGeneratedDescription: syncedNominee.aiGeneratedDescription || "",
-                aiMatchConfidence: syncedNominee.aiMatchConfidence || 0,
-                alternativeTitles: syncedNominee.alternativeTitles || [],
-                originalLanguage: syncedNominee.originalLanguage || null,
-                originalTitle: syncedNominee.originalTitle || null,
-                dataSource: syncedNominee.dataSource || {
-                  tmdb: null,
-                  imdb: null,
-                  wikidata: null
-                }
-              };
-
-              await db.insert(nominees).values(nomineeData);
+              await insertNominee(syncedNominee, db);
               processedCount++;
-              console.log(`✓ Successfully inserted: ${nominee.nominee}`);
+              console.log(`✓ Successfully processed: ${nominee.nominee}`);
               return true;
             }
           } catch (error) {
-            console.error(`Failed to sync: ${nominee.nominee}`, error);
+            console.error(`Failed to process: ${nominee.nominee}`, error);
             failedCount++;
           }
           return false;
@@ -151,8 +133,9 @@ async function runBackgroundSync() {
       const progress = Math.round((processedCount / currentYearNominees.length) * 100);
       console.log(`Progress: ${progress}% (${processedCount}/${currentYearNominees.length} nominees processed)`);
 
-      if (i + 5 < currentYearNominees.length) {
-        await new Promise(resolve => setTimeout(resolve, 2000)); // Reduced delay between batches
+      // Add delay between batches to respect rate limits
+      if (i + batchSize < currentYearNominees.length) {
+        await new Promise(resolve => setTimeout(resolve, 3000));
       }
     }
 
@@ -184,23 +167,19 @@ async function runBackgroundSync() {
   }
 }
 
-// Main seed function - now just sets up basic data
+// Main seed function - now just sets up basic data and triggers sync
 export async function seed() {
   try {
-    console.log("Starting minimal database seeding...");
+    console.log("Starting database seeding...");
 
-    // Clear existing nominees
+    // Clear existing nominees before sync
     await db.execute(sql`TRUNCATE TABLE ${nominees}`);
     console.log("Cleared existing nominees");
 
-    // Start background sync process after a delay
-    setTimeout(() => {
-      runBackgroundSync().catch(error => {
-        console.error("Background sync failed:", error);
-      });
-    }, 2000); // Reduced initial delay
+    // Start background sync process immediately
+    await runBackgroundSync();
 
-    return { status: "Background sync scheduled" };
+    return { status: "Sync process started" };
   } catch (error) {
     console.error("Error seeding database:", error);
     throw error;
