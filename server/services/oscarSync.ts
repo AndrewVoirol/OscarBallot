@@ -36,11 +36,47 @@ export class OscarSyncService {
     this.genAI = new GoogleGenerativeAI(process.env.GOOGLE_AI_KEY);
   }
 
-  // Example method to get nominations for a specific year
+  // Method to get nominations for a specific year
   async getNominationsForYear(year: number): Promise<OscarNomination[]> {
-    // This would be replaced with actual data from a JSON file or database
-    // For now, returning sample data for testing
-    return [
+    // 2024 Oscar Nominations
+    const nominations: OscarNomination[] = [
+      // Best Picture
+      {
+        ceremonyYear: 2024,
+        category: "Best Picture",
+        nominee: "American Fiction",
+        isWinner: false
+      },
+      {
+        ceremonyYear: 2024,
+        category: "Best Picture",
+        nominee: "Anatomy of a Fall",
+        isWinner: false
+      },
+      {
+        ceremonyYear: 2024,
+        category: "Best Picture",
+        nominee: "Barbie",
+        isWinner: false
+      },
+      {
+        ceremonyYear: 2024,
+        category: "Best Picture",
+        nominee: "The Holdovers",
+        isWinner: false
+      },
+      {
+        ceremonyYear: 2024,
+        category: "Best Picture",
+        nominee: "Killers of the Flower Moon",
+        isWinner: false
+      },
+      {
+        ceremonyYear: 2024,
+        category: "Best Picture",
+        nominee: "Maestro",
+        isWinner: false
+      },
       {
         ceremonyYear: 2024,
         category: "Best Picture",
@@ -50,11 +86,121 @@ export class OscarSyncService {
       {
         ceremonyYear: 2024,
         category: "Best Picture",
-        nominee: "Barbie",
+        nominee: "Past Lives",
         isWinner: false
       },
-      // Add more nominations as needed
+      {
+        ceremonyYear: 2024,
+        category: "Best Picture",
+        nominee: "Poor Things",
+        isWinner: false
+      },
+      {
+        ceremonyYear: 2024,
+        category: "Best Picture",
+        nominee: "The Zone of Interest",
+        isWinner: false
+      },
+
+      // Best Director
+      {
+        ceremonyYear: 2024,
+        category: "Best Director",
+        nominee: "Justine Triet (Anatomy of a Fall)",
+        isWinner: false
+      },
+      {
+        ceremonyYear: 2024,
+        category: "Best Director",
+        nominee: "Martin Scorsese (Killers of the Flower Moon)",
+        isWinner: false
+      },
+      {
+        ceremonyYear: 2024,
+        category: "Best Director",
+        nominee: "Christopher Nolan (Oppenheimer)",
+        isWinner: false
+      },
+      {
+        ceremonyYear: 2024,
+        category: "Best Director",
+        nominee: "Yorgos Lanthimos (Poor Things)",
+        isWinner: false
+      },
+      {
+        ceremonyYear: 2024,
+        category: "Best Director",
+        nominee: "Jonathan Glazer (The Zone of Interest)",
+        isWinner: false
+      },
+
+      // Actor in a Leading Role
+      {
+        ceremonyYear: 2024,
+        category: "Actor in a Leading Role",
+        nominee: "Bradley Cooper (Maestro)",
+        isWinner: false
+      },
+      {
+        ceremonyYear: 2024,
+        category: "Actor in a Leading Role",
+        nominee: "Colman Domingo (Rustin)",
+        isWinner: false
+      },
+      {
+        ceremonyYear: 2024,
+        category: "Actor in a Leading Role",
+        nominee: "Paul Giamatti (The Holdovers)",
+        isWinner: false
+      },
+      {
+        ceremonyYear: 2024,
+        category: "Actor in a Leading Role",
+        nominee: "Cillian Murphy (Oppenheimer)",
+        isWinner: false
+      },
+      {
+        ceremonyYear: 2024,
+        category: "Actor in a Leading Role",
+        nominee: "Jeffrey Wright (American Fiction)",
+        isWinner: false
+      },
+
+      // Actress in a Leading Role
+      {
+        ceremonyYear: 2024,
+        category: "Actress in a Leading Role",
+        nominee: "Annette Bening (Nyad)",
+        isWinner: false
+      },
+      {
+        ceremonyYear: 2024,
+        category: "Actress in a Leading Role",
+        nominee: "Lily Gladstone (Killers of the Flower Moon)",
+        isWinner: false
+      },
+      {
+        ceremonyYear: 2024,
+        category: "Actress in a Leading Role",
+        nominee: "Sandra Hüller (Anatomy of a Fall)",
+        isWinner: false
+      },
+      {
+        ceremonyYear: 2024,
+        category: "Actress in a Leading Role",
+        nominee: "Carey Mulligan (Maestro)",
+        isWinner: false
+      },
+      {
+        ceremonyYear: 2024,
+        category: "Actress in a Leading Role",
+        nominee: "Emma Stone (Poor Things)",
+        isWinner: false
+      }
+      // ... Add other categories like Supporting Actor/Actress, Original Screenplay, etc.
     ];
+
+    return nominations.filter(nom => nom.ceremonyYear === year);
   }
 
   private async findBestMatchWithAI(oscarTitle: string, tmdbResults: TMDBSearchResult[], year: string): Promise<TMDBSearchResult | null> {
