@@ -163,5 +163,4 @@ export class DatabaseStorage implements IStorage {
   }
 }
 
-// Initialize storage with database implementation
 export const storage = new DatabaseStorage();

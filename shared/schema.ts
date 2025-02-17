@@ -13,9 +13,10 @@ export interface TMDBSearchResult {
   vote_average: number;
 }
 
-// Structured data for Oscar nominations
+// Enhanced Oscar nomination interface
 export interface OscarNomination {
-  ceremonyYear: number;
+  ceremonyYear: number;        // Year the ceremony takes place (e.g., 2025)
+  eligibilityYear: number;     // Year the film was eligible (e.g., 2024)
   category: string;
   nominee: string;
   isWinner: boolean;
@@ -55,7 +56,8 @@ export const nominees = pgTable("nominees", {
   streamingPlatforms: text("streaming_platforms").array().notNull(),
   awards: jsonb("awards").notNull(),
   historicalAwards: jsonb("historical_awards").$type<{
-    year: number;
+    ceremonyYear: number;
+    eligibilityYear: number;
     awards: Array<{
       ceremonyId: number;
       name: string;
@@ -68,6 +70,7 @@ export const nominees = pgTable("nominees", {
   crew: text("crew").array().notNull(),
   funFacts: text("fun_facts").array().notNull(),
   ceremonyYear: integer("ceremony_year").notNull().default(2025),
+  eligibilityYear: integer("eligibility_year").notNull().default(2024),
   isWinner: boolean("is_winner").notNull().default(false),
   tmdbId: integer("tmdb_id"),
   runtime: integer("runtime"),

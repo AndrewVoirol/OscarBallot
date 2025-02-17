@@ -49,8 +49,7 @@ export class OscarSyncService {
     }
   }
 
-  // Enhanced TMDB search with multiple strategies and retries
-  async searchTMDB(title: string, year: string, category: string): Promise<TMDBSearchResult | null> {
+  private async searchTMDB(title: string, year: string, category: string): Promise<TMDBSearchResult | null> {
     const movieTitle = this.extractMovieTitle(title, category);
     console.log(`Searching TMDB for: ${movieTitle} (${year}) - Original: ${title}, Category: ${category}`);
 
@@ -59,12 +58,17 @@ export class OscarSyncService {
     const searchLanguages = this.isInternationalCategory(category) ?
       ['en-US', 'original'] : ['en-US'];
 
-    // Search strategies in order of preference
+    // Calculate eligibility window
+    // Films released in the previous year are eligible for the current ceremony
+    const ceremonyYear = parseInt(year);
+    const eligibilityYear = ceremonyYear - 1;
+
+    // Search strategies in order of preference, considering eligibility window
     const searchStrategies = [
-      { query: movieTitle, year: parseInt(year) },
-      { query: movieTitle, year: parseInt(year) - 1 },
-      { query: this.getAlternativeTitle(movieTitle), year: parseInt(year) },
-      { query: movieTitle }
+      { query: movieTitle, year: eligibilityYear },           // Primary eligibility year
+      { query: movieTitle, year: eligibilityYear - 1 },       // Late previous year releases
+      { query: this.getAlternativeTitle(movieTitle), year: eligibilityYear },
+      { query: movieTitle }                                   // Fallback without year
     ];
 
     for (let attempt = 0; attempt < this.RETRY_ATTEMPTS; attempt++) {
@@ -78,7 +82,8 @@ export class OscarSyncService {
             });
 
             if (results.length) {
-              const match = await this.findBestMatchWithAI(title, results, year, category);
+              // Enhanced matching to consider eligibility window
+              const match = await this.findBestMatchWithAI(title, results, year, category, eligibilityYear);
               if (match) return match;
             }
           } catch (error) {
@@ -92,6 +97,54 @@ export class OscarSyncService {
 
     console.log(`No TMDB match found for: ${movieTitle}`);
     return null;
+  }
+
+  private async findBestMatchWithAI(
+    oscarTitle: string,
+    tmdbResults: TMDBSearchResult[],
+    ceremonyYear: string,
+    category: string,
+    eligibilityYear: number
+  ): Promise<TMDBSearchResult | null> {
+    const model = this.genAI.getGenerativeModel({ model: "gemini-pro" });
+
+    const prompt = `Task: Find the best matching movie from TMDB results for an Oscar nominee.
+
+Oscar Information:
+- Title: "${oscarTitle}"
+- Category: ${category}
+- Ceremony Year: ${ceremonyYear}
+- Eligibility Year: ${eligibilityYear}
+
+TMDB Results:
+${tmdbResults.map((movie, index) =>
+        `${index}. "${movie.title}" (${movie.release_date})
+   Overview: ${movie.overview}
+   Vote Average: ${movie.vote_average}`
+      ).join('\n\n')}
+
+Analyze each result considering:
+1. Title similarity (exact matches, variations, international titles)
+2. Release date must be primarily in ${eligibilityYear} (or late ${eligibilityYear - 1})
+3. Plot/overview relevance to the Oscar category
+4. Common variations in movie titles between databases
+5. Critical reception (vote average) as a factor
+
+Return only the index number (0-based) of the best match. Just the number, e.g. "2".
+If no good match exists within the eligibility window, return "null".
+
+Explanation: The selected movie should be the Oscar-nominated work that was released in the eligibility window and matches the specific Oscar category.`;
+
+    try {
+      const result = await model.generateContent(prompt);
+      const text = result.response.text().trim();
+      if (text === "null") return null;
+      const index = parseInt(text);
+      return isNaN(index) || index >= tmdbResults.length ? null : tmdbResults[index];
+    } catch (error) {
+      console.error("AI matching error:", error);
+      return null;
+    }
   }
 
   private getCategorySearchType(category: string): 'movie' | 'person' | 'multi' {
@@ -145,6 +198,7 @@ export class OscarSyncService {
     };
     return variations[title] || title;
   }
+
 
   private async findBestMatchWithAI(oscarTitle: string, tmdbResults: TMDBSearchResult[], year: string, category: string): Promise<TMDBSearchResult | null> {
     const model = this.genAI.getGenerativeModel({ model: "gemini-pro" });
@@ -932,7 +986,7 @@ Include critical reception and any notable achievements. Keep it under 200 words
         category: "Sound",
         nominee: "Maestro",
         isWinner: false
-      },
+},
       {
         ceremonyYear: year,
         category: "Sound",
@@ -1021,7 +1075,8 @@ Include critical reception and any notable achievements. Keep it under 200 words
         isWinner: false
       },
       {
-        ceremonyYear: year,category: "Writing (Original Screenplay)",
+        ceremonyYear: year,
+        category: "Writing (Original Screenplay)",
         nominee: "The Holdovers",
         isWinner: false
       },
