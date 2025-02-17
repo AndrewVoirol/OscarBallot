@@ -3,7 +3,6 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertBallotSchema, type User } from "@shared/schema";
 import { setupAuth, requireAuth } from "./auth";
-import { updateNomineeWithTMDBData } from "./tmdb";
 import rateLimit from 'express-rate-limit';
 import { eq } from "drizzle-orm";
 import { OscarSyncService } from "./services/oscarSync";
@@ -26,46 +25,66 @@ export function registerRoutes(app: Express): Server {
 
   // Public routes for accessing nominee data
   app.get("/api/nominees", async (req, res) => {
-    const year = parseInt(req.query.year as string) || 2025;
-    const nominees = await storage.getNominees(year);
-    res.json(nominees);
+    try {
+      const year = parseInt(req.query.year as string) || 2025;
+      const nominees = await storage.getNominees(year);
+      res.json(nominees);
+    } catch (error) {
+      console.error("Error fetching nominees:", error);
+      res.status(500).json({ message: "Failed to fetch nominees" });
+    }
   });
 
   app.get("/api/nominees/category/:category", async (req, res) => {
-    const year = parseInt(req.query.year as string) || 2025;
-    const nominees = await storage.getNomineesByCategory(req.params.category, year);
-    res.json(nominees);
+    try {
+      const year = parseInt(req.query.year as string) || 2025;
+      const nominees = await storage.getNomineesByCategory(req.params.category, year);
+      res.json(nominees);
+    } catch (error) {
+      console.error("Error fetching nominees by category:", error);
+      res.status(500).json({ message: "Failed to fetch nominees" });
+    }
   });
 
   app.get("/api/nominees/:id", async (req, res) => {
-    const nominee = await storage.getNominee(parseInt(req.params.id));
-    if (!nominee) {
-      res.status(404).json({ message: "Nominee not found" });
-      return;
+    try {
+      const nominee = await storage.getNominee(parseInt(req.params.id));
+      if (!nominee) {
+        res.status(404).json({ message: "Nominee not found" });
+        return;
+      }
+      res.json(nominee);
+    } catch (error) {
+      console.error("Error fetching nominee:", error);
+      res.status(500).json({ message: "Failed to fetch nominee" });
     }
-    res.json(nominee);
   });
 
-  // Public endpoint to update TMDB data for all nominees
+  // Public endpoint to update TMDB data
   app.post("/api/nominees/update-tmdb", tmdbLimiter, async (_req, res) => {
     try {
+      const oscarService = new OscarSyncService();
       const nominees = await storage.getNominees();
-      console.log('Starting TMDB update for all nominees:', nominees.map(n => n.name).join(', '));
 
-      const updates = await Promise.all(
-        nominees.map(nominee => updateNomineeWithTMDBData(nominee))
+      const updates = await Promise.allSettled(
+        nominees.slice(0, 3).map(nominee =>
+          oscarService.syncNominee({
+            ceremonyYear: nominee.ceremonyYear,
+            category: nominee.category,
+            nominee: nominee.name,
+            isWinner: nominee.isWinner
+          })
+        )
       );
 
-      const updatedCount = updates.filter(Boolean).length;
-      console.log(`Successfully updated ${updatedCount} out of ${nominees.length} nominees`);
+      const successCount = updates.filter(r => r.status === 'fulfilled' && r.value).length;
 
-      res.json({ 
-        message: `Updated ${updatedCount} out of ${nominees.length} nominees with TMDB data`,
-        updatedNominees: updates.filter(Boolean)
+      res.json({
+        message: `Updated ${successCount} out of 3 nominees with TMDB data`,
+        status: "success"
       });
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "Unknown error";
-      console.error('Error updating nominees with TMDB data:', errorMessage);
+      console.error("Error updating nominees with TMDB data:", error);
       res.status(500).json({ message: "Failed to update nominees with TMDB data" });
     }
   });
@@ -75,57 +94,72 @@ export function registerRoutes(app: Express): Server {
 
   // Protected routes for ballot operations
   app.get("/api/ballots/:nomineeId", requireAuth, async (req: Request, res) => {
-    const ballot = await storage.getBallot(
-      parseInt(req.params.nomineeId),
-      req.user!.id
-    );
+    try {
+      const ballot = await storage.getBallot(
+        parseInt(req.params.nomineeId),
+        req.user!.id
+      );
 
-    if (!ballot) {
-      res.json({
-        nomineeId: parseInt(req.params.nomineeId),
-        userId: req.user!.id,
-        ceremonyId: 96, // Default to 96th Academy Awards
-        hasWatched: false,
-        predictedWinner: false,
-        wantToWin: false
-      });
-      return;
+      if (!ballot) {
+        res.json({
+          nomineeId: parseInt(req.params.nomineeId),
+          userId: req.user!.id,
+          ceremonyId: 96, // Default to 96th Academy Awards
+          hasWatched: false,
+          predictedWinner: false,
+          wantToWin: false
+        });
+        return;
+      }
+      res.json(ballot);
+    } catch (error) {
+      console.error("Error fetching ballot:", error);
+      res.status(500).json({ message: "Failed to fetch ballot" });
     }
-    res.json(ballot);
   });
 
   app.post("/api/ballots", requireAuth, async (req: Request, res) => {
-    const result = insertBallotSchema.safeParse(req.body);
-    if (!result.success) {
-      res.status(400).json({ 
-        message: "Invalid ballot data",
-        errors: result.error.errors 
-      });
-      return;
-    }
+    try {
+      const result = insertBallotSchema.safeParse(req.body);
+      if (!result.success) {
+        res.status(400).json({
+          message: "Invalid ballot data",
+          errors: result.error.errors
+        });
+        return;
+      }
 
-    const ballot = await storage.updateBallot({
-      ...result.data,
-      userId: req.user!.id
-    });
-    res.json(ballot);
+      const ballot = await storage.updateBallot({
+        ...result.data,
+        userId: req.user!.id
+      });
+      res.json(ballot);
+    } catch (error) {
+      console.error("Error updating ballot:", error);
+      res.status(500).json({ message: "Failed to update ballot" });
+    }
   });
 
   app.get("/api/ballots", requireAuth, async (req: Request, res) => {
-    const ballots = await storage.getBallotsByUser(req.user!.id);
-    res.json(ballots);
+    try {
+      const ballots = await storage.getBallotsByUser(req.user!.id);
+      res.json(ballots);
+    } catch (error) {
+      console.error("Error fetching ballots:", error);
+      res.status(500).json({ message: "Failed to fetch ballots" });
+    }
   });
 
   // Add admin route for seeding
-  app.post("/api/admin/seed", requireAuth, async (req: Request, res) => {
+  app.post("/api/admin/seed", requireAuth, async (_req: Request, res) => {
     try {
-      await seed();
-      res.json({ message: "Database seeding completed successfully" });
+      const result = await seed();
+      res.json({ message: "Database seeding initiated", ...result });
     } catch (error: any) {
       console.error("Error in seed endpoint:", error);
-      res.status(500).json({ 
+      res.status(500).json({
         error: "Failed to seed database",
-        message: error.message 
+        message: error.message
       });
     }
   });
@@ -161,9 +195,9 @@ export function registerRoutes(app: Express): Server {
       });
     } catch (error) {
       console.error("Error in Oscar sync test:", error);
-      res.status(500).json({ 
+      res.status(500).json({
         error: "Failed to test Oscar sync",
-        message: error.message 
+        message: error.message
       });
     }
   });

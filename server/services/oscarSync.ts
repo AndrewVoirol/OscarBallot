@@ -21,15 +21,43 @@ export class OscarSyncService {
     this.genAI = new GoogleGenerativeAI(process.env.GOOGLE_AI_KEY);
   }
 
+  private async searchTMDBWithConfig(config: {
+    query: string,
+    year?: number,
+    searchType: 'movie' | 'person' | 'multi',
+    language?: string
+  }): Promise<any> {
+    const headers = {
+      'Authorization': `Bearer ${this.tmdbToken}`,
+      'Content-Type': 'application/json;charset=utf-8'
+    };
+
+    try {
+      const response = await axios.get(`${this.tmdbBaseUrl}/search/${config.searchType}`, {
+        headers,
+        params: {
+          query: config.query,
+          year: config.year,
+          include_adult: false,
+          language: config.language || 'en-US'
+        }
+      });
+      return response.data.results;
+    } catch (error) {
+      console.error(`TMDB search failed for ${config.query}:`, error);
+      return [];
+    }
+  }
+
   // Enhanced TMDB search with multiple strategies and retries
   async searchTMDB(title: string, year: string, category: string): Promise<TMDBSearchResult | null> {
     const movieTitle = this.extractMovieTitle(title, category);
     console.log(`Searching TMDB for: ${movieTitle} (${year}) - Original: ${title}, Category: ${category}`);
 
-    const headers = {
-      'Authorization': `Bearer ${this.tmdbToken}`,
-      'Content-Type': 'application/json;charset=utf-8'
-    };
+    // Determine search strategy based on category
+    const searchType = this.getCategorySearchType(category);
+    const searchLanguages = this.isInternationalCategory(category) ?
+      ['en-US', 'original'] : ['en-US'];
 
     // Search strategies in order of preference
     const searchStrategies = [
@@ -41,24 +69,23 @@ export class OscarSyncService {
 
     for (let attempt = 0; attempt < this.RETRY_ATTEMPTS; attempt++) {
       for (const strategy of searchStrategies) {
-        try {
-          const response = await axios.get(`${this.tmdbBaseUrl}/search/movie`, {
-            headers,
-            params: {
+        for (const language of searchLanguages) {
+          try {
+            const results = await this.searchTMDBWithConfig({
               ...strategy,
-              include_adult: false,
-              language: 'en-US'
-            }
-          });
+              searchType,
+              language
+            });
 
-          if (response.data.results.length) {
-            const match = await this.findBestMatchWithAI(title, response.data.results, year, category);
-            if (match) return match;
+            if (results.length) {
+              const match = await this.findBestMatchWithAI(title, results, year, category);
+              if (match) return match;
+            }
+          } catch (error) {
+            console.error(`TMDB search failed for ${movieTitle}:`, error);
+            await new Promise(resolve => setTimeout(resolve, this.RETRY_DELAY));
+            continue;
           }
-        } catch (error) {
-          console.error(`TMDB search failed for ${movieTitle}:`, error);
-          await new Promise(resolve => setTimeout(resolve, this.RETRY_DELAY));
-          continue;
         }
       }
     }
@@ -67,15 +94,37 @@ export class OscarSyncService {
     return null;
   }
 
+  private getCategorySearchType(category: string): 'movie' | 'person' | 'multi' {
+    if (category.includes("Actor") || category.includes("Actress") ||
+      category.includes("Directing")) {
+      return 'person';
+    }
+    if (category.includes("Music (Original Song)")) {
+      return 'multi';
+    }
+    return 'movie';
+  }
+
+  private isInternationalCategory(category: string): boolean {
+    return category === "International Feature Film" ||
+      category.includes("Documentary") ||
+      category.includes("Short Film");
+  }
+
   private extractMovieTitle(nominee: string, category: string): string {
     // Handle different nominee formats based on category
-    if (category.includes("Actor") || category.includes("Actress")) {
+    if (category.includes("Actor") || category.includes("Actress") ||
+      category.includes("Directing")) {
       return nominee.split(" (")[1]?.replace(")", "") || nominee;
     }
     // Handle song nominations
     if (category.includes("Music (Original Song)")) {
       const match = nominee.match(/\((.*?)\)$/);
       return match ? match[1] : nominee;
+    }
+    // Handle international films
+    if (category === "International Feature Film") {
+      return nominee.split(" (")[0].trim();
     }
     return nominee;
   }
@@ -89,6 +138,9 @@ export class OscarSyncService {
       "The Teachers' Lounge": "Das Lehrerzimmer",
       "The Zone of Interest": "Zone of Interest",
       "Io Capitano": "Io Captain",
+      "20 Days in Mariupol": "20 днів у Маріуполі",
+      "Robot Dreams": "Robot Dreams (El sueño robot)",
+      "The Peasants": "Chłopi",
       // Add more variations as needed
     };
     return variations[title] || title;
@@ -106,10 +158,10 @@ Oscar Information:
 
 TMDB Results:
 ${tmdbResults.map((movie, index) =>
-  `${index}. "${movie.title}" (${movie.release_date})
+        `${index}. "${movie.title}" (${movie.release_date})
    Overview: ${movie.overview}
    Vote Average: ${movie.vote_average}`
-).join('\n\n')}
+      ).join('\n\n')}
 
 Analyze each result considering:
 1. Title similarity (exact matches, variations, international titles)
@@ -135,18 +187,8 @@ Explanation: The selected movie should be the Oscar-nominated work, considering 
     }
   }
 
-  // Method to fetch Oscar nominations for specified years
-  async fetchOscarData(startYear: number, endYear: number): Promise<OscarNomination[]> {
-    const nominations: OscarNomination[] = [];
-    for (let year = startYear; year <= endYear; year++) {
-      const yearNominations = await this.getNominationsForYear(year);
-      nominations.push(...yearNominations);
-    }
-    return nominations;
-  }
-
   // Method to sync a nominee with TMDB data
-  async syncNominee(nomination: OscarNomination) {
+  async syncNominee(nomination: OscarNomination): Promise<InsertNominee | null> {
     try {
       console.log(`Syncing nominee: ${nomination.nominee} (${nomination.category})`);
 
@@ -163,7 +205,9 @@ Explanation: The selected movie should be the Oscar-nominated work, considering 
 
       // Generate AI description using Gemini
       const model = this.genAI.getGenerativeModel({ model: "gemini-pro" });
-      const descriptionPrompt = `Generate a concise description for the Oscar-nominated film "${nomination.nominee}" (${nomination.ceremonyYear}).
+      const descriptionPrompt = `Generate a concise description for the Oscar-nominated ${
+        nomination.category.includes("Actor") || nomination.category.includes("Actress") ?
+          "performance in" : "work"} "${nomination.nominee}" (${nomination.ceremonyYear}).
 Focus on its Oscar-nominated aspects for the category "${nomination.category}".
 Include critical reception and any notable achievements. Keep it under 200 words.`;
 
@@ -174,12 +218,29 @@ Include critical reception and any notable achievements. Keep it under 200 words
           return "";
         });
 
+      // Get additional details if it's a movie
+      let details = {};
+      if (!nomination.category.includes("Actor") && !nomination.category.includes("Actress")) {
+        try {
+          const detailsResponse = await axios.get(
+            `${this.tmdbBaseUrl}/movie/${tmdbData.id}`,
+            {
+              headers: { 'Authorization': `Bearer ${this.tmdbToken}` },
+              params: { append_to_response: 'credits,alternative_titles' }
+            }
+          );
+          details = detailsResponse.data;
+        } catch (error) {
+          console.error(`Error fetching details for ${nomination.nominee}:`, error);
+        }
+      }
+
       return {
         name: nomination.nominee,
         category: nomination.category,
         description: tmdbData.overview || "",
         poster: tmdbData.poster_path ? `https://image.tmdb.org/t/p/w500${tmdbData.poster_path}` : "",
-        trailerUrl: "",
+        trailerUrl: "", // Will be added in a separate API call
         streamingPlatforms: [],
         awards: {},
         historicalAwards: [{
@@ -192,26 +253,33 @@ Include critical reception and any notable achievements. Keep it under 200 words
             dateAwarded: `${nomination.ceremonyYear}-03-10`
           }]
         }],
-        castMembers: [],
-        crew: [],
+        castMembers: (details as any)?.credits?.cast?.slice(0, 10).map((c: any) => c.name) || [],
+        crew: (details as any)?.credits?.crew?.slice(0, 10).map((c: any) => `${c.name} - ${c.job}`) || [],
         funFacts: [],
         ceremonyYear: nomination.ceremonyYear,
         isWinner: nomination.isWinner,
         tmdbId: tmdbData.id,
-        runtime: null,
+        runtime: (details as any)?.runtime || null,
         releaseDate: tmdbData.release_date,
         voteAverage: Math.round(tmdbData.vote_average * 10),
         backdropPath: tmdbData.backdrop_path ? `https://image.tmdb.org/t/p/original${tmdbData.backdrop_path}` : '',
-        genres: [],
-        productionCompanies: [],
-        extendedCredits: { cast: [], crew: [] },
+        genres: (details as any)?.genres?.map((g: any) => g.name) || [],
+        productionCompanies: (details as any)?.production_companies || [],
+        extendedCredits: {
+          cast: (details as any)?.credits?.cast || [],
+          crew: (details as any)?.credits?.crew || []
+        },
         aiGeneratedDescription: aiDescription,
         aiMatchConfidence: 100,
+        alternativeTitles: (details as any)?.alternative_titles?.titles?.map((t: any) => t.title) || [],
+        originalLanguage: (details as any)?.original_language || null,
+        originalTitle: (details as any)?.original_title || null,
         dataSource: {
           tmdb: { lastUpdated: new Date().toISOString(), version: "3.0" },
           imdb: null,
           wikidata: null
-        }
+        },
+        lastUpdated: new Date()
       };
     } catch (error) {
       console.error(`Error syncing nominee ${nomination.nominee}:`, error);
@@ -219,10 +287,18 @@ Include critical reception and any notable achievements. Keep it under 200 words
     }
   }
 
+  // Method to fetch Oscar nominations for specified years
+  async fetchOscarData(startYear: number, endYear: number): Promise<OscarNomination[]> {
+    const nominations: OscarNomination[] = [];
+    for (let year = startYear; year <= endYear; year++) {
+      const yearNominations = await this.getNominationsForYear(year);
+      nominations.push(...yearNominations);
+    }
+    return nominations;
+  }
+
   // Method to get nominations for a specific year
   async getNominationsForYear(year: number): Promise<OscarNomination[]> {
-    // Include all the nominations data here...
-    // For brevity, I'll truncate the nominations list in this example
     const nominations: OscarNomination[] = [
       // Best Picture nominees
       {
@@ -945,15 +1021,8 @@ Include critical reception and any notable achievements. Keep it under 200 words
         isWinner: false
       },
       {
-        ceremonyYear: year,
-        category: "Writing (Original Screenplay)",
+        ceremonyYear: year,category: "Writing (Original Screenplay)",
         nominee: "The Holdovers",
-        isWinner: false
-      },
-      {
-        ceremonyYear: year,
-        category: "Writing (Original Screenplay)",
-        nominee: "Maestro",
         isWinner: false
       },
       {
@@ -967,9 +1036,75 @@ Include critical reception and any notable achievements. Keep it under 200 words
         category: "Writing (Original Screenplay)",
         nominee: "Past Lives",
         isWinner: false
+      },
+      {
+        ceremonyYear: year,
+        category: "Writing (Original Screenplay)",
+        nominee: "Maestro",
+        isWinner: false
       }
     ];
 
-    return nominations.filter(nom => nom.ceremonyYear === year);
+    return nominations;
+  }
+
+  // Method to sync historical data with improved rate limiting
+  async syncHistoricalData(startYear: number, endYear: number) {
+    console.log(`Starting historical data sync from ${startYear} to ${endYear}`);
+    const nominations = await this.fetchOscarData(startYear, endYear);
+
+    console.log(`Retrieved ${nominations.length} historical nominations`);
+
+    // Process in smaller batches with improved rate limiting
+    const BATCH_SIZE = 3;
+    let successCount = 0;
+    let failureCount = 0;
+
+    for (let i = 0; i < nominations.length; i += BATCH_SIZE) {
+      const batch = nominations.slice(i, i + BATCH_SIZE);
+
+      // Add longer delay between batches to avoid rate limits
+      if (i > 0) {
+        console.log('Waiting to avoid rate limits...');
+        await new Promise(resolve => setTimeout(resolve, 5000));
+      }
+
+      // Process batch with retries and improved error handling
+      const results = await Promise.allSettled(
+        batch.map(async nom => {
+          for (let attempt = 1; attempt <= 3; attempt++) {
+            try {
+              const result = await this.syncNominee(nom);
+              if (result) return result;
+
+              console.log(`Attempt ${attempt} failed for ${nom.nominee}, retrying...`);
+              if (attempt < 3) {
+                await new Promise(resolve => setTimeout(resolve, 2000));
+              }
+            } catch (error) {
+              console.error(`Attempt ${attempt} failed for ${nom.nominee}:`, error);
+              if (attempt < 3) {
+                await new Promise(resolve => setTimeout(resolve, 2000));
+              }
+            }
+          }
+          console.error(`All attempts failed for ${nom.nominee}`);
+          return null;
+        })
+      );
+
+      // Count successes and failures
+      successCount += results.filter(r => r.status === 'fulfilled' && r.value).length;
+      failureCount += results.filter(r => r.status === 'rejected' || (r.status === 'fulfilled' && !r.value)).length;
+
+      console.log(`Processed ${i + batch.length}/${nominations.length} nominations`);
+      console.log(`Success: ${successCount}, Failed: ${failureCount}`);
+    }
+
+    return {
+      total: nominations.length,
+      succeeded: successCount,
+      failed: failureCount
+    };
   }
 }

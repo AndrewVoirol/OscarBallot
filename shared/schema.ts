@@ -2,6 +2,26 @@ import { pgTable, text, serial, integer, jsonb, boolean, timestamp, foreignKey }
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
+// TMDB related types
+export interface TMDBSearchResult {
+  id: number;
+  title: string;
+  release_date: string;
+  overview: string;
+  poster_path: string | null;
+  backdrop_path: string | null;
+  vote_average: number;
+}
+
+// Structured data for Oscar nominations
+export interface OscarNomination {
+  ceremonyYear: number;
+  category: string;
+  nominee: string;
+  isWinner: boolean;
+}
+
+// Database schema definitions
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   username: text("username").notNull().unique(),
@@ -78,6 +98,9 @@ export const nominees = pgTable("nominees", {
   }>(),
   aiGeneratedDescription: text("ai_generated_description"),
   aiMatchConfidence: integer("ai_match_confidence"),
+  alternativeTitles: jsonb("alternative_titles").$type<string[]>().notNull().default([]),
+  originalLanguage: text("original_language"),
+  originalTitle: text("original_title"),
   dataSource: jsonb("data_source").$type<{
     tmdb: { lastUpdated: string; version: string; } | null;
     imdb: { lastUpdated: string; version: string; } | null;
