@@ -14,8 +14,8 @@ async function runBackgroundSync() {
 
     // Sync current year (2024) nominees first
     console.log("\nBackground sync: Starting 2024 Oscar nominees sync...");
-    const currentYearNominees = await oscarService.getNominationsForYear(2024)
-      .filter(nom => !existingNames.has(nom.nominee)); // Skip already processed
+    const nominations = await oscarService.getNominationsForYear(2024);
+    const currentYearNominees = nominations.filter(nom => !existingNames.has(nom.nominee)); // Skip already processed
 
     console.log(`Processing ${currentYearNominees.length} remaining nominees...`);
 
