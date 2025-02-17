@@ -5,74 +5,127 @@ import { eq } from "drizzle-orm";
 interface TMDBMovieResult {
   id: number;
   title: string;
+  original_title?: string;
   release_date: string;
 }
 
-const TMDB_BASE_URL = "https://api.themoviedb.org/3";  // Changed to v3 API for better compatibility
+const TMDB_BASE_URL = "https://api.themoviedb.org/3";
 const TMDB_IMAGE_BASE_URL = "https://image.tmdb.org/t/p";
 
 if (!process.env.TMDB_ACCESS_TOKEN) {
   throw new Error("TMDB_ACCESS_TOKEN environment variable is not set");
 }
 
+function normalizeTitle(title: string): string {
+  return title
+    .toLowerCase()
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '') // Remove diacritics
+    .replace(/[^a-z0-9\s]/g, '') // Remove special characters
+    .trim();
+}
+
+function calculateTitleSimilarity(str1: string, str2: string): number {
+  const s1 = normalizeTitle(str1);
+  const s2 = normalizeTitle(str2);
+
+  if (s1 === s2) return 1;
+
+  // Simple Levenshtein distance calculation
+  const m = s1.length;
+  const n = s2.length;
+  const dp: number[][] = Array.from({ length: m + 1 }, () => Array(n + 1).fill(0));
+
+  for (let i = 0; i <= m; i++) dp[i][0] = i;
+  for (let j = 0; j <= n; j++) dp[0][j] = j;
+
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      dp[i][j] = Math.min(
+        dp[i-1][j-1] + (s1[i-1] === s2[j-1] ? 0 : 1),
+        dp[i-1][j] + 1,
+        dp[i][j-1] + 1
+      );
+    }
+  }
+
+  const maxLength = Math.max(s1.length, s2.length);
+  return 1 - (dp[m][n] / maxLength);
+}
+
 async function searchMovie(query: string, year?: number) {
   try {
     console.log(`Searching for movie: ${query}${year ? ` (${year})` : ''}`);
+
+    const searchStrategies = [
+      { query, year },
+      { query: query.split('(')[0].trim(), year }, // Try without parenthetical content
+      { query, year: year ? year - 1 : undefined }, // Try previous year
+      { query: query.split(':')[0].trim(), year }, // Try without subtitle
+      { query } // Try without year constraint
+    ];
 
     const headers = {
       'Authorization': `Bearer ${process.env.TMDB_ACCESS_TOKEN}`,
       'Content-Type': 'application/json;charset=utf-8'
     };
 
-    // Create URL with search parameters
-    const searchParams = new URLSearchParams({
-      query,
-      include_adult: 'false',
-      language: 'en-US',
-      ...(year && { year: year.toString() })
-    });
+    for (const strategy of searchStrategies) {
+      console.log(`Trying search strategy: ${JSON.stringify(strategy)}`);
 
-    const response = await fetch(`${TMDB_BASE_URL}/search/movie?${searchParams}`, {
-      method: 'GET',
-      headers
-    });
-
-    if (!response.ok) {
-      const error = await response.json();
-      console.error('TMDB Search Error:', error);
-      throw new Error(`TMDB API error: ${error.status_message}`);
-    }
-
-    const data = await response.json();
-    console.log(`Found ${data.results?.length || 0} results for "${query}"`);
-
-    if (!data.results?.length) {
-      console.log(`No results found for: ${query}`);
-      return null;
-    }
-
-    // Improved matching logic
-    const results = data.results;
-    let bestMatch = null;
-
-    // First try exact title match
-    bestMatch = results.find((movie: TMDBMovieResult) => 
-      movie.title.toLowerCase() === query.toLowerCase()
-    );
-
-    // If no exact match, try partial match with year
-    if (!bestMatch && year) {
-      bestMatch = results.find((movie: TMDBMovieResult) => {
-        const movieYear = new Date(movie.release_date).getFullYear();
-        return movieYear === year || movieYear === year - 1;
+      const searchParams = new URLSearchParams({
+        query: strategy.query,
+        include_adult: 'false',
+        language: 'en-US',
+        ...(strategy.year && { year: strategy.year.toString() })
       });
+
+      const response = await fetch(`${TMDB_BASE_URL}/search/movie?${searchParams}`, {
+        method: 'GET',
+        headers
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        console.error('TMDB Search Error:', error);
+        continue; // Try next strategy
+      }
+
+      const data = await response.json();
+      if (!data.results?.length) {
+        console.log(`No results found for strategy: ${JSON.stringify(strategy)}`);
+        continue;
+      }
+
+      // Score and rank results
+      const scoredResults = data.results.map((movie: TMDBMovieResult) => {
+        const titleSimilarity = calculateTitleSimilarity(strategy.query, movie.title);
+        const originalTitleSimilarity = movie.original_title ? 
+          calculateTitleSimilarity(strategy.query, movie.original_title) : 0;
+
+        const movieYear = movie.release_date ? new Date(movie.release_date).getFullYear() : 0;
+        const yearMatch = !strategy.year || Math.abs(movieYear - strategy.year) <= 1 ? 1 : 0;
+
+        return {
+          movie,
+          score: Math.max(titleSimilarity, originalTitleSimilarity) * 0.7 + yearMatch * 0.3
+        };
+      });
+
+      // Sort by score and filter those above threshold
+      const bestMatches = scoredResults
+        .filter(result => result.score > 0.6)
+        .sort((a, b) => b.score - a.score);
+
+      if (bestMatches.length > 0) {
+        const bestMatch = bestMatches[0].movie;
+        console.log(`Found match: ${bestMatch.title} (ID: ${bestMatch.id}) with score ${bestMatches[0].score}`);
+        return bestMatch;
+      }
     }
 
-    // If still no match, take the first result
-    bestMatch = bestMatch || results[0];
-
-    console.log(`Selected match: ${bestMatch.title} (ID: ${bestMatch.id})`);
-    return bestMatch;
+    console.log(`No suitable matches found for: ${query}`);
+    return null;
 
   } catch (error: any) {
     console.error(`Error searching for movie ${query}:`, error.message);
@@ -185,7 +238,7 @@ export async function updateNomineeWithTMDBData(nominee: Nominee) {
         dataSource: {
           tmdb: { 
             lastUpdated: new Date().toISOString(), 
-            version: "3.0"  // Updated to v3 API version
+            version: "3.0"  
           },
           imdb: null,
           wikidata: null
