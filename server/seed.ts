@@ -33,46 +33,58 @@ export async function seed() {
         console.log(`${category}: ${count} nominees`);
       });
 
-    // Process nominees in parallel batches
-    const BATCH_SIZE = 5;
-    const nominations = [];
+    // First insert all nominees with basic data, without waiting for TMDB
+    const basicNominations = oscarNominees.map(nominee => ({
+      name: nominee.nominee,
+      category: nominee.category,
+      description: "",
+      poster: "",
+      trailerUrl: "",
+      streamingPlatforms: [],
+      awards: {},
+      historicalAwards: [{
+        year: nominee.ceremonyYear,
+        awards: [{
+          ceremonyId: 96,
+          name: "Academy Awards",
+          type: nominee.category,
+          result: nominee.isWinner ? "Won" : "Nominated",
+          dateAwarded: `${nominee.ceremonyYear}-03-10`
+        }]
+      }],
+      castMembers: [],
+      crew: [],
+      funFacts: [],
+      ceremonyYear: nominee.ceremonyYear,
+      isWinner: nominee.isWinner,
+      tmdbId: null,
+      runtime: null,
+      releaseDate: null,
+      voteAverage: null,
+      backdropPath: "",
+      genres: [],
+      productionCompanies: [],
+      extendedCredits: { cast: [], crew: [] },
+      aiGeneratedDescription: "",
+      aiMatchConfidence: 0,
+      dataSource: {
+        tmdb: null,
+        imdb: null,
+        wikidata: null
+      }
+    }));
 
-    for (let i = 0; i < oscarNominees.length; i += BATCH_SIZE) {
-      const batch = oscarNominees.slice(i, i + BATCH_SIZE);
-      const batchResults = await Promise.allSettled(
-        batch.map(async (oscarNominee) => {
-          try {
-            return await oscarService.syncNominee(oscarNominee);
-          } catch (error) {
-            console.error(`Failed to sync ${oscarNominee.nominee}:`, error);
-            return null;
-          }
-        })
-      );
-
-      const validResults = batchResults
-        .filter((result): result is PromiseFulfilledResult<any> => 
-          result.status === 'fulfilled' && result.value !== null
-        )
-        .map(result => result.value);
-
-      nominations.push(...validResults);
-
-      // Log progress
-      console.log(`Processed batch ${Math.floor(i / BATCH_SIZE) + 1}/${Math.ceil(oscarNominees.length / BATCH_SIZE)}`);
-    }
-
-    // Insert synced nominees
-    console.log(`\nInserting ${nominations.length} nominees into database...`);
+    // Insert all nominees with basic data
+    console.log(`\nInserting ${basicNominations.length} nominees into database...`);
     const insertedNominees = await db
       .insert(nominees)
-      .values(nominations)
+      .values(basicNominations)
       .returning();
 
     console.log(`Successfully inserted ${insertedNominees.length} nominees`);
 
-    // Start TMDB enrichment in parallel batches
-    console.log("\nEnriching nominees with TMDB data (background process)...");
+    // Start TMDB enrichment in background
+    console.log("\nStarting TMDB enrichment in background...");
 
     // Process TMDB updates in the background
     (async () => {
@@ -115,7 +127,7 @@ export async function seed() {
 
     return {
       totalFetched: oscarNominees.length,
-      totalSynced: nominations.length,
+      totalSynced: basicNominations.length,
       totalInserted: insertedNominees.length,
     };
   } catch (error) {

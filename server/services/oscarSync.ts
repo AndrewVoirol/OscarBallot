@@ -38,9 +38,9 @@ export class OscarSyncService {
 
   // Method to get nominations for a specific year
   async getNominationsForYear(year: number): Promise<OscarNomination[]> {
-    // 2024 Oscar Nominations
+    // 2024 Oscar Nominations (96th Academy Awards)
     const nominations: OscarNomination[] = [
-      // Best Picture
+      // Best Picture (10 nominees)
       {
         ceremonyYear: 2024,
         category: "Best Picture",
@@ -102,39 +102,7 @@ export class OscarSyncService {
         isWinner: false
       },
 
-      // Best Director
-      {
-        ceremonyYear: 2024,
-        category: "Best Director",
-        nominee: "Justine Triet (Anatomy of a Fall)",
-        isWinner: false
-      },
-      {
-        ceremonyYear: 2024,
-        category: "Best Director",
-        nominee: "Martin Scorsese (Killers of the Flower Moon)",
-        isWinner: false
-      },
-      {
-        ceremonyYear: 2024,
-        category: "Best Director",
-        nominee: "Christopher Nolan (Oppenheimer)",
-        isWinner: false
-      },
-      {
-        ceremonyYear: 2024,
-        category: "Best Director",
-        nominee: "Yorgos Lanthimos (Poor Things)",
-        isWinner: false
-      },
-      {
-        ceremonyYear: 2024,
-        category: "Best Director",
-        nominee: "Jonathan Glazer (The Zone of Interest)",
-        isWinner: false
-      },
-
-      // Actor in a Leading Role
+      // Actor in a Leading Role (5 nominees)
       {
         ceremonyYear: 2024,
         category: "Actor in a Leading Role",
@@ -166,7 +134,7 @@ export class OscarSyncService {
         isWinner: false
       },
 
-      // Actress in a Leading Role
+      // Actress in a Leading Role (5 nominees)
       {
         ceremonyYear: 2024,
         category: "Actress in a Leading Role",
@@ -196,8 +164,647 @@ export class OscarSyncService {
         category: "Actress in a Leading Role",
         nominee: "Emma Stone (Poor Things)",
         isWinner: false
+      },
+
+      // Actor in a Supporting Role (5 nominees)
+      {
+        ceremonyYear: 2024,
+        category: "Actor in a Supporting Role",
+        nominee: "Sterling K. Brown (American Fiction)",
+        isWinner: false
+      },
+      {
+        ceremonyYear: 2024,
+        category: "Actor in a Supporting Role",
+        nominee: "Robert De Niro (Killers of the Flower Moon)",
+        isWinner: false
+      },
+      {
+        ceremonyYear: 2024,
+        category: "Actor in a Supporting Role",
+        nominee: "Robert Downey Jr. (Oppenheimer)",
+        isWinner: false
+      },
+      {
+        ceremonyYear: 2024,
+        category: "Actor in a Supporting Role",
+        nominee: "Ryan Gosling (Barbie)",
+        isWinner: false
+      },
+      {
+        ceremonyYear: 2024,
+        category: "Actor in a Supporting Role",
+        nominee: "Mark Ruffalo (Poor Things)",
+        isWinner: false
+      },
+
+      // Actress in a Supporting Role (5 nominees)
+      {
+        ceremonyYear: 2024,
+        category: "Actress in a Supporting Role",
+        nominee: "Emily Blunt (Oppenheimer)",
+        isWinner: false
+      },
+      {
+        ceremonyYear: 2024,
+        category: "Actress in a Supporting Role",
+        nominee: "Danielle Brooks (The Color Purple)",
+        isWinner: false
+      },
+      {
+        ceremonyYear: 2024,
+        category: "Actress in a Supporting Role",
+        nominee: "America Ferrera (Barbie)",
+        isWinner: false
+      },
+      {
+        ceremonyYear: 2024,
+        category: "Actress in a Supporting Role",
+        nominee: "Jodie Foster (Nyad)",
+        isWinner: false
+      },
+      {
+        ceremonyYear: 2024,
+        category: "Actress in a Supporting Role",
+        nominee: "Da'Vine Joy Randolph (The Holdovers)",
+        isWinner: false
+      },
+
+      // Animated Feature Film (5 nominees)
+      {
+        ceremonyYear: 2024,
+        category: "Animated Feature Film",
+        nominee: "The Boy and the Heron",
+        isWinner: false
+      },
+      {
+        ceremonyYear: 2024,
+        category: "Animated Feature Film",
+        nominee: "Elemental",
+        isWinner: false
+      },
+      {
+        ceremonyYear: 2024,
+        category: "Animated Feature Film",
+        nominee: "Nimona",
+        isWinner: false
+      },
+      {
+        ceremonyYear: 2024,
+        category: "Animated Feature Film",
+        nominee: "Robot Dreams",
+        isWinner: false
+      },
+      {
+        ceremonyYear: 2024,
+        category: "Animated Feature Film",
+        nominee: "Spider-Man: Across the Spider-Verse",
+        isWinner: false
+      },
+
+      // Cinematography (5 nominees)
+      {
+        ceremonyYear: 2024,
+        category: "Cinematography",
+        nominee: "El Conde",
+        isWinner: false
+      },
+      {
+        ceremonyYear: 2024,
+        category: "Cinematography",
+        nominee: "Killers of the Flower Moon",
+        isWinner: false
+      },
+      {
+        ceremonyYear: 2024,
+        category: "Cinematography",
+        nominee: "Maestro",
+        isWinner: false
+      },
+      {
+        ceremonyYear: 2024,
+        category: "Cinematography",
+        nominee: "Oppenheimer",
+        isWinner: false
+      },
+      {
+        ceremonyYear: 2024,
+        category: "Cinematography",
+        nominee: "Poor Things",
+        isWinner: false
+      },
+
+      // Costume Design (5 nominees)
+      {
+        ceremonyYear: 2024,
+        category: "Costume Design",
+        nominee: "Barbie",
+        isWinner: false
+      },
+      {
+        ceremonyYear: 2024,
+        category: "Costume Design",
+        nominee: "Killers of the Flower Moon",
+        isWinner: false
+      },
+      {
+        ceremonyYear: 2024,
+        category: "Costume Design",
+        nominee: "Napoleon",
+        isWinner: false
+      },
+      {
+        ceremonyYear: 2024,
+        category: "Costume Design",
+        nominee: "Oppenheimer",
+        isWinner: false
+      },
+      {
+        ceremonyYear: 2024,
+        category: "Costume Design",
+        nominee: "Poor Things",
+        isWinner: false
+      },
+
+      // Directing (5 nominees)
+      {
+        ceremonyYear: 2024,
+        category: "Directing",
+        nominee: "Justine Triet (Anatomy of a Fall)",
+        isWinner: false
+      },
+      {
+        ceremonyYear: 2024,
+        category: "Directing",
+        nominee: "Martin Scorsese (Killers of the Flower Moon)",
+        isWinner: false
+      },
+      {
+        ceremonyYear: 2024,
+        category: "Directing",
+        nominee: "Christopher Nolan (Oppenheimer)",
+        isWinner: false
+      },
+      {
+        ceremonyYear: 2024,
+        category: "Directing",
+        nominee: "Yorgos Lanthimos (Poor Things)",
+        isWinner: false
+      },
+      {
+        ceremonyYear: 2024,
+        category: "Directing",
+        nominee: "Jonathan Glazer (The Zone of Interest)",
+        isWinner: false
+      },
+
+      // Documentary Feature Film (5 nominees)
+      {
+        ceremonyYear: 2024,
+        category: "Documentary Feature Film",
+        nominee: "Bobi Wine: The People's President",
+        isWinner: false
+      },
+      {
+        ceremonyYear: 2024,
+        category: "Documentary Feature Film",
+        nominee: "The Eternal Memory",
+        isWinner: false
+      },
+      {
+        ceremonyYear: 2024,
+        category: "Documentary Feature Film",
+        nominee: "Four Daughters",
+        isWinner: false
+      },
+      {
+        ceremonyYear: 2024,
+        category: "Documentary Feature Film",
+        nominee: "To Kill a Tiger",
+        isWinner: false
+      },
+      {
+        ceremonyYear: 2024,
+        category: "Documentary Feature Film",
+        nominee: "20 Days in Mariupol",
+        isWinner: false
+      },
+
+      // Documentary Short Film (5 nominees)
+      {
+        ceremonyYear: 2024,
+        category: "Documentary Short Film",
+        nominee: "The ABCs of Book Banning",
+        isWinner: false
+      },
+      {
+        ceremonyYear: 2024,
+        category: "Documentary Short Film",
+        nominee: "The Barber of Little Rock",
+        isWinner: false
+      },
+      {
+        ceremonyYear: 2024,
+        category: "Documentary Short Film",
+        nominee: "Island in Between",
+        isWinner: false
+      },
+      {
+        ceremonyYear: 2024,
+        category: "Documentary Short Film",
+        nominee: "The Last Repair Shop",
+        isWinner: false
+      },
+      {
+        ceremonyYear: 2024,
+        category: "Documentary Short Film",
+        nominee: "Nǎi Nai & Wài Pó",
+        isWinner: false
+      },
+
+      // Film Editing (5 nominees)
+      {
+        ceremonyYear: 2024,
+        category: "Film Editing",
+        nominee: "Anatomy of a Fall",
+        isWinner: false
+      },
+      {
+        ceremonyYear: 2024,
+        category: "Film Editing",
+        nominee: "The Holdovers",
+        isWinner: false
+      },
+      {
+        ceremonyYear: 2024,
+        category: "Film Editing",
+        nominee: "Killers of the Flower Moon",
+        isWinner: false
+      },
+      {
+        ceremonyYear: 2024,
+        category: "Film Editing",
+        nominee: "Oppenheimer",
+        isWinner: false
+      },
+      {
+        ceremonyYear: 2024,
+        category: "Film Editing",
+        nominee: "Poor Things",
+        isWinner: false
+      },
+
+      // International Feature Film (5 nominees)
+      {
+        ceremonyYear: 2024,
+        category: "International Feature Film",
+        nominee: "Io Capitano (Italy)",
+        isWinner: false
+      },
+      {
+        ceremonyYear: 2024,
+        category: "International Feature Film",
+        nominee: "Perfect Days (Japan)",
+        isWinner: false
+      },
+      {
+        ceremonyYear: 2024,
+        category: "International Feature Film",
+        nominee: "Society of the Snow (Spain)",
+        isWinner: false
+      },
+      {
+        ceremonyYear: 2024,
+        category: "International Feature Film",
+        nominee: "The Teachers' Lounge (Germany)",
+        isWinner: false
+      },
+      {
+        ceremonyYear: 2024,
+        category: "International Feature Film",
+        nominee: "The Zone of Interest (United Kingdom)",
+        isWinner: false
+      },
+
+      // Makeup and Hairstyling (5 nominees)
+      {
+        ceremonyYear: 2024,
+        category: "Makeup and Hairstyling",
+        nominee: "Golda",
+        isWinner: false
+      },
+      {
+        ceremonyYear: 2024,
+        category: "Makeup and Hairstyling",
+        nominee: "Maestro",
+        isWinner: false
+      },
+      {
+        ceremonyYear: 2024,
+        category: "Makeup and Hairstyling",
+        nominee: "Oppenheimer",
+        isWinner: false
+      },
+      {
+        ceremonyYear: 2024,
+        category: "Makeup and Hairstyling",
+        nominee: "Poor Things",
+        isWinner: false
+      },
+      {
+        ceremonyYear: 2024,
+        category: "Makeup and Hairstyling",
+        nominee: "Society of the Snow",
+        isWinner: false
+      },
+
+      // Music (Original Score) (5 nominees)
+      {
+        ceremonyYear: 2024,
+        category: "Music (Original Score)",
+        nominee: "American Fiction",
+        isWinner: false
+      },
+      {
+        ceremonyYear: 2024,
+        category: "Music (Original Score)",
+        nominee: "Indiana Jones and the Dial of Destiny",
+        isWinner: false
+      },
+      {
+        ceremonyYear: 2024,
+        category: "Music (Original Score)",
+        nominee: "Killers of the Flower Moon",
+        isWinner: false
+      },
+      {
+        ceremonyYear: 2024,
+        category: "Music (Original Score)",
+        nominee: "Oppenheimer",
+        isWinner: false
+      },
+      {
+        ceremonyYear: 2024,
+        category: "Music (Original Score)",
+        nominee: "Poor Things",
+        isWinner: false
+      },
+
+      // Music (Original Song) (5 nominees)
+      {
+        ceremonyYear: 2024,
+        category: "Music (Original Song)",
+        nominee: "The Fire Inside (Flamin' Hot)",
+        isWinner: false
+      },
+      {
+        ceremonyYear: 2024,
+        category: "Music (Original Song)",
+        nominee: "I'm Just Ken (Barbie)",
+        isWinner: false
+      },
+      {
+        ceremonyYear: 2024,
+        category: "Music (Original Song)",
+        nominee: "It Never Went Away (American Symphony)",
+        isWinner: false
+      },
+      {
+        ceremonyYear: 2024,
+        category: "Music (Original Song)",
+        nominee: "Wahzhazhe (A Song for My People) (Killers of the Flower Moon)",
+        isWinner: false
+      },
+      {
+        ceremonyYear: 2024,
+        category: "Music (Original Song)",
+        nominee: "What Was I Made For? (Barbie)",
+        isWinner: false
+      },
+
+      // Production Design (5 nominees)
+      {
+        ceremonyYear: 2024,
+        category: "Production Design",
+        nominee: "Barbie",
+        isWinner: false
+      },
+      {
+        ceremonyYear: 2024,
+        category: "Production Design",
+        nominee: "Killers of the Flower Moon",
+        isWinner: false
+      },
+      {
+        ceremonyYear: 2024,
+        category: "Production Design",
+        nominee: "Napoleon",
+        isWinner: false
+      },
+      {
+        ceremonyYear: 2024,
+        category: "Production Design",
+        nominee: "Oppenheimer",
+        isWinner: false
+      },
+      {
+        ceremonyYear: 2024,
+        category: "Production Design",
+        nominee: "Poor Things",
+        isWinner: false
+      },
+
+      // Short Film (Animated) (5 nominees)
+      {
+        ceremonyYear: 2024,
+        category: "Short Film (Animated)",
+        nominee: "Letter to a Pig",
+        isWinner: false
+      },
+      {
+        ceremonyYear: 2024,
+        category: "Short Film (Animated)",
+        nominee: "Ninety-Five Senses",
+        isWinner: false
+      },
+      {
+        ceremonyYear: 2024,
+        category: "Short Film (Animated)",
+        nominee: "Our Uniform",
+        isWinner: false
+      },
+      {
+        ceremonyYear: 2024,
+        category: "Short Film (Animated)",
+        nominee: "Pachyderme",
+        isWinner: false
+      },
+      {
+        ceremonyYear: 2024,
+        category: "Short Film (Animated)",
+        nominee: "War Is Over! Inspired by the Music of John & Yoko",
+        isWinner: false
+      },
+
+      // Short Film (Live Action) (5 nominees)
+      {
+        ceremonyYear: 2024,
+        category: "Short Film (Live Action)",
+        nominee: "The After",
+        isWinner: false
+      },
+      {
+        ceremonyYear: 2024,
+        category: "Short Film (Live Action)",
+        nominee: "Invincible",
+        isWinner: false
+      },
+      {
+        ceremonyYear: 2024,
+        category: "Short Film (Live Action)",
+        nominee: "Knight of Fortune",
+        isWinner: false
+      },
+      {
+        ceremonyYear: 2024,
+        category: "Short Film (Live Action)",
+        nominee: "Red, White and Blue",
+        isWinner: false
+      },
+      {
+        ceremonyYear: 2024,
+        category: "Short Film (Live Action)",
+        nominee: "The Wonderful Story of Henry Sugar",
+        isWinner: false
+      },
+
+      // Sound (5 nominees)
+      {
+        ceremonyYear: 2024,
+        category: "Sound",
+        nominee: "The Creator",
+        isWinner: false
+      },
+      {
+        ceremonyYear: 2024,
+        category: "Sound",
+        nominee: "Maestro",
+        isWinner: false
+      },
+      {
+        ceremonyYear: 2024,
+        category: "Sound",
+        nominee: "Mission: Impossible - Dead Reckoning Part One",
+        isWinner: false
+      },
+      {
+        ceremonyYear: 2024,
+        category: "Sound",
+        nominee: "Oppenheimer",
+        isWinner: false
+      },
+      {
+        ceremonyYear: 2024,
+        category: "Sound",
+        nominee: "The Zone of Interest",
+        isWinner: false
+      },
+
+      // Visual Effects (5 nominees)
+      {
+        ceremonyYear: 2024,
+        category: "Visual Effects",
+        nominee: "The Creator",
+        isWinner: false
+      },
+      {
+        ceremonyYear: 2024,
+        category: "Visual Effects",
+        nominee: "Godzilla Minus One",
+        isWinner: false
+      },
+      {
+        ceremonyYear: 2024,
+        category: "Visual Effects",
+        nominee: "Guardians of the Galaxy Vol. 3",
+        isWinner: false
+      },
+      {
+        ceremonyYear: 2024,
+        category: "Visual Effects",
+        nominee: "Mission: Impossible - Dead Reckoning Part One",
+        isWinner: false
+      },
+      {
+        ceremonyYear: 2024,
+        category: "Visual Effects",
+        nominee: "Napoleon",
+        isWinner: false
+      },
+
+      // Writing (Adapted Screenplay) (5 nominees)
+      {
+        ceremonyYear: 2024,
+        category: "Writing (Adapted Screenplay)",
+        nominee: "American Fiction",
+        isWinner: false
+      },
+      {
+        ceremonyYear: 2024,
+        category: "Writing (Adapted Screenplay)",
+        nominee: "Barbie",
+        isWinner: false
+      },
+      {
+        ceremonyYear: 2024,
+        category: "Writing (Adapted Screenplay)",
+        nominee: "Oppenheimer",
+        isWinner: false
+      },
+      {
+        ceremonyYear: 2024,
+        category: "Writing (Adapted Screenplay)",
+        nominee: "Poor Things",
+        isWinner: false
+      },
+      {
+        ceremonyYear: 2024,
+        category: "Writing (Adapted Screenplay)",
+        nominee: "The Zone of Interest",
+        isWinner: false
+      },
+
+      // Writing (Original Screenplay) (5 nominees)
+      {
+        ceremonyYear: 2024,
+        category: "Writing (Original Screenplay)",
+        nominee: "Anatomy of a Fall",
+        isWinner: false
+      },
+      {
+        ceremonyYear: 2024,
+        category: "Writing (Original Screenplay)",
+        nominee: "The Holdovers",
+        isWinner: false
+      },
+      {
+        ceremonyYear: 2024,
+        category: "Writing (Original Screenplay)",
+        nominee: "Maestro",
+        isWinner: false
+      },
+      {
+        ceremonyYear: 2024,
+        category: "Writing (Original Screenplay)",
+        nominee: "May December",
+        isWinner: false
+      },
+      {
+        ceremonyYear: 2024,
+        category: "Writing (Original Screenplay)",
+        nominee: "Past Lives",
+        isWinner: false
       }
-      // ... Add other categories like Supporting Actor/Actress, Original Screenplay, etc.
     ];
 
     return nominations.filter(nom => nom.ceremonyYear === year);
@@ -211,7 +818,7 @@ export class OscarSyncService {
 Oscar Movie: "${oscarTitle}" (Year: ${year})
 
 TMDB Results:
-${tmdbResults.map((movie, index) => 
+${tmdbResults.map((movie, index) =>
   `${index}. "${movie.title}" (${movie.release_date})\n   Overview: ${movie.overview}`
 ).join('\n')}
 
