@@ -1,7 +1,7 @@
 import { db } from "./db";
 import { nominees, syncStatus } from "@shared/schema";
 import { OscarSyncService } from "./services/oscarSync";
-import { sql, eq, and, gte } from "drizzle-orm";
+import { sql, eq, and, desc } from "drizzle-orm";
 import { subHours } from "date-fns";
 
 const SYNC_INTERVAL_HOURS = 24; // Only sync once per day
@@ -24,7 +24,7 @@ async function shouldStartSync(): Promise<boolean> {
         eq(syncStatus.status, 'completed'),
         eq(syncStatus.syncType, 'current_year')
       ),
-      orderBy: [syncStatus.lastSyncCompleted, 'desc']
+      orderBy: desc(syncStatus.lastSyncCompleted)
     });
 
     if (!lastSuccessfulSync) {
@@ -83,7 +83,12 @@ async function runBackgroundSync() {
           try {
             const syncedNominee = await oscarService.syncNominee(nominee);
             if (syncedNominee) {
-              await db.insert(nominees).values(syncedNominee);
+              await db.insert(nominees).values({
+                ...syncedNominee,
+                awards: syncedNominee.awards || {},
+                productionCompanies: syncedNominee.productionCompanies || [],
+                extendedCredits: syncedNominee.extendedCredits || { cast: [], crew: [] }
+              });
               processedCount++;
               return true;
             }
@@ -129,7 +134,7 @@ async function runBackgroundSync() {
 
     console.log(`Sync completed. Processed: ${processedCount}, Failed: ${failedCount}`);
 
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error in background sync:", error);
     // Update sync status to failed
     await db

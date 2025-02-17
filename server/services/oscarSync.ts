@@ -9,6 +9,8 @@ export class OscarSyncService {
   private readonly genAI: GoogleGenerativeAI;
   private readonly BATCH_SIZE = 3;
   private readonly RATE_LIMIT_DELAY = 1000; // 1 second between requests
+  private readonly RETRY_ATTEMPTS = 3;
+  private readonly RETRY_DELAY = 1000;
   private readonly headers: Record<string, string>;
 
   constructor() {
@@ -367,70 +369,70 @@ Include critical reception and any notable achievements. Keep it under 200 words
         category: "Best Picture",
         nominee: "American Fiction",
         isWinner: false,
-        eligibilityYear: year -1
+        eligibilityYear: year - 1
       },
       {
         ceremonyYear: year,
         category: "Best Picture",
         nominee: "Anatomy of a Fall",
         isWinner: false,
-        eligibilityYear: year -1
+        eligibilityYear: year - 1
       },
       {
         ceremonyYear: year,
         category: "Best Picture",
         nominee: "Barbie",
         isWinner: false,
-        eligibilityYear: year -1
+        eligibilityYear: year - 1
       },
       {
         ceremonyYear: year,
         category: "Best Picture",
         nominee: "The Holdovers",
         isWinner: false,
-        eligibilityYear: year -1
+        eligibilityYear: year - 1
       },
       {
         ceremonyYear: year,
         category: "Best Picture",
         nominee: "Killers of the Flower Moon",
         isWinner: false,
-        eligibilityYear: year -1
+        eligibilityYear: year - 1
       },
       {
         ceremonyYear: year,
         category: "Best Picture",
         nominee: "Maestro",
         isWinner: false,
-        eligibilityYear: year -1
+        eligibilityYear: year - 1
       },
       {
         ceremonyYear: year,
         category: "Best Picture",
         nominee: "Oppenheimer",
         isWinner: false,
-        eligibilityYear: year -1
+        eligibilityYear: year - 1
       },
       {
         ceremonyYear: year,
         category: "Best Picture",
         nominee: "Past Lives",
         isWinner: false,
-        eligibilityYear: year -1
+        eligibilityYear: year - 1
       },
       {
         ceremonyYear: year,
         category: "Best Picture",
         nominee: "Poor Things",
         isWinner: false,
-        eligibilityYear: year -1
+        eligibilityYear: year - 1
       },
       {
         ceremonyYear: year,
         category: "Best Picture",
         nominee: "The Zone of Interest",
         isWinner: false,
-        eligibilityYear: year -1
+        eligibilityYear: year - 1
       },
 
       // Actor in a Leading Role (5 nominees)
@@ -439,35 +441,35 @@ Include critical reception and any notable achievements. Keep it under 200 words
         category: "Actor in a Leading Role",
         nominee: "Bradley Cooper (Maestro)",
         isWinner: false,
-        eligibilityYear: year -1
+        eligibilityYear: year - 1
       },
       {
         ceremonyYear: year,
         category: "Actor in a Leading Role",
         nominee: "Colman Domingo (Rustin)",
         isWinner: false,
-        eligibilityYear: year -1
+        eligibilityYear: year - 1
       },
       {
         ceremonyYear: year,
         category: "Actor in a Leading Role",
         nominee: "Paul Giamatti (The Holdovers)",
         isWinner: false,
-        eligibilityYear: year -1
+        eligibilityYear: year - 1
       },
       {
         ceremonyYear: year,
         category: "Actor in a Leading Role",
         nominee: "Cillian Murphy (Oppenheimer)",
         isWinner: false,
-        eligibilityYear: year -1
+        eligibilityYear: year - 1
       },
       {
         ceremonyYear: year,
         category: "Actor in a Leading Role",
         nominee: "Jeffrey Wright (American Fiction)",
         isWinner: false,
-        eligibilityYear: year -1
+        eligibilityYear: year - 1
       },
       // Actress in a Leading Role (5 nominees)
       {
@@ -475,35 +477,35 @@ Include critical reception and any notable achievements. Keep it under 200 words
         category: "Actress in a Leading Role",
         nominee: "Annette Bening (Nyad)",
         isWinner: false,
-        eligibilityYear: year -1
+        eligibilityYear: year - 1
       },
       {
         ceremonyYear: year,
         category: "Actress in a Leading Role",
         nominee: "Lily Gladstone (Killers of the Flower Moon)",
         isWinner: false,
-        eligibilityYear: year -1
+        eligibilityYear: year - 1
       },
       {
         ceremonyYear: year,
         category: "Actress in a Leading Role",
         nominee: "Sandra Hüller (Anatomy of a Fall)",
         isWinner: false,
-        eligibilityYear: year -1
+        eligibilityYear: year - 1
       },
       {
         ceremonyYear: year,
         category: "Actress in a Leading Role",
         nominee: "Carey Mulligan (Maestro)",
         isWinner: false,
-        eligibilityYear: year -1
+        eligibilityYear: year - 1
       },
       {
         ceremonyYear: year,
         category: "Actress in a Leading Role",
         nominee: "Emma Stone (Poor Things)",
         isWinner: false,
-        eligibilityYear: year -1
+        eligibilityYear: year - 1
       },
       // Actor in a Supporting Role (5 nominees)
       {
@@ -511,35 +513,35 @@ Include critical reception and any notable achievements. Keep it under 200 words
         category: "Actor in a Supporting Role",
         nominee: "Sterling K. Brown (American Fiction)",
         isWinner: false,
-        eligibilityYear: year -1
+        eligibilityYear: year - 1
       },
       {
         ceremonyYear: year,
         category: "Actor in a Supporting Role",
         nominee: "Robert De Niro (Killers of the Flower Moon)",
         isWinner: false,
-        eligibilityYear: year -1
+        eligibilityYear: year - 1
       },
       {
         ceremonyYear: year,
         category: "Actor in a Supporting Role",
         nominee: "Robert Downey Jr. (Oppenheimer)",
         isWinner: false,
-        eligibilityYear: year -1
+        eligibilityYear: year - 1
       },
       {
         ceremonyYear: year,
         category: "Actor in a Supporting Role",
         nominee: "Ryan Gosling (Barbie)",
         isWinner: false,
-        eligibilityYear: year -1
+        eligibilityYear: year - 1
       },
       {
         ceremonyYear: year,
         category: "Actor in a Supporting Role",
         nominee: "Mark Ruffalo (Poor Things)",
         isWinner: false,
-        eligibilityYear: year -1
+        eligibilityYear: year - 1
       },
       // Actress in a Supporting Role (5 nominees)
       {
@@ -547,35 +549,35 @@ Include critical reception and any notable achievements. Keep it under 200 words
         category: "Actress in a Supporting Role",
         nominee: "Emily Blunt (Oppenheimer)",
         isWinner: false,
-        eligibilityYear: year -1
+        eligibilityYear: year - 1
       },
       {
         ceremonyYear: year,
         category: "Actress in a Supporting Role",
         nominee: "Danielle Brooks (The Color Purple)",
         isWinner: false,
-        eligibilityYear: year -1
+        eligibilityYear: year - 1
       },
       {
         ceremonyYear: year,
         category: "Actress in a Supporting Role",
         nominee: "America Ferrera (Barbie)",
         isWinner: false,
-        eligibilityYear: year -1
+        eligibilityYear: year - 1
       },
       {
         ceremonyYear: year,
         category: "Actress in a Supporting Role",
         nominee: "Jodie Foster (Nyad)",
         isWinner: false,
-        eligibilityYear: year -1
+        eligibilityYear: year - 1
       },
       {
         ceremonyYear: year,
         category: "Actress in a Supporting Role",
         nominee: "Da'Vine Joy Randolph (The Holdovers)",
         isWinner: false,
-        eligibilityYear: year -1
+        eligibilityYear: year - 1
       },
       // Animated Feature Film (5 nominees)
       {
@@ -583,35 +585,35 @@ Include critical reception and any notable achievements. Keep it under 200 words
         category: "Animated Feature Film",
         nominee: "The Boy and the Heron",
         isWinner: false,
-        eligibilityYear: year -1
+        eligibilityYear: year - 1
       },
       {
         ceremonyYear: year,
         category: "Animated Feature Film",
         nominee: "Elemental",
         isWinner: false,
-        eligibilityYear: year -1
+        eligibilityYear: year - 1
       },
       {
         ceremonyYear: year,
         category: "Animated Feature Film",
         nominee: "Nimona",
         isWinner: false,
-        eligibilityYear: year -1
+        eligibilityYear: year - 1
       },
       {
         ceremonyYear: year,
         category: "Animated Feature Film",
         nominee: "Robot Dreams",
         isWinner: false,
-        eligibilityYear: year -1
+        eligibilityYear: year - 1
       },
       {
         ceremonyYear: year,
         category: "Animated Feature Film",
         nominee: "Spider-Man: Across the Spider-Verse",
         isWinner: false,
-        eligibilityYear: year -1
+        eligibilityYear: year - 1
       },
       // Cinematography (5 nominees)
       {
@@ -619,35 +621,35 @@ Include critical reception and any notable achievements. Keep it under 200 words
         category: "Cinematography",
         nominee: "El Conde",
         isWinner: false,
-        eligibilityYear: year -1
+        eligibilityYear: year - 1
       },
       {
         ceremonyYear: year,
         category: "Cinematography",
         nominee: "Killers of the Flower Moon",
         isWinner: false,
-        eligibilityYear: year -1
+        eligibilityYear: year - 1
       },
       {
         ceremonyYear: year,
         category: "Cinematography",
         nominee: "Maestro",
         isWinner: false,
-        eligibilityYear: year -1
+        eligibilityYear: year - 1
       },
       {
         ceremonyYear: year,
         category: "Cinematography",
         nominee: "Oppenheimer",
         isWinner: false,
-        eligibilityYear: year -1
+        eligibilityYear: year - 1
       },
       {
         ceremonyYear: year,
         category: "Cinematography",
         nominee: "Poor Things",
         isWinner: false,
-        eligibilityYear: year -1
+        eligibilityYear: year - 1
       },
       // Costume Design (5 nominees)
       {
@@ -655,35 +657,35 @@ Include critical reception and any notable achievements. Keep it under 200 words
         category: "Costume Design",
         nominee: "Barbie",
         isWinner: false,
-        eligibilityYear: year -1
+        eligibilityYear: year - 1
       },
       {
         ceremonyYear: year,
         category: "Costume Design",
         nominee: "Killers of the Flower Moon",
         isWinner: false,
-        eligibilityYear: year -1
+        eligibilityYear: year - 1
       },
       {
         ceremonyYear: year,
         category: "Costume Design",
         nominee: "Napoleon",
         isWinner: false,
-        eligibilityYear: year -1
+        eligibilityYear: year - 1
       },
       {
         ceremonyYear: year,
         category: "Costume Design",
         nominee: "Oppenheimer",
         isWinner: false,
-        eligibilityYear: year -1
+        eligibilityYear: year - 1
       },
       {
         ceremonyYear: year,
         category: "Costume Design",
         nominee: "Poor Things",
         isWinner: false,
-        eligibilityYear: year -1
+        eligibilityYear: year - 1
       },
       // Directing (5 nominees)
       {
@@ -691,35 +693,35 @@ Include critical reception and any notable achievements. Keep it under 200 words
         category: "Directing",
         nominee: "Justine Triet (Anatomy of a Fall)",
         isWinner: false,
-        eligibilityYear: year -1
+        eligibilityYear: year - 1
       },
       {
         ceremonyYear: year,
         category: "Directing",
         nominee: "Martin Scorsese (Killers of the Flower Moon)",
         isWinner: false,
-        eligibilityYear: year -1
+        eligibilityYear: year - 1
       },
       {
         ceremonyYear: year,
         category: "Directing",
         nominee: "Christopher Nolan (Oppenheimer)",
         isWinner: false,
-        eligibilityYear: year -1
+        eligibilityYear: year - 1
       },
       {
         ceremonyYear: year,
         category: "Directing",
         nominee: "Yorgos Lanthimos (Poor Things)",
         isWinner: false,
-        eligibilityYear: year -1
+        eligibilityYear: year - 1
       },
       {
         ceremonyYear: year,
         category: "Directing",
         nominee: "Jonathan Glazer (The Zone of Interest)",
         isWinner: false,
-        eligibilityYear: year -1
+        eligibilityYear: year - 1
       },
       // Documentary Feature Film (5 nominees)
       {
@@ -727,35 +729,35 @@ Include critical reception and any notable achievements. Keep it under 200 words
         category: "Documentary Feature Film",
         nominee: "Bobi Wine: The People's President",
         isWinner: false,
-        eligibilityYear: year -1
+        eligibilityYear: year - 1
       },
       {
         ceremonyYear: year,
         category: "Documentary Feature Film",
         nominee: "The Eternal Memory",
         isWinner: false,
-        eligibilityYear: year -1
+        eligibilityYear: year - 1
       },
       {
         ceremonyYear: year,
         category: "Documentary Feature Film",
         nominee: "Four Daughters",
         isWinner: false,
-        eligibilityYear: year -1
+        eligibilityYear: year - 1
       },
       {
         ceremonyYear: year,
         category: "Documentary Feature Film",
         nominee: "To Kill a Tiger",
         isWinner: false,
-        eligibilityYear: year -1
+        eligibilityYear: year - 1
       },
       {
         ceremonyYear: year,
         category: "Documentary Feature Film",
         nominee: "20 Days in Mariupol",
         isWinner: false,
-        eligibilityYear: year -1
+        eligibilityYear: year - 1
       },
       // Documentary Short Film (5 nominees)
       {
@@ -763,35 +765,35 @@ Include critical reception and any notable achievements. Keep it under 200 words
         category: "Documentary Short Film",
         nominee: "The ABCs of Book Banning",
         isWinner: false,
-        eligibilityYear: year -1
+        eligibilityYear: year - 1
       },
       {
         ceremonyYear: year,
         category: "Documentary Short Film",
         nominee: "The Barber of Little Rock",
         isWinner: false,
-        eligibilityYear: year -1
+        eligibilityYear: year - 1
       },
       {
         ceremonyYear: year,
         category: "Documentary Short Film",
         nominee: "Island in Between",
         isWinner: false,
-        eligibilityYear: year -1
+        eligibilityYear: year - 1
       },
       {
         ceremonyYear: year,
         category: "Documentary Short Film",
         nominee: "The Last Repair Shop",
         isWinner: false,
-        eligibilityYear: year -1
+        eligibilityYear: year - 1
       },
       {
         ceremonyYear: year,
         category: "Documentary Short Film",
         nominee: "Nǎi Nai & Wài Pó",
         isWinner: false,
-        eligibilityYear: year -1
+        eligibilityYear: year - 1
       },
       // Film Editing (5 nominees)
       {
@@ -799,35 +801,35 @@ Include critical reception and any notable achievements. Keep it under 200 words
         category: "Film Editing",
         nominee: "Anatomy of a Fall",
         isWinner: false,
-        eligibilityYear: year -1
+        eligibilityYear: year - 1
       },
       {
         ceremonyYear: year,
         category: "Film Editing",
         nominee: "The Holdovers",
         isWinner: false,
-        eligibilityYear: year -1
+        eligibilityYear: year - 1
       },
       {
         ceremonyYear: year,
         category: "Film Editing",
         nominee: "Killers of the Flower Moon",
         isWinner: false,
-        eligibilityYear: year -1
+        eligibilityYear: year - 1
       },
       {
         ceremonyYear: year,
         category: "Film Editing",
         nominee: "Oppenheimer",
         isWinner: false,
-        eligibilityYear: year -1
+        eligibilityYear: year - 1
       },
       {
         ceremonyYear: year,
         category: "Film Editing",
         nominee: "Poor Things",
         isWinner: false,
-        eligibilityYear: year -1
+        eligibilityYear: year - 1
       },
       // International Feature Film (5 nominees)
       {
@@ -835,35 +837,35 @@ Include critical reception and any notable achievements. Keep it under 200 words
         category: "International Feature Film",
         nominee: "Io Capitano (Italy)",
         isWinner: false,
-        eligibilityYear: year -1
+        eligibilityYear: year - 1
       },
       {
         ceremonyYear: year,
         category: "International Feature Film",
         nominee: "Perfect Days (Japan)",
         isWinner: false,
-        eligibilityYear: year -1
+        eligibilityYear: year - 1
       },
       {
         ceremonyYear: year,
         category: "International Feature Film",
         nominee: "Society of the Snow (Spain)",
         isWinner: false,
-        eligibilityYear: year -1
+        eligibilityYear: year - 1
       },
       {
         ceremonyYear: year,
         category: "International Feature Film",
         nominee: "The Teachers' Lounge (Germany)",
         isWinner: false,
-        eligibilityYear: year -1
+        eligibilityYear: year - 1
       },
       {
         ceremonyYear: year,
         category: "International Feature Film",
         nominee: "The Zone of Interest (United Kingdom)",
         isWinner: false,
-        eligibilityYear: year -1
+        eligibilityYear: year - 1
       },
       // Makeup and Hairstyling (5 nominees)
       {
@@ -871,35 +873,35 @@ Include critical reception and any notable achievements. Keep it under 200 words
         category: "Makeup and Hairstyling",
         nominee: "Golda",
         isWinner: false,
-        eligibilityYear: year -1
+        eligibilityYear: year - 1
       },
       {
         ceremonyYear: year,
         category: "Makeup and Hairstyling",
         nominee: "Maestro",
         isWinner: false,
-        eligibilityYear: year -1
+        eligibilityYear: year - 1
       },
       {
         ceremonyYear: year,
         category: "Makeup and Hairstyling",
         nominee: "Oppenheimer",
         isWinner: false,
-        eligibilityYear: year -1
+        eligibilityYear: year - 1
       },
       {
         ceremonyYear: year,
         category: "Makeup and Hairstyling",
         nominee: "Poor Things",
         isWinner: false,
-        eligibilityYear: year -1
+        eligibilityYear: year - 1
       },
       {
         ceremonyYear: year,
         category: "Makeup and Hairstyling",
         nominee: "Society of the Snow",
         isWinner: false,
-        eligibilityYear: year -1
+        eligibilityYear: year - 1
       },
       // Music (Original Score) (5 nominees)
       {
@@ -907,35 +909,35 @@ Include critical reception and any notable achievements. Keep it under 200 words
         category: "Music (Original Score)",
         nominee: "American Fiction",
         isWinner: false,
-        eligibilityYear: year -1
+        eligibilityYear: year - 1
       },
       {
         ceremonyYear: year,
         category: "Music (Original Score)",
         nominee: "Indiana Jones and the Dial of Destiny",
         isWinner: false,
-        eligibilityYear: year -1
+        eligibilityYear: year - 1
       },
       {
         ceremonyYear: year,
         category: "Music (Original Score)",
         nominee: "Killers of the Flower Moon",
         isWinner: false,
-        eligibilityYear: year -1
+        eligibilityYear: year - 1
       },
       {
         ceremonyYear: year,
         category: "Music (Original Score)",
         nominee: "Oppenheimer",
         isWinner: false,
-        eligibilityYear: year -1
+        eligibilityYear: year - 1
       },
       {
         ceremonyYear: year,
         category: "Music (Original Score)",
         nominee: "Poor Things",
         isWinner: false,
-        eligibilityYear: year -1
+        eligibilityYear: year - 1
       },
       // Music (Original Song) (5 nominees)
       {
@@ -943,34 +945,34 @@ Include critical reception and any notable achievements. Keep it under 200 words
         category: "Music (Original Song)",
         nominee: "The Fire Inside (Flamin' Hot)",
         isWinner: false,
-        eligibilityYear: year -1
+        eligibilityYear: year - 1
       },
       {
         ceremonyYear: year,
         category: "Music (Original Song)",
         nominee: "I'm Just Ken (Barbie)",
         isWinner: false,
-        eligibilityYear: year -1
+        eligibilityYear: year - 1
       },
       {
         ceremonyYear: year,
         category: "Music (Original Song)",
         nominee: "It Never Went Away (American Symphony)",
         isWinner: false,
-        eligibilityYear: year -1},
+        eligibilityYear: year - 1},
       {
         ceremonyYear: year,
         category: "Music (Original Song)",
         nominee: "Wahzhazhe (A Song for My People) (Killers of the Flower Moon)",
         isWinner: false,
-        eligibilityYear: year -1
+        eligibilityYear: year - 1
       },
       {
         ceremonyYear: year,
         category: "Music (Original Song)",
         nominee: "What Was I Made For? (Barbie)",
         isWinner: false,
-        eligibilityYear: year -1
+        eligibilityYear: year - 1
       },
       // Production Design (5 nominees)
       {
@@ -978,35 +980,35 @@ Include critical reception and any notable achievements. Keep it under 200 words
         category: "Production Design",
         nominee: "Barbie",
         isWinner: false,
-        eligibilityYear: year -1
+        eligibilityYear: year - 1
       },
       {
         ceremonyYear: year,
         category: "Production Design",
         nominee: "Killersof the Flower Moon",
         isWinner: false,
-        eligibilityYear: year -1
+        eligibilityYear: year - 1
       },
       {
         ceremonyYear: year,
         category: "Production Design",
         nominee: "Napoleon",
         isWinner: false,
-        eligibilityYear: year -1
+        eligibilityYear: year - 1
       },
       {
         ceremonyYear: year,
         category: "Production Design",
         nominee: "Oppenheimer",
         isWinner: false,
-        eligibilityYear: year -1
+        eligibilityYear: year - 1
       },
       {
         ceremonyYear: year,
         category: "Production Design",
         nominee: "Poor Things",
         isWinner: false,
-        eligibilityYear: year -1
+        eligibilityYear: year - 1
       },
       // Short Film (Animated) (5 nominees)
       {
@@ -1014,35 +1016,35 @@ Include critical reception and any notable achievements. Keep it under 200 words
         category: "Short Film (Animated)",
         nominee: "Letter to a Pig",
         isWinner: false,
-        eligibilityYear: year -1
+        eligibilityYear: year - 1
       },
       {
         ceremonyYear: year,
         category: "Short Film (Animated)",
         nominee: "Ninety-Five Senses",
         isWinner: false,
-        eligibilityYear: year -1
+        eligibilityYear: year - 1
       },
       {
         ceremonyYear: year,
         category: "Short Film (Animated)",
         nominee: "Our Uniform",
         isWinner: false,
-        eligibilityYear: year -1
+        eligibilityYear: year - 1
       },
       {
         ceremonyYear: year,
         category: "Short Film (Animated)",
         nominee: "Pachyderme",
         isWinner: false,
-        eligibilityYear: year -1
+        eligibilityYear: year - 1
       },
       {
         ceremonyYear: year,
         category: "Short Film (Animated)",
         nominee: "War Is Over! Inspired by the Music of John & Yoko",
         isWinner: false,
-        eligibilityYear: year -1
+        eligibilityYear: year - 1
       },
       // Short Film (Live Action) (5 nominees)
       {
@@ -1050,35 +1052,35 @@ Include critical reception and any notable achievements. Keep it under 200 words
         category: "Short Film (Live Action)",
         nominee: "The After",
         isWinner: false,
-        eligibilityYear: year -1
+        eligibilityYear: year - 1
       },
       {
         ceremonyYear: year,
         category: "Short Film (Live Action)",
         nominee: "Invincible",
         isWinner: false,
-        eligibilityYear: year -1
+        eligibilityYear: year - 1
       },
       {
         ceremonyYear: year,
         category: "Short Film (Live Action)",
         nominee: "Knight of Fortune",
         isWinner: false,
-        eligibilityYear: year -1
+        eligibilityYear: year - 1
       },
       {
         ceremonyYear: year,
         category: "Short Film (Live Action)",
         nominee: "Red, White and Blue",
         isWinner: false,
-        eligibilityYear: year -1
+        eligibilityYear: year - 1
       },
       {
         ceremonyYear: year,
         category: "Short Film (Live Action)",
         nominee: "The Wonderful Story of Henry Sugar",
         isWinner: false,
-        eligibilityYear: year -1
+        eligibilityYear: year - 1
       },
       // Sound (5 nominees)
       {
@@ -1086,35 +1088,35 @@ Include critical reception and any notable achievements. Keep it under 200 words
         category: "Sound",
         nominee: "The Creator",
         isWinner: false,
-        eligibilityYear: year -1
+        eligibilityYear: year - 1
       },
       {
         ceremonyYear: year,
         category: "Sound",
         nominee: "Maestro",
         isWinner: false,
-        eligibilityYear: year -1
+        eligibilityYear: year - 1
       },
       {
         ceremonyYear: year,
         category: "Sound",
         nominee: "Mission: Impossible - Dead Reckoning Part One",
         isWinner: false,
-        eligibilityYear: year -1
+        eligibilityYear: year - 1
       },
       {
         ceremonyYear: year,
         category: "Sound",
         nominee: "Oppenheimer",
         isWinner: false,
-        eligibilityYear: year -1
+        eligibilityYear: year - 1
       },
       {
         ceremonyYear: year,
         category: "Sound",
         nominee: "The Zone of Interest",
         isWinner: false,
-        eligibilityYear: year -1
+        eligibilityYear: year - 1
       },
       // Visual Effects (5 nominees)
       {
@@ -1122,35 +1124,35 @@ Include critical reception and any notable achievements. Keep it under 200 words
         category: "Visual Effects",
         nominee: "The Creator",
         isWinner: false,
-        eligibilityYear: year -1
+        eligibilityYear: year - 1
       },
       {
         ceremonyYear: year,
         category: "Visual Effects",
         nominee: "Godzilla Minus One",
         isWinner: false,
-        eligibilityYear: year -1
+        eligibilityYear: year - 1
       },
       {
         ceremonyYear: year,
         category: "Visual Effects",
         nominee: "Guardians of the Galaxy Vol. 3",
         isWinner: false,
-        eligibilityYear: year -1
+        eligibilityYear: year - 1
       },
       {
         ceremonyYear: year,
         category: "Visual Effects",
         nominee: "Mission: Impossible - Dead Reckoning Part One",
         isWinner: false,
-        eligibilityYear: year -1
+        eligibilityYear: year - 1
       },
       {
         ceremonyYear: year,
         category: "Visual Effects",
         nominee: "Napoleon",
         isWinner: false,
-        eligibilityYear: year -1
+        eligibilityYear: year - 1
       },
       // Writing (Adapted Screenplay) (5 nominees)
       {
@@ -1158,35 +1160,35 @@ Include critical reception and any notable achievements. Keep it under 200 words
         category: "Writing (Adapted Screenplay)",
         nominee: "American Fiction",
         isWinner: false,
-        eligibilityYear: year -1
+        eligibilityYear: year - 1
       },
       {
         ceremonyYear: year,
         category: "Writing (Adapted Screenplay)",
         nominee: "Barbie",
         isWinner: false,
-        eligibilityYear: year -1
+        eligibilityYear: year - 1
       },
       {
         ceremonyYear: year,
         category: "Writing (Adapted Screenplay)",
         nominee: "Oppenheimer",
         isWinner: false,
-        eligibilityYear: year -1
+        eligibilityYear: year - 1
       },
       {
         ceremonyYear: year,
         category: "Writing (Adapted Screenplay)",
         nominee: "Poor Things",
         isWinner: false,
-        eligibilityYear: year -1
+        eligibilityYear: year - 1
       },
       {
         ceremonyYear: year,
         category: "Writing (Adapted Screenplay)",
         nominee: "The Zone of Interest",
         isWinner: false,
-        eligibilityYear: year -1
+        eligibilityYear: year - 1
       },
       // Writing (Original Screenplay) (5 nominees)
       {
@@ -1194,35 +1196,35 @@ Include critical reception and any notable achievements. Keep it under 200 words
         category: "Writing (Original Screenplay)",
         nominee: "Anatomy of a Fall",
         isWinner: false,
-        eligibilityYear: year -1
+        eligibilityYear: year - 1
       },
       {
         ceremonyYear: year,
         category: "Writing (Original Screenplay)",
         nominee: "The Holdovers",
         isWinner: false,
-        eligibilityYear: year -1
+        eligibilityYear: year - 1
       },
       {
         ceremonyYear: year,
         category: "Writing (Original Screenplay)",
         nominee: "May December",
         isWinner: false,
-        eligibilityYear: year -1
+        eligibilityYear: year - 1
       },
       {
         ceremonyYear: year,
         category: "Writing (Original Screenplay)",
         nominee: "Past Lives",
         isWinner: false,
-        eligibilityYear: year -1
+        eligibilityYear: year - 1
       },
       {
         ceremonyYear: year,
         category: "Writing (Original Screenplay)",
         nominee: "Maestro",
         isWinner: false,
-        eligibilityYear: year -1
+        eligibilityYear: year - 1
       }
     ];
 
