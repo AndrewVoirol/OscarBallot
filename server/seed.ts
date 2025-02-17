@@ -50,7 +50,7 @@ async function runBackgroundSync() {
       return;
     }
 
-    // Create new sync status record
+    console.log("Starting Oscar nominees sync...");
     const [syncRecord] = await db
       .insert(syncStatus)
       .values({
@@ -67,18 +67,19 @@ async function runBackgroundSync() {
       .returning();
 
     const oscarService = new OscarSyncService();
-
-    // Sync current year (2024) nominees first
-    console.log("\nBackground sync: Starting 2024 Oscar nominees sync...");
     const currentYearNominees = await oscarService.getNominationsForYear(2024);
+    console.log(`Found ${currentYearNominees.length} nominees to process`);
 
     let processedCount = 0;
     let failedCount = 0;
+    const totalBatches = Math.ceil(currentYearNominees.length / 3);
 
-    // Process in smaller batches with better progress tracking
     for (let i = 0; i < currentYearNominees.length; i += 3) {
+      const currentBatch = Math.floor(i / 3) + 1;
+      console.log(`\nProcessing batch ${currentBatch}/${totalBatches}...`);
+
       const batch = currentYearNominees.slice(i, i + 3);
-      const batchResults = await Promise.allSettled(
+      await Promise.allSettled(
         batch.map(async nominee => {
           try {
             const syncedNominee = await oscarService.syncNominee(nominee);
@@ -93,14 +94,14 @@ async function runBackgroundSync() {
               return true;
             }
           } catch (error) {
-            console.error(`Failed to sync nominee ${nominee.nominee}:`, error);
+            console.error(`Failed to sync: ${nominee.nominee}`);
             failedCount++;
           }
           return false;
         })
       );
 
-      // Update sync status
+      // Update sync status with progress
       await db
         .update(syncStatus)
         .set({
@@ -108,13 +109,16 @@ async function runBackgroundSync() {
           failedItems: failedCount,
           metadata: {
             ...syncRecord.metadata,
-            currentBatch: Math.floor(i / 3),
-            totalBatches: Math.ceil(currentYearNominees.length / 3)
+            currentBatch,
+            totalBatches
           }
         })
         .where(eq(syncStatus.id, syncRecord.id));
 
-      // Add delay between batches
+      // Progress indicator
+      const progress = Math.round((processedCount / currentYearNominees.length) * 100);
+      console.log(`Progress: ${progress}% (${processedCount}/${currentYearNominees.length} nominees processed)`);
+
       if (i + 3 < currentYearNominees.length) {
         await new Promise(resolve => setTimeout(resolve, 3000));
       }
@@ -132,11 +136,12 @@ async function runBackgroundSync() {
       })
       .where(eq(syncStatus.id, syncRecord.id));
 
-    console.log(`Sync completed. Processed: ${processedCount}, Failed: ${failedCount}`);
+    console.log(`\nSync completed successfully:`);
+    console.log(`✓ ${processedCount} nominees processed`);
+    console.log(`✗ ${failedCount} nominees failed`);
 
   } catch (error: any) {
-    console.error("Error in background sync:", error);
-    // Update sync status to failed
+    console.error("Error in background sync:", error.message);
     await db
       .update(syncStatus)
       .set({

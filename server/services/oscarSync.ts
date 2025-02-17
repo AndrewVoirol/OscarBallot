@@ -36,7 +36,6 @@ export class OscarSyncService {
     region?: string
   }): Promise<TMDBSearchResult[]> {
     try {
-      // Use v4 search endpoint
       const response = await axios.get(`${this.tmdbBaseUrl}/search/${config.searchType}`, {
         headers: this.headers,
         params: {
@@ -53,12 +52,14 @@ export class OscarSyncService {
       return response.data.results;
     } catch (error) {
       if (axios.isAxiosError(error) && error.response?.status === 429) {
-        // Handle rate limiting
         const retryAfter = parseInt(error.response.headers['retry-after'] || '1');
         await new Promise(resolve => setTimeout(resolve, retryAfter * 1000));
         return this.searchTMDBWithConfig(config);
       }
-      console.error(`TMDB search failed for ${config.query}:`, error);
+      // Only log actual errors, not just no results found
+      if (!(axios.isAxiosError(error) && error.response?.status === 404)) {
+        console.error(`TMDB API error for ${config.query}:`, error.message);
+      }
       return [];
     }
   }
@@ -69,51 +70,45 @@ export class OscarSyncService {
 
   private async searchTMDB(title: string, year: string, category: string): Promise<TMDBSearchResult | null> {
     const movieTitle = this.extractMovieTitle(title, category);
-    console.log(`Searching TMDB for: ${movieTitle} (${year}) - Original: ${title}, Category: ${category}`);
+    // Only log initial search attempt
+    console.log(`Starting TMDB search for: ${movieTitle} (${year})`);
 
-    // Determine search strategy based on category
     const searchType = this.getCategorySearchType(category);
     const searchLanguages = this.isInternationalCategory(category) ?
       ['en-US', 'original'] : ['en-US'];
 
-    // Calculate eligibility window
-    // Films released in the previous year are eligible for the current ceremony
     const ceremonyYear = parseInt(year);
     const eligibilityYear = ceremonyYear - 1;
 
-    // Search strategies in order of preference, considering eligibility window
     const searchStrategies = [
-      { query: movieTitle, year: eligibilityYear, region: 'US' },           // Primary eligibility year
-      { query: movieTitle, year: eligibilityYear - 1, region: 'US' },       // Late previous year releases
+      { query: movieTitle, year: eligibilityYear, region: 'US' },
+      { query: movieTitle, year: eligibilityYear - 1, region: 'US' },
       { query: this.getAlternativeTitle(movieTitle), year: eligibilityYear, region: 'US' },
-      { query: movieTitle, region: 'US' }                                   // Fallback without year
+      { query: movieTitle, region: 'US' }
     ];
 
     for (let attempt = 0; attempt < this.RETRY_ATTEMPTS; attempt++) {
       for (const strategy of searchStrategies) {
         for (const language of searchLanguages) {
-          try {
-            const results = await this.searchTMDBWithConfig({
-              ...strategy,
-              searchType,
-              language
-            });
+          const results = await this.searchTMDBWithConfig({
+            ...strategy,
+            searchType,
+            language
+          });
 
-            if (results.length) {
-              // Enhanced matching to consider eligibility window
-              const match = await this.findBestMatchWithAI(title, results, year, category, eligibilityYear);
-              if (match) return match;
+          if (results.length) {
+            const match = await this.findBestMatchWithAI(title, results, year, category, eligibilityYear);
+            if (match) {
+              console.log(`✓ Found match for "${movieTitle}": ${match.title}`);
+              return match;
             }
-          } catch (error) {
-            console.error(`TMDB search failed for ${movieTitle}:`, error);
-            await new Promise(resolve => setTimeout(resolve, this.RETRY_DELAY));
-            continue;
           }
         }
       }
     }
 
-    console.log(`No TMDB match found for: ${movieTitle}`);
+    // Only log if no match found after all attempts
+    console.log(`✗ No match found for: ${movieTitle}`);
     return null;
   }
 
@@ -959,10 +954,10 @@ Include critical reception and any notable achievements. Keep it under 200 words
         category: "Music (Original Song)",
         nominee: "It Never Went Away (American Symphony)",
         isWinner: false,
-        eligibilityYear: year - 1},
+        eligibilityYear: year - 1
+      },
       {
-        ceremonyYear: year,
-        category: "Music (Original Song)",
+        ceremonyYear: year,        category: "Music (Original Song)",
         nominee: "Wahzhazhe (A Song for My People) (Killers of the Flower Moon)",
         isWinner: false,
         eligibilityYear: year - 1
