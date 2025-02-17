@@ -200,52 +200,62 @@ Explanation: The selected movie should be the Oscar-nominated work that was rele
   }
 
 
-  private async findBestMatchWithAI(oscarTitle: string, tmdbResults: TMDBSearchResult[], year: string, category: string): Promise<TMDBSearchResult | null> {
-    const model = this.genAI.getGenerativeModel({ model: "gemini-pro" });
-
-    const prompt = `Task: Find the best matching movie from TMDB results for an Oscar nominee.
-
-Oscar Information:
-- Title: "${oscarTitle}"
-- Category: ${category}
-- Year: ${year}
-
-TMDB Results:
-${tmdbResults.map((movie, index) =>
-        `${index}. "${movie.title}" (${movie.release_date})
-   Overview: ${movie.overview}
-   Vote Average: ${movie.vote_average}`
-      ).join('\n\n')}
-
-Analyze each result considering:
-1. Title similarity (exact matches, variations, international titles)
-2. Release date proximity to Oscar year
-3. Plot/overview relevance to the Oscar category
-4. Common variations in movie titles between databases
-5. Critical reception (vote average) as a factor
-
-Return only the index number (0-based) of the best match. Just the number, e.g. "2".
-If no good match exists, return "null".
-
-Explanation: The selected movie should be the Oscar-nominated work, considering both the title and its eligibility for the specific Oscar category.`;
-
-    try {
-      const result = await model.generateContent(prompt);
-      const text = result.response.text().trim();
-      if (text === "null") return null;
-      const index = parseInt(text);
-      return isNaN(index) || index >= tmdbResults.length ? null : tmdbResults[index];
-    } catch (error) {
-      console.error("AI matching error:", error);
-      return null;
-    }
-  }
-
   // Method to sync a nominee with TMDB data
-  async syncNominee(nomination: OscarNomination): Promise<InsertNominee | null> {
+  async syncNominee(nomination: OscarNomination): Promise<InsertNominee> {
     try {
       console.log(`Syncing nominee: ${nomination.nominee} (${nomination.category})`);
 
+      // Create base nominee record with required fields
+      const baseNominee: InsertNominee = {
+        name: nomination.nominee,
+        category: nomination.category,
+        description: "",
+        poster: "",
+        trailerUrl: "",
+        streamingPlatforms: [],
+        awards: {},
+        historicalAwards: [{
+          ceremonyYear: nomination.ceremonyYear,
+          eligibilityYear: nomination.eligibilityYear,
+          awards: [{
+            ceremonyId: nomination.ceremonyYear - 1928,
+            name: "Academy Awards",
+            type: nomination.category,
+            result: nomination.isWinner ? "Won" : "Nominated",
+            dateAwarded: `${nomination.ceremonyYear}-03-10`
+          }]
+        }],
+        castMembers: [],
+        crew: [],
+        funFacts: [],
+        ceremonyYear: nomination.ceremonyYear,
+        eligibilityYear: nomination.eligibilityYear,
+        isWinner: nomination.isWinner,
+        tmdbId: null,
+        runtime: null,
+        releaseDate: null,
+        voteAverage: null,
+        backdropPath: "",
+        genres: [],
+        productionCompanies: [],
+        extendedCredits: {
+          cast: [],
+          crew: []
+        },
+        aiGeneratedDescription: "",
+        aiMatchConfidence: 0,
+        alternativeTitles: [],
+        originalLanguage: null,
+        originalTitle: null,
+        dataSource: {
+          tmdb: null,
+          imdb: null,
+          wikidata: null
+        },
+        lastUpdated: new Date()
+      };
+
+      // Try to get TMDB data
       const tmdbData = await this.searchTMDB(
         nomination.nominee,
         nomination.ceremonyYear.toString(),
@@ -253,8 +263,8 @@ Explanation: The selected movie should be the Oscar-nominated work, considering 
       );
 
       if (!tmdbData) {
-        console.log(`No TMDB match found for ${nomination.nominee}`);
-        return null;
+        console.log(`No TMDB match found for ${nomination.nominee}, using base nominee data`);
+        return baseNominee;
       }
 
       // Generate AI description using Gemini
@@ -290,54 +300,35 @@ Include critical reception and any notable achievements. Keep it under 200 words
       }
 
       return {
-        name: nomination.nominee,
-        category: nomination.category,
-        description: tmdbData.overview || "",
-        poster: tmdbData.poster_path ? `https://image.tmdb.org/t/p/w500${tmdbData.poster_path}` : "",
-        trailerUrl: "", // Will be added in a separate API call
-        streamingPlatforms: [],
-        awards: {},
-        historicalAwards: [{
-          year: nomination.ceremonyYear,
-          awards: [{
-            ceremonyId: nomination.ceremonyYear - 1928,
-            name: "Academy Awards",
-            type: nomination.category,
-            result: nomination.isWinner ? "Won" : "Nominated",
-            dateAwarded: `${nomination.ceremonyYear}-03-10`
-          }]
-        }],
-        castMembers: (details as any)?.credits?.cast?.slice(0, 10).map((c: any) => c.name) || [],
-        crew: (details as any)?.credits?.crew?.slice(0, 10).map((c: any) => `${c.name} - ${c.job}`) || [],
-        funFacts: [],
-        ceremonyYear: nomination.ceremonyYear,
-        isWinner: nomination.isWinner,
+        ...baseNominee,
+        description: tmdbData.overview || baseNominee.description,
+        poster: tmdbData.poster_path ? `https://image.tmdb.org/t/p/w500${tmdbData.poster_path}` : baseNominee.poster,
         tmdbId: tmdbData.id,
-        runtime: (details as any)?.runtime || null,
-        releaseDate: tmdbData.release_date,
+        runtime: (details as any)?.runtime || baseNominee.runtime,
+        releaseDate: tmdbData.release_date || baseNominee.releaseDate,
         voteAverage: Math.round(tmdbData.vote_average * 10),
-        backdropPath: tmdbData.backdrop_path ? `https://image.tmdb.org/t/p/original${tmdbData.backdrop_path}` : '',
-        genres: (details as any)?.genres?.map((g: any) => g.name) || [],
-        productionCompanies: (details as any)?.production_companies || [],
+        backdropPath: tmdbData.backdrop_path ? `https://image.tmdb.org/t/p/original${tmdbData.backdrop_path}` : baseNominee.backdropPath,
+        genres: (details as any)?.genres?.map((g: any) => g.name) || baseNominee.genres,
+        productionCompanies: (details as any)?.production_companies || baseNominee.productionCompanies,
         extendedCredits: {
           cast: (details as any)?.credits?.cast || [],
           crew: (details as any)?.credits?.crew || []
         },
-        aiGeneratedDescription: aiDescription,
+        aiGeneratedDescription: aiDescription || baseNominee.aiGeneratedDescription,
         aiMatchConfidence: 100,
-        alternativeTitles: (details as any)?.alternative_titles?.titles?.map((t: any) => t.title) || [],
-        originalLanguage: (details as any)?.original_language || null,
-        originalTitle: (details as any)?.original_title || null,
+        alternativeTitles: (details as any)?.alternative_titles?.titles?.map((t: any) => t.title) || baseNominee.alternativeTitles,
+        originalLanguage: (details as any)?.original_language || baseNominee.originalLanguage,
+        originalTitle: (details as any)?.original_title || baseNominee.originalTitle,
         dataSource: {
           tmdb: { lastUpdated: new Date().toISOString(), version: "3.0" },
           imdb: null,
           wikidata: null
-        },
-        lastUpdated: new Date()
+        }
       };
     } catch (error) {
       console.error(`Error syncing nominee ${nomination.nominee}:`, error);
-      return null;
+      // Return base nominee data if sync fails
+      return baseNominee;
     }
   }
 
@@ -359,61 +350,71 @@ Include critical reception and any notable achievements. Keep it under 200 words
         ceremonyYear: year,
         category: "Best Picture",
         nominee: "American Fiction",
-        isWinner: false
+        isWinner: false,
+        eligibilityYear: year -1
       },
       {
         ceremonyYear: year,
         category: "Best Picture",
         nominee: "Anatomy of a Fall",
-        isWinner: false
+        isWinner: false,
+        eligibilityYear: year -1
       },
       {
         ceremonyYear: year,
         category: "Best Picture",
         nominee: "Barbie",
-        isWinner: false
+        isWinner: false,
+        eligibilityYear: year -1
       },
       {
         ceremonyYear: year,
         category: "Best Picture",
         nominee: "The Holdovers",
-        isWinner: false
+        isWinner: false,
+        eligibilityYear: year -1
       },
       {
         ceremonyYear: year,
         category: "Best Picture",
         nominee: "Killers of the Flower Moon",
-        isWinner: false
+        isWinner: false,
+        eligibilityYear: year -1
       },
       {
         ceremonyYear: year,
         category: "Best Picture",
         nominee: "Maestro",
-        isWinner: false
+        isWinner: false,
+        eligibilityYear: year -1
       },
       {
         ceremonyYear: year,
         category: "Best Picture",
         nominee: "Oppenheimer",
-        isWinner: false
+        isWinner: false,
+        eligibilityYear: year -1
       },
       {
         ceremonyYear: year,
         category: "Best Picture",
         nominee: "Past Lives",
-        isWinner: false
+        isWinner: false,
+        eligibilityYear: year -1
       },
       {
         ceremonyYear: year,
         category: "Best Picture",
         nominee: "Poor Things",
-        isWinner: false
+        isWinner: false,
+        eligibilityYear: year -1
       },
       {
         ceremonyYear: year,
         category: "Best Picture",
         nominee: "The Zone of Interest",
-        isWinner: false
+        isWinner: false,
+        eligibilityYear: year -1
       },
 
       // Actor in a Leading Role (5 nominees)
@@ -421,682 +422,792 @@ Include critical reception and any notable achievements. Keep it under 200 words
         ceremonyYear: year,
         category: "Actor in a Leading Role",
         nominee: "Bradley Cooper (Maestro)",
-        isWinner: false
+        isWinner: false,
+        eligibilityYear: year -1
       },
       {
         ceremonyYear: year,
         category: "Actor in a Leading Role",
         nominee: "Colman Domingo (Rustin)",
-        isWinner: false
+        isWinner: false,
+        eligibilityYear: year -1
       },
       {
         ceremonyYear: year,
         category: "Actor in a Leading Role",
         nominee: "Paul Giamatti (The Holdovers)",
-        isWinner: false
+        isWinner: false,
+        eligibilityYear: year -1
       },
       {
         ceremonyYear: year,
         category: "Actor in a Leading Role",
         nominee: "Cillian Murphy (Oppenheimer)",
-        isWinner: false
+        isWinner: false,
+        eligibilityYear: year -1
       },
       {
         ceremonyYear: year,
         category: "Actor in a Leading Role",
         nominee: "Jeffrey Wright (American Fiction)",
-        isWinner: false
+        isWinner: false,
+        eligibilityYear: year -1
       },
       // Actress in a Leading Role (5 nominees)
       {
         ceremonyYear: year,
         category: "Actress in a Leading Role",
         nominee: "Annette Bening (Nyad)",
-        isWinner: false
+        isWinner: false,
+        eligibilityYear: year -1
       },
       {
         ceremonyYear: year,
         category: "Actress in a Leading Role",
         nominee: "Lily Gladstone (Killers of the Flower Moon)",
-        isWinner: false
+        isWinner: false,
+        eligibilityYear: year -1
       },
       {
         ceremonyYear: year,
         category: "Actress in a Leading Role",
         nominee: "Sandra Hüller (Anatomy of a Fall)",
-        isWinner: false
+        isWinner: false,
+        eligibilityYear: year -1
       },
       {
         ceremonyYear: year,
         category: "Actress in a Leading Role",
         nominee: "Carey Mulligan (Maestro)",
-        isWinner: false
+        isWinner: false,
+        eligibilityYear: year -1
       },
       {
         ceremonyYear: year,
         category: "Actress in a Leading Role",
         nominee: "Emma Stone (Poor Things)",
-        isWinner: false
+        isWinner: false,
+        eligibilityYear: year -1
       },
       // Actor in a Supporting Role (5 nominees)
       {
         ceremonyYear: year,
         category: "Actor in a Supporting Role",
         nominee: "Sterling K. Brown (American Fiction)",
-        isWinner: false
+        isWinner: false,
+        eligibilityYear: year -1
       },
       {
         ceremonyYear: year,
         category: "Actor in a Supporting Role",
         nominee: "Robert De Niro (Killers of the Flower Moon)",
-        isWinner: false
+        isWinner: false,
+        eligibilityYear: year -1
       },
       {
         ceremonyYear: year,
         category: "Actor in a Supporting Role",
         nominee: "Robert Downey Jr. (Oppenheimer)",
-        isWinner: false
+        isWinner: false,
+        eligibilityYear: year -1
       },
       {
         ceremonyYear: year,
         category: "Actor in a Supporting Role",
         nominee: "Ryan Gosling (Barbie)",
-        isWinner: false
+        isWinner: false,
+        eligibilityYear: year -1
       },
       {
         ceremonyYear: year,
         category: "Actor in a Supporting Role",
         nominee: "Mark Ruffalo (Poor Things)",
-        isWinner: false
+        isWinner: false,
+        eligibilityYear: year -1
       },
       // Actress in a Supporting Role (5 nominees)
       {
         ceremonyYear: year,
         category: "Actress in a Supporting Role",
         nominee: "Emily Blunt (Oppenheimer)",
-        isWinner: false
+        isWinner: false,
+        eligibilityYear: year -1
       },
       {
         ceremonyYear: year,
         category: "Actress in a Supporting Role",
         nominee: "Danielle Brooks (The Color Purple)",
-        isWinner: false
+        isWinner: false,
+        eligibilityYear: year -1
       },
       {
         ceremonyYear: year,
         category: "Actress in a Supporting Role",
         nominee: "America Ferrera (Barbie)",
-        isWinner: false
+        isWinner: false,
+        eligibilityYear: year -1
       },
       {
         ceremonyYear: year,
         category: "Actress in a Supporting Role",
         nominee: "Jodie Foster (Nyad)",
-        isWinner: false
+        isWinner: false,
+        eligibilityYear: year -1
       },
       {
         ceremonyYear: year,
         category: "Actress in a Supporting Role",
         nominee: "Da'Vine Joy Randolph (The Holdovers)",
-        isWinner: false
+        isWinner: false,
+        eligibilityYear: year -1
       },
       // Animated Feature Film (5 nominees)
       {
         ceremonyYear: year,
         category: "Animated Feature Film",
         nominee: "The Boy and the Heron",
-        isWinner: false
+        isWinner: false,
+        eligibilityYear: year -1
       },
       {
         ceremonyYear: year,
         category: "Animated Feature Film",
         nominee: "Elemental",
-        isWinner: false
+        isWinner: false,
+        eligibilityYear: year -1
       },
       {
         ceremonyYear: year,
         category: "Animated Feature Film",
         nominee: "Nimona",
-        isWinner: false
+        isWinner: false,
+        eligibilityYear: year -1
       },
       {
         ceremonyYear: year,
         category: "Animated Feature Film",
         nominee: "Robot Dreams",
-        isWinner: false
+        isWinner: false,
+        eligibilityYear: year -1
       },
       {
         ceremonyYear: year,
         category: "Animated Feature Film",
         nominee: "Spider-Man: Across the Spider-Verse",
-        isWinner: false
+        isWinner: false,
+        eligibilityYear: year -1
       },
       // Cinematography (5 nominees)
       {
         ceremonyYear: year,
         category: "Cinematography",
         nominee: "El Conde",
-        isWinner: false
+        isWinner: false,
+        eligibilityYear: year -1
       },
       {
         ceremonyYear: year,
         category: "Cinematography",
         nominee: "Killers of the Flower Moon",
-        isWinner: false
+        isWinner: false,
+        eligibilityYear: year -1
       },
       {
         ceremonyYear: year,
         category: "Cinematography",
         nominee: "Maestro",
-        isWinner: false
+        isWinner: false,
+        eligibilityYear: year -1
       },
       {
         ceremonyYear: year,
         category: "Cinematography",
         nominee: "Oppenheimer",
-        isWinner: false
+        isWinner: false,
+        eligibilityYear: year -1
       },
       {
         ceremonyYear: year,
         category: "Cinematography",
         nominee: "Poor Things",
-        isWinner: false
+        isWinner: false,
+        eligibilityYear: year -1
       },
       // Costume Design (5 nominees)
       {
         ceremonyYear: year,
         category: "Costume Design",
         nominee: "Barbie",
-        isWinner: false
+        isWinner: false,
+        eligibilityYear: year -1
       },
       {
         ceremonyYear: year,
         category: "Costume Design",
         nominee: "Killers of the Flower Moon",
-        isWinner: false
+        isWinner: false,
+        eligibilityYear: year -1
       },
       {
         ceremonyYear: year,
         category: "Costume Design",
         nominee: "Napoleon",
-        isWinner: false
+        isWinner: false,
+        eligibilityYear: year -1
       },
       {
         ceremonyYear: year,
         category: "Costume Design",
         nominee: "Oppenheimer",
-        isWinner: false
+        isWinner: false,
+        eligibilityYear: year -1
       },
       {
         ceremonyYear: year,
         category: "Costume Design",
         nominee: "Poor Things",
-        isWinner: false
+        isWinner: false,
+        eligibilityYear: year -1
       },
       // Directing (5 nominees)
       {
         ceremonyYear: year,
         category: "Directing",
         nominee: "Justine Triet (Anatomy of a Fall)",
-        isWinner: false
+        isWinner: false,
+        eligibilityYear: year -1
       },
       {
         ceremonyYear: year,
         category: "Directing",
         nominee: "Martin Scorsese (Killers of the Flower Moon)",
-        isWinner: false
+        isWinner: false,
+        eligibilityYear: year -1
       },
       {
         ceremonyYear: year,
         category: "Directing",
         nominee: "Christopher Nolan (Oppenheimer)",
-        isWinner: false
+        isWinner: false,
+        eligibilityYear: year -1
       },
       {
         ceremonyYear: year,
         category: "Directing",
         nominee: "Yorgos Lanthimos (Poor Things)",
-        isWinner: false
+        isWinner: false,
+        eligibilityYear: year -1
       },
       {
         ceremonyYear: year,
         category: "Directing",
         nominee: "Jonathan Glazer (The Zone of Interest)",
-        isWinner: false
+        isWinner: false,
+        eligibilityYear: year -1
       },
       // Documentary Feature Film (5 nominees)
       {
         ceremonyYear: year,
         category: "Documentary Feature Film",
         nominee: "Bobi Wine: The People's President",
-        isWinner: false
+        isWinner: false,
+        eligibilityYear: year -1
       },
       {
         ceremonyYear: year,
         category: "Documentary Feature Film",
         nominee: "The Eternal Memory",
-        isWinner: false
+        isWinner: false,
+        eligibilityYear: year -1
       },
       {
         ceremonyYear: year,
         category: "Documentary Feature Film",
         nominee: "Four Daughters",
-        isWinner: false
+        isWinner: false,
+        eligibilityYear: year -1
       },
       {
         ceremonyYear: year,
         category: "Documentary Feature Film",
         nominee: "To Kill a Tiger",
-        isWinner: false
+        isWinner: false,
+        eligibilityYear: year -1
       },
       {
         ceremonyYear: year,
         category: "Documentary Feature Film",
         nominee: "20 Days in Mariupol",
-        isWinner: false
+        isWinner: false,
+        eligibilityYear: year -1
       },
       // Documentary Short Film (5 nominees)
       {
         ceremonyYear: year,
         category: "Documentary Short Film",
         nominee: "The ABCs of Book Banning",
-        isWinner: false
+        isWinner: false,
+        eligibilityYear: year -1
       },
       {
         ceremonyYear: year,
         category: "Documentary Short Film",
         nominee: "The Barber of Little Rock",
-        isWinner: false
+        isWinner: false,
+        eligibilityYear: year -1
       },
       {
         ceremonyYear: year,
         category: "Documentary Short Film",
         nominee: "Island in Between",
-        isWinner: false
+        isWinner: false,
+        eligibilityYear: year -1
       },
       {
         ceremonyYear: year,
         category: "Documentary Short Film",
         nominee: "The Last Repair Shop",
-        isWinner: false
+        isWinner: false,
+        eligibilityYear: year -1
       },
       {
         ceremonyYear: year,
         category: "Documentary Short Film",
         nominee: "Nǎi Nai & Wài Pó",
-        isWinner: false
+        isWinner: false,
+        eligibilityYear: year -1
       },
       // Film Editing (5 nominees)
       {
         ceremonyYear: year,
         category: "Film Editing",
         nominee: "Anatomy of a Fall",
-        isWinner: false
+        isWinner: false,
+        eligibilityYear: year -1
       },
       {
         ceremonyYear: year,
         category: "Film Editing",
         nominee: "The Holdovers",
-        isWinner: false
+        isWinner: false,
+        eligibilityYear: year -1
       },
       {
         ceremonyYear: year,
         category: "Film Editing",
         nominee: "Killers of the Flower Moon",
-        isWinner: false
+        isWinner: false,
+        eligibilityYear: year -1
       },
       {
         ceremonyYear: year,
         category: "Film Editing",
         nominee: "Oppenheimer",
-        isWinner: false
+        isWinner: false,
+        eligibilityYear: year -1
       },
       {
         ceremonyYear: year,
         category: "Film Editing",
         nominee: "Poor Things",
-        isWinner: false
+        isWinner: false,
+        eligibilityYear: year -1
       },
       // International Feature Film (5 nominees)
       {
         ceremonyYear: year,
         category: "International Feature Film",
         nominee: "Io Capitano (Italy)",
-        isWinner: false
+        isWinner: false,
+        eligibilityYear: year -1
       },
       {
         ceremonyYear: year,
         category: "International Feature Film",
         nominee: "Perfect Days (Japan)",
-        isWinner: false
+        isWinner: false,
+        eligibilityYear: year -1
       },
       {
         ceremonyYear: year,
         category: "International Feature Film",
         nominee: "Society of the Snow (Spain)",
-        isWinner: false
+        isWinner: false,
+        eligibilityYear: year -1
       },
       {
         ceremonyYear: year,
         category: "International Feature Film",
         nominee: "The Teachers' Lounge (Germany)",
-        isWinner: false
+        isWinner: false,
+        eligibilityYear: year -1
       },
       {
         ceremonyYear: year,
         category: "International Feature Film",
         nominee: "The Zone of Interest (United Kingdom)",
-        isWinner: false
+        isWinner: false,
+        eligibilityYear: year -1
       },
       // Makeup and Hairstyling (5 nominees)
       {
         ceremonyYear: year,
         category: "Makeup and Hairstyling",
         nominee: "Golda",
-        isWinner: false
+        isWinner: false,
+        eligibilityYear: year -1
       },
       {
         ceremonyYear: year,
         category: "Makeup and Hairstyling",
         nominee: "Maestro",
-        isWinner: false
+        isWinner: false,
+        eligibilityYear: year -1
       },
       {
         ceremonyYear: year,
         category: "Makeup and Hairstyling",
         nominee: "Oppenheimer",
-        isWinner: false
+        isWinner: false,
+        eligibilityYear: year -1
       },
       {
         ceremonyYear: year,
         category: "Makeup and Hairstyling",
         nominee: "Poor Things",
-        isWinner: false
+        isWinner: false,
+        eligibilityYear: year -1
       },
       {
         ceremonyYear: year,
         category: "Makeup and Hairstyling",
         nominee: "Society of the Snow",
-        isWinner: false
+        isWinner: false,
+        eligibilityYear: year -1
       },
       // Music (Original Score) (5 nominees)
       {
         ceremonyYear: year,
         category: "Music (Original Score)",
         nominee: "American Fiction",
-        isWinner: false
+        isWinner: false,
+        eligibilityYear: year -1
       },
       {
         ceremonyYear: year,
         category: "Music (Original Score)",
         nominee: "Indiana Jones and the Dial of Destiny",
-        isWinner: false
+        isWinner: false,
+        eligibilityYear: year -1
       },
       {
         ceremonyYear: year,
         category: "Music (Original Score)",
         nominee: "Killers of the Flower Moon",
-        isWinner: false
+        isWinner: false,
+        eligibilityYear: year -1
       },
       {
         ceremonyYear: year,
         category: "Music (Original Score)",
         nominee: "Oppenheimer",
-        isWinner: false
+        isWinner: false,
+        eligibilityYear: year -1
       },
       {
         ceremonyYear: year,
         category: "Music (Original Score)",
         nominee: "Poor Things",
-        isWinner: false
+        isWinner: false,
+        eligibilityYear: year -1
       },
       // Music (Original Song) (5 nominees)
       {
         ceremonyYear: year,
         category: "Music (Original Song)",
         nominee: "The Fire Inside (Flamin' Hot)",
-        isWinner: false
+        isWinner: false,
+        eligibilityYear: year -1
       },
       {
         ceremonyYear: year,
         category: "Music (Original Song)",
         nominee: "I'm Just Ken (Barbie)",
-        isWinner: false
+        isWinner: false,
+        eligibilityYear: year -1
       },
       {
         ceremonyYear: year,
         category: "Music (Original Song)",
         nominee: "It Never Went Away (American Symphony)",
-        isWinner: false
+        isWinner: false,
+        eligibilityYear: year -1
       },
       {
         ceremonyYear: year,
         category: "Music (Original Song)",
         nominee: "Wahzhazhe (A Song for My People) (Killers of the Flower Moon)",
-        isWinner: false
+        isWinner: false,
+        eligibilityYear: year -1
       },
       {
         ceremonyYear: year,
         category: "Music (Original Song)",
         nominee: "What Was I Made For? (Barbie)",
-        isWinner: false
+        isWinner: false,
+        eligibilityYear: year -1
       },
       // Production Design (5 nominees)
       {
         ceremonyYear: year,
         category: "Production Design",
         nominee: "Barbie",
-        isWinner: false
+        isWinner: false,
+        eligibilityYear: year -1
       },
       {
         ceremonyYear: year,
         category: "Production Design",
-        nominee: "Killers of the Flower Moon",
-        isWinner: false
+        nominee: "Killersof the Flower Moon",
+        isWinner: false,
+        eligibilityYear: year -1
       },
       {
         ceremonyYear: year,
         category: "Production Design",
         nominee: "Napoleon",
-        isWinner: false
+        isWinner: false,
+        eligibilityYear: year -1
       },
       {
         ceremonyYear: year,
         category: "Production Design",
         nominee: "Oppenheimer",
-        isWinner: false
+        isWinner: false,
+        eligibilityYear: year -1
       },
       {
         ceremonyYear: year,
         category: "Production Design",
         nominee: "Poor Things",
-        isWinner: false
+        isWinner: false,
+        eligibilityYear: year -1
       },
       // Short Film (Animated) (5 nominees)
       {
         ceremonyYear: year,
         category: "Short Film (Animated)",
         nominee: "Letter to a Pig",
-        isWinner: false
+        isWinner: false,
+        eligibilityYear: year -1
       },
       {
         ceremonyYear: year,
         category: "Short Film (Animated)",
         nominee: "Ninety-Five Senses",
-        isWinner: false
+        isWinner: false,
+        eligibilityYear: year -1
       },
       {
         ceremonyYear: year,
         category: "Short Film (Animated)",
         nominee: "Our Uniform",
-        isWinner: false
+        isWinner: false,
+        eligibilityYear: year -1
       },
       {
         ceremonyYear: year,
         category: "Short Film (Animated)",
         nominee: "Pachyderme",
-        isWinner: false
+        isWinner: false,
+        eligibilityYear: year -1
       },
       {
         ceremonyYear: year,
         category: "Short Film (Animated)",
         nominee: "War Is Over! Inspired by the Music of John & Yoko",
-        isWinner: false
+        isWinner: false,
+        eligibilityYear: year -1
       },
       // Short Film (Live Action) (5 nominees)
       {
         ceremonyYear: year,
         category: "Short Film (Live Action)",
         nominee: "The After",
-        isWinner: false
+        isWinner: false,
+        eligibilityYear: year -1
       },
       {
         ceremonyYear: year,
         category: "Short Film (Live Action)",
         nominee: "Invincible",
-        isWinner: false
+        isWinner: false,
+        eligibilityYear: year -1
       },
       {
         ceremonyYear: year,
         category: "Short Film (Live Action)",
         nominee: "Knight of Fortune",
-        isWinner: false
+        isWinner: false,
+        eligibilityYear: year -1
       },
       {
         ceremonyYear: year,
         category: "Short Film (Live Action)",
         nominee: "Red, White and Blue",
-        isWinner: false
+        isWinner: false,
+        eligibilityYear: year -1
       },
       {
         ceremonyYear: year,
         category: "Short Film (Live Action)",
         nominee: "The Wonderful Story of Henry Sugar",
-        isWinner: false
+        isWinner: false,
+        eligibilityYear: year -1
       },
       // Sound (5 nominees)
       {
         ceremonyYear: year,
         category: "Sound",
         nominee: "The Creator",
-        isWinner: false
+        isWinner: false,
+        eligibilityYear: year -1
       },
       {
         ceremonyYear: year,
         category: "Sound",
         nominee: "Maestro",
-        isWinner: false
-},
+        isWinner: false,
+        eligibilityYear: year -1
+      },
       {
         ceremonyYear: year,
         category: "Sound",
         nominee: "Mission: Impossible - Dead Reckoning Part One",
-        isWinner: false
+        isWinner: false,
+        eligibilityYear: year -1
       },
       {
         ceremonyYear: year,
         category: "Sound",
         nominee: "Oppenheimer",
-        isWinner: false
+        isWinner: false,
+        eligibilityYear: year -1
       },
       {
         ceremonyYear: year,
         category: "Sound",
         nominee: "The Zone of Interest",
-        isWinner: false
+        isWinner: false,
+        eligibilityYear: year -1
       },
       // Visual Effects (5 nominees)
       {
         ceremonyYear: year,
         category: "Visual Effects",
         nominee: "The Creator",
-        isWinner: false
+        isWinner: false,
+        eligibilityYear: year -1
       },
       {
         ceremonyYear: year,
         category: "Visual Effects",
         nominee: "Godzilla Minus One",
-        isWinner: false
+        isWinner: false,
+        eligibilityYear: year -1
       },
       {
         ceremonyYear: year,
         category: "Visual Effects",
         nominee: "Guardians of the Galaxy Vol. 3",
-        isWinner: false
+        isWinner: false,
+        eligibilityYear: year -1
       },
       {
         ceremonyYear: year,
         category: "Visual Effects",
         nominee: "Mission: Impossible - Dead Reckoning Part One",
-        isWinner: false
+        isWinner: false,
+        eligibilityYear: year -1
       },
       {
         ceremonyYear: year,
         category: "Visual Effects",
         nominee: "Napoleon",
-        isWinner: false
+        isWinner: false,
+        eligibilityYear: year -1
       },
       // Writing (Adapted Screenplay) (5 nominees)
       {
         ceremonyYear: year,
         category: "Writing (Adapted Screenplay)",
         nominee: "American Fiction",
-        isWinner: false
+        isWinner: false,
+        eligibilityYear: year -1
       },
       {
         ceremonyYear: year,
         category: "Writing (Adapted Screenplay)",
         nominee: "Barbie",
-        isWinner: false
+        isWinner: false,
+        eligibilityYear: year -1
       },
       {
         ceremonyYear: year,
         category: "Writing (Adapted Screenplay)",
         nominee: "Oppenheimer",
-        isWinner: false
+        isWinner: false,
+        eligibilityYear: year -1
       },
       {
         ceremonyYear: year,
         category: "Writing (Adapted Screenplay)",
         nominee: "Poor Things",
-        isWinner: false
+        isWinner: false,
+        eligibilityYear: year -1
       },
       {
         ceremonyYear: year,
         category: "Writing (Adapted Screenplay)",
         nominee: "The Zone of Interest",
-        isWinner: false
+        isWinner: false,
+        eligibilityYear: year -1
       },
       // Writing (Original Screenplay) (5 nominees)
       {
         ceremonyYear: year,
         category: "Writing (Original Screenplay)",
         nominee: "Anatomy of a Fall",
-        isWinner: false
+        isWinner: false,
+        eligibilityYear: year -1
       },
       {
         ceremonyYear: year,
         category: "Writing (Original Screenplay)",
         nominee: "The Holdovers",
-        isWinner: false
+        isWinner: false,
+        eligibilityYear: year -1
       },
       {
         ceremonyYear: year,
         category: "Writing (Original Screenplay)",
         nominee: "May December",
-        isWinner: false
+        isWinner: false,
+        eligibilityYear: year -1
       },
       {
         ceremonyYear: year,
         category: "Writing (Original Screenplay)",
         nominee: "Past Lives",
-        isWinner: false
+        isWinner: false,
+        eligibilityYear: year -1
       },
       {
         ceremonyYear: year,
         category: "Writing (Original Screenplay)",
         nominee: "Maestro",
-        isWinner: false
+        isWinner: false,
+        eligibilityYear: year -1
       }
     ];
 
