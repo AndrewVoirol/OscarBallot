@@ -163,11 +163,45 @@ export class OscarSyncService {
           if (results.length) {
             const match = await this.findBestMatchWithAI(title, results, year, category, eligibilityYear);
             if (match) {
-              console.log(`✓ Found match for "${movieTitle}": ${match.title}`);
-              return match;
+              console.log(`✓ Found match for "${movieTitle}": ${match.title} (ID: ${match.id})`);
+              // Fetch additional details immediately
+              try {
+                const detailsResponse = await axios.get(
+                  `${this.tmdbBaseUrl}/movie/${match.id}`,
+                  {
+                    headers: this.headers,
+                    params: { 
+                      append_to_response: 'credits,images,alternative_titles',
+                      include_image_language: 'en,null'
+                    }
+                  }
+                );
+
+                // Enhance the match with additional data
+                return {
+                  ...match,
+                  poster_path: detailsResponse.data.poster_path || match.poster_path,
+                  backdrop_path: detailsResponse.data.backdrop_path || match.backdrop_path,
+                  // Add any additional fields from detailed response
+                  images: detailsResponse.data.images,
+                  credits: detailsResponse.data.credits,
+                  alternative_titles: detailsResponse.data.alternative_titles
+                };
+              } catch (error) {
+                console.error(`Error fetching additional details for ${match.title}:`, error);
+                return match; // Return basic match if details fetch fails
+              }
             }
           }
+
+          // Add delay between searches only if we haven't found a match
+          await this.handleRateLimit();
         }
+      }
+
+      if (attempt < this.RETRY_ATTEMPTS - 1) {
+        console.log(`Retry ${attempt + 1} for "${movieTitle}"`);
+        await new Promise(resolve => setTimeout(resolve, this.RETRY_DELAY));
       }
     }
 
@@ -286,7 +320,7 @@ Explanation: The selected movie should be the Oscar-nominated work that was rele
   // Method to sync a nominee with TMDB data
   async syncNominee(nomination: OscarNomination): Promise<InsertNominee | null> {
     try {
-      console.log(`Syncing nominee: ${nomination.nominee} (${nomination.category})`);
+      console.log(`\nSyncing nominee: ${nomination.nominee} (${nomination.category})`);
 
       // Create base nominee record with required fields
       const baseNominee: InsertNominee = {
@@ -350,73 +384,69 @@ Explanation: The selected movie should be the Oscar-nominated work that was rele
         return baseNominee;
       }
 
+      // Generate AI description using Gemini
+      let aiDescription = "";
       try {
-        // Generate AI description using Gemini
         const model = this.genAI.getGenerativeModel({ model: "gemini-pro" });
         const descriptionPrompt = `Generate a concise description for the Oscar-nominated ${
           nomination.category.includes("Actor") || nomination.category.includes("Actress") ?
             "performance in" : "work"} "${nomination.nominee}" (${nomination.ceremonyYear}).
-      Focus on its Oscar-nominated aspects for the category "${nomination.category}".
-      Include critical reception and any notable achievements. Keep it under 200 words.`;
+        Focus on its Oscar-nominated aspects for the category "${nomination.category}".
+        Include critical reception and any notable achievements. Keep it under 200 words.`;
 
-        const aiDescription = await model.generateContent(descriptionPrompt)
+        aiDescription = await model.generateContent(descriptionPrompt)
           .then(result => result.response.text())
           .catch(error => {
             console.error("Error generating AI description:", error);
             return "";
           });
-
-        // Get additional details if it's a movie
-        let details = {};
-        if (!nomination.category.includes("Actor") && !nomination.category.includes("Actress")) {
-          try {
-            const detailsResponse = await axios.get(
-              `${this.tmdbBaseUrl}/movie/${tmdbData.id}`,
-              {
-                headers: this.headers,
-                params: { append_to_response: 'credits,alternative_titles' }
-              }
-            );
-            details = detailsResponse.data;
-            await this.handleRateLimit();
-          } catch (error) {
-            console.error(`Error fetching details for ${nomination.nominee}:`, error);
-          }
-        }
-
-        return {
-          ...baseNominee,
-          description: tmdbData.overview || baseNominee.description,
-          poster: tmdbData.poster_path ? `https://image.tmdb.org/t/p/w500${tmdbData.poster_path}` : baseNominee.poster,
-          tmdbId: tmdbData.id,
-          runtime: (details as any)?.runtime || baseNominee.runtime,
-          releaseDate: tmdbData.release_date || baseNominee.releaseDate,
-          voteAverage: Math.round(tmdbData.vote_average * 10),
-          backdropPath: tmdbData.backdrop_path ? `https://image.tmdb.org/t/p/original${tmdbData.backdrop_path}` : baseNominee.backdropPath,
-          genres: (details as any)?.genres?.map((g: any) => g.name) || baseNominee.genres,
-          productionCompanies: (details as any)?.production_companies || baseNominee.productionCompanies,
-          extendedCredits: {
-            cast: (details as any)?.credits?.cast || [],
-            crew: (details as any)?.credits?.crew || []
-          },
-          aiGeneratedDescription: aiDescription || baseNominee.aiGeneratedDescription,
-          aiMatchConfidence: 100,
-          alternativeTitles: (details as any)?.alternative_titles?.titles?.map((t: any) => t.title) || baseNominee.alternativeTitles,
-          originalLanguage: (details as any)?.original_language || baseNominee.originalLanguage,
-          originalTitle: (details as any)?.original_title || baseNominee.originalTitle,
-          dataSource: {
-            tmdb: { lastUpdated: new Date().toISOString(), version: "4.0" },
-            imdb: null,
-            wikidata: null
-          }
-        };
       } catch (error) {
-        console.error(`Error enriching nominee data for ${nomination.nominee}:`, error);
-        return baseNominee;
+        console.error("Error with AI description generation:", error);
       }
+
+      // Construct the enhanced nominee data
+      const enhancedNominee: InsertNominee = {
+        ...baseNominee,
+        description: tmdbData.overview || baseNominee.description,
+        poster: tmdbData.poster_path ? 
+          `https://image.tmdb.org/t/p/original${tmdbData.poster_path}` : 
+          baseNominee.poster,
+        tmdbId: tmdbData.id,
+        runtime: (tmdbData as any).runtime || baseNominee.runtime,
+        releaseDate: tmdbData.release_date || baseNominee.releaseDate,
+        voteAverage: Math.round(tmdbData.vote_average * 10),
+        backdropPath: tmdbData.backdrop_path ? 
+          `https://image.tmdb.org/t/p/original${tmdbData.backdrop_path}` : 
+          baseNominee.backdropPath,
+        genres: (tmdbData as any).genres?.map((g: any) => g.name) || baseNominee.genres,
+        productionCompanies: (tmdbData as any).production_companies || baseNominee.productionCompanies,
+        extendedCredits: {
+          cast: (tmdbData as any).credits?.cast?.slice(0, 10) || [],
+          crew: (tmdbData as any).credits?.crew?.slice(0, 10) || []
+        },
+        aiGeneratedDescription: aiDescription || baseNominee.aiGeneratedDescription,
+        aiMatchConfidence: 100,
+        alternativeTitles: (tmdbData as any).alternative_titles?.titles?.map((t: any) => t.title) || 
+          baseNominee.alternativeTitles,
+        originalLanguage: (tmdbData as any).original_language || baseNominee.originalLanguage,
+        originalTitle: (tmdbData as any).original_title || baseNominee.originalTitle,
+        dataSource: {
+          tmdb: { 
+            lastUpdated: new Date().toISOString(), 
+            version: "4.0" 
+          },
+          imdb: null,
+          wikidata: null
+        },
+        lastUpdated: new Date()
+      };
+
+      console.log(`✓ Successfully processed ${nomination.nominee} with TMDB ID: ${tmdbData.id}`);
+      return enhancedNominee;
+
     } catch (error) {
       console.error(`Error syncing nominee ${nomination.nominee}:`, error);
-      return baseNominee;
+      return null;
     }
   }
 
@@ -914,7 +944,7 @@ Explanation: The selected movie should be the Oscar-nominated work that was rele
         category: "International Feature Film",
         nominee: "Perfect Days (Japan)",
         isWinner: false,
-        eligibilityYear: year - 1
+        eligibilityYear: year -1
       },
       {
         ceremonyYear: year,
