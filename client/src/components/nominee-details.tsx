@@ -25,9 +25,8 @@ export function NomineeDetails({ nominee }: NomineeDetailsProps) {
 
   const getImageUrl = (path: string | null | undefined) => {
     if (!path) return undefined;
-    // Ensure path starts with '/' for TMDB API
-    const cleanPath = path.startsWith('/') ? path : `/${path}`;
-    return `https://image.tmdb.org/t/p/w500${cleanPath}`;
+    if (path.startsWith('http')) return path;
+    return `https://image.tmdb.org/t/p/w500${path.startsWith('/') ? path : `/${path}`}`;
   };
 
   const handleImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
@@ -54,7 +53,7 @@ export function NomineeDetails({ nominee }: NomineeDetailsProps) {
           <div className="shrink-0 w-40 md:w-48">
             <div className="aspect-[2/3] relative bg-muted rounded-lg overflow-hidden shadow-lg">
               <img
-                src={nominee.poster}
+                src={getImageUrl(nominee.poster)}
                 alt={nominee.name}
                 className="absolute inset-0 w-full h-full object-cover"
                 onError={handleImageError}
@@ -139,11 +138,13 @@ export function NomineeDetails({ nominee }: NomineeDetailsProps) {
                       {nominee.extendedCredits?.cast?.slice(0, 12)?.map((member) => (
                         <div key={`${nominee.id}-cast-${member.id}`} className="flex items-center gap-3">
                           <Avatar className="h-14 w-14">
-                            <AvatarImage
-                              src={member.profileImage}
-                              alt={member.name}
-                              className="object-cover"
-                            />
+                            {member.profileImage && (
+                              <AvatarImage
+                                src={getImageUrl(member.profileImage)}
+                                alt={member.name}
+                                className="object-cover"
+                              />
+                            )}
                             <AvatarFallback>
                               <User className="h-6 w-6 text-muted-foreground" />
                             </AvatarFallback>
@@ -174,11 +175,13 @@ export function NomineeDetails({ nominee }: NomineeDetailsProps) {
                         ?.map((member) => (
                           <div key={`${nominee.id}-crew-${member.id}-${member.job}`} className="flex items-center gap-3">
                             <Avatar className="h-14 w-14">
-                              <AvatarImage
-                                src={member.profileImage}
-                                alt={member.name}
-                                className="object-cover"
-                              />
+                              {member.profileImage && (
+                                <AvatarImage
+                                  src={getImageUrl(member.profileImage)}
+                                  alt={member.name}
+                                  className="object-cover"
+                                />
+                              )}
                               <AvatarFallback>
                                 <User className="h-6 w-6 text-muted-foreground" />
                               </AvatarFallback>
@@ -194,26 +197,6 @@ export function NomineeDetails({ nominee }: NomineeDetailsProps) {
                 </AccordionItem>
               )}
 
-              {/* Fun Facts Section */}
-              {nominee.funFacts && nominee.funFacts.length > 0 && (
-                <AccordionItem value="funFacts">
-                  <AccordionTrigger className="flex items-center gap-2">
-                    <LightbulbIcon className="h-4 w-4" />
-                    Fun Facts
-                  </AccordionTrigger>
-                  <AccordionContent>
-                    <ul className="space-y-2">
-                      {nominee.funFacts.map((fact, index) => (
-                        <li key={`${nominee.id}-fact-${index}`} className="flex items-start gap-2">
-                          <span className="text-primary">•</span>
-                          <span>{fact}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </AccordionContent>
-                </AccordionItem>
-              )}
-
               {/* Production Companies Section */}
               {nominee.productionCompanies && nominee.productionCompanies.length > 0 && (
                 <AccordionItem value="production">
@@ -222,10 +205,10 @@ export function NomineeDetails({ nominee }: NomineeDetailsProps) {
                     <div className="grid grid-cols-2 gap-6">
                       {nominee.productionCompanies.map((company) => (
                         <div key={`${nominee.id}-company-${company.id}`} className="flex items-center gap-3">
-                          {company.logo_path ? (
+                          {company.logoPath ? (
                             <div className="h-12 w-24 relative bg-white/5 rounded-lg p-2 flex items-center justify-center">
                               <img
-                                src={getImageUrl(company.logo_path)}
+                                src={getImageUrl(company.logoPath)}
                                 alt={company.name}
                                 className="max-h-full max-w-full object-contain"
                                 onError={handleImageError}
