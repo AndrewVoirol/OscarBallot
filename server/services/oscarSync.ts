@@ -15,9 +15,10 @@ const CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours
 export class OscarSyncService {
   private readonly tmdbToken: string;
   private readonly tmdbBaseUrl = "https://api.themoviedb.org/4";
+  private readonly tmdbImageBaseUrl = "https://image.tmdb.org/t/p";
   private readonly genAI: GoogleGenerativeAI;
-  private readonly BATCH_SIZE = 5;
-  private readonly RATE_LIMIT_DELAY = 500; // Reduced to 500ms
+  private readonly BATCH_SIZE = 10; // Increased for efficiency
+  private readonly RATE_LIMIT_DELAY = 250; // Reduced to optimize speed
   private readonly RETRY_ATTEMPTS = 3;
   private readonly RETRY_DELAY = 1000;
   private readonly headers: Record<string, string>;
@@ -36,6 +37,11 @@ export class OscarSyncService {
       'Authorization': `Bearer ${this.tmdbToken}`,
       'Content-Type': 'application/json;charset=utf-8'
     };
+  }
+
+  private formatImageUrl(path: string | null, size: string = 'original'): string {
+    if (!path) return '';
+    return `${this.tmdbImageBaseUrl}/${size}${path}`;
   }
 
   private async initializeSync(totalItems: number) {
@@ -88,10 +94,12 @@ export class OscarSyncService {
     const cached = tmdbCache.get(cacheKey);
 
     if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+      console.log(`Cache hit for: ${config.query}`);
       return cached.data ? [cached.data] : [];
     }
 
     try {
+      console.log(`Fetching TMDB data for: ${config.query}`);
       const response = await axios.get(`${this.tmdbBaseUrl}/search/${config.searchType}`, {
         headers: this.headers,
         params: {
@@ -100,26 +108,55 @@ export class OscarSyncService {
           include_adult: false,
           language: config.language || 'en-US',
           region: config.region || 'US',
-          page: 1
+          page: 1,
+          append_to_response: 'images,credits,alternative_titles'
         }
       });
 
-      await this.handleRateLimit();
+      if (response.data.results?.[0]) {
+        // Get additional details for the first result
+        const movieId = response.data.results[0].id;
+        const detailsResponse = await axios.get(
+          `${this.tmdbBaseUrl}/movie/${movieId}`,
+          {
+            headers: this.headers,
+            params: {
+              append_to_response: 'credits,images,alternative_titles,videos',
+              include_image_language: 'en,null'
+            }
+          }
+        );
 
-      if (response.data.results[0]) {
+        const enhancedResult = {
+          ...response.data.results[0],
+          ...detailsResponse.data,
+          poster_path: this.formatImageUrl(detailsResponse.data.poster_path),
+          backdrop_path: this.formatImageUrl(detailsResponse.data.backdrop_path),
+          images: {
+            ...detailsResponse.data.images,
+            posters: detailsResponse.data.images?.posters?.map((p: any) => ({
+              ...p,
+              file_path: this.formatImageUrl(p.file_path)
+            }))
+          },
+          credits: detailsResponse.data.credits,
+          videos: detailsResponse.data.videos
+        };
+
         tmdbCache.set(cacheKey, {
-          data: response.data.results[0],
+          data: enhancedResult,
           timestamp: Date.now()
         });
+
+        return [enhancedResult];
       }
 
-      return response.data.results;
+      return [];
     } catch (error) {
       if (axios.isAxiosError(error)) {
         if (error.response?.status === 429) {
           console.log('Rate limit hit, waiting before retry...');
-          const retryAfter = parseInt(error.response.headers['retry-after'] || '1');
-          await new Promise(resolve => setTimeout(resolve, (retryAfter + 1) * 1000));
+          await new Promise(resolve => setTimeout(resolve, this.RATE_LIMIT_DELAY * 4));
           return this.searchTMDBWithCache(config);
         }
       }
@@ -134,7 +171,6 @@ export class OscarSyncService {
 
   private async searchTMDB(title: string, year: string, category: string): Promise<TMDBSearchResult | null> {
     const movieTitle = this.extractMovieTitle(title, category);
-    // Only log initial search attempt
     console.log(`Starting TMDB search for: ${movieTitle} (${year})`);
 
     const searchType = this.getCategorySearchType(category);
@@ -152,60 +188,36 @@ export class OscarSyncService {
     ];
 
     for (let attempt = 0; attempt < this.RETRY_ATTEMPTS; attempt++) {
-      for (const strategy of searchStrategies) {
-        for (const language of searchLanguages) {
-          const results = await this.searchTMDBWithCache({
-            ...strategy,
-            searchType,
-            language
-          });
+      try {
+        for (const strategy of searchStrategies) {
+          for (const language of searchLanguages) {
+            const results = await this.searchTMDBWithCache({
+              ...strategy,
+              searchType,
+              language
+            });
 
-          if (results.length) {
-            const match = await this.findBestMatchWithAI(title, results, year, category, eligibilityYear);
-            if (match) {
-              console.log(`✓ Found match for "${movieTitle}": ${match.title} (ID: ${match.id})`);
-              // Fetch additional details immediately
-              try {
-                const detailsResponse = await axios.get(
-                  `${this.tmdbBaseUrl}/movie/${match.id}`,
-                  {
-                    headers: this.headers,
-                    params: { 
-                      append_to_response: 'credits,images,alternative_titles',
-                      include_image_language: 'en,null'
-                    }
-                  }
-                );
-
-                // Enhance the match with additional data
-                return {
-                  ...match,
-                  poster_path: detailsResponse.data.poster_path || match.poster_path,
-                  backdrop_path: detailsResponse.data.backdrop_path || match.backdrop_path,
-                  // Add any additional fields from detailed response
-                  images: detailsResponse.data.images,
-                  credits: detailsResponse.data.credits,
-                  alternative_titles: detailsResponse.data.alternative_titles
-                };
-              } catch (error) {
-                console.error(`Error fetching additional details for ${match.title}:`, error);
-                return match; // Return basic match if details fetch fails
+            if (results.length) {
+              const match = await this.findBestMatchWithAI(title, results, year, category, eligibilityYear);
+              if (match) {
+                console.log(`✓ Found match for "${movieTitle}": ${match.title} (ID: ${match.id})`);
+                return match;
               }
             }
+
+            // Add small delay between searches
+            await this.handleRateLimit();
           }
-
-          // Add delay between searches only if we haven't found a match
-          await this.handleRateLimit();
         }
-      }
-
-      if (attempt < this.RETRY_ATTEMPTS - 1) {
-        console.log(`Retry ${attempt + 1} for "${movieTitle}"`);
-        await new Promise(resolve => setTimeout(resolve, this.RETRY_DELAY));
+      } catch (error) {
+        console.error(`Error in search attempt ${attempt + 1} for "${movieTitle}":`, error);
+        if (attempt < this.RETRY_ATTEMPTS - 1) {
+          console.log(`Retrying search for "${movieTitle}" after delay...`);
+          await new Promise(resolve => setTimeout(resolve, this.RETRY_DELAY * (attempt + 1)));
+        }
       }
     }
 
-    // Only log if no match found after all attempts
     console.log(`✗ No match found for: ${movieTitle}`);
     return null;
   }
@@ -316,7 +328,6 @@ Explanation: The selected movie should be the Oscar-nominated work that was rele
     return variations[title] || title;
   }
 
-
   // Method to sync a nominee with TMDB data
   async syncNominee(nomination: OscarNomination): Promise<InsertNominee | null> {
     try {
@@ -404,42 +415,68 @@ Explanation: The selected movie should be the Oscar-nominated work that was rele
         console.error("Error with AI description generation:", error);
       }
 
-      // Construct the enhanced nominee data
+      // Construct the enhanced nominee data with proper image URLs
       const enhancedNominee: InsertNominee = {
         ...baseNominee,
         description: tmdbData.overview || baseNominee.description,
-        poster: tmdbData.poster_path ? 
-          `https://image.tmdb.org/t/p/original${tmdbData.poster_path}` : 
-          baseNominee.poster,
+        poster: tmdbData.poster_path || baseNominee.poster,
         tmdbId: tmdbData.id,
-        runtime: (tmdbData as any).runtime || baseNominee.runtime,
+        runtime: tmdbData.runtime || baseNominee.runtime,
         releaseDate: tmdbData.release_date || baseNominee.releaseDate,
         voteAverage: Math.round(tmdbData.vote_average * 10),
-        backdropPath: tmdbData.backdrop_path ? 
-          `https://image.tmdb.org/t/p/original${tmdbData.backdrop_path}` : 
-          baseNominee.backdropPath,
-        genres: (tmdbData as any).genres?.map((g: any) => g.name) || baseNominee.genres,
-        productionCompanies: (tmdbData as any).production_companies || baseNominee.productionCompanies,
+        backdropPath: tmdbData.backdrop_path || baseNominee.backdropPath,
+        genres: tmdbData.genres?.map((g: any) => g.name) || baseNominee.genres,
+        productionCompanies: tmdbData.production_companies?.map((company: any) => ({
+          id: company.id,
+          name: company.name,
+          logoPath: this.formatImageUrl(company.logo_path, 'w500'),
+          originCountry: company.origin_country
+        })) || baseNominee.productionCompanies,
         extendedCredits: {
-          cast: (tmdbData as any).credits?.cast?.slice(0, 10) || [],
-          crew: (tmdbData as any).credits?.crew?.slice(0, 10) || []
+          cast: tmdbData.credits?.cast?.slice(0, 10).map((member: any) => ({
+            id: member.id,
+            name: member.name,
+            character: member.character,
+            profileImage: this.formatImageUrl(member.profile_path, 'w500')
+          })) || [],
+          crew: tmdbData.credits?.crew?.slice(0, 10).map((member: any) => ({
+            id: member.id,
+            name: member.name,
+            job: member.job,
+            department: member.department,
+            profileImage: this.formatImageUrl(member.profile_path, 'w500')
+          })) || []
         },
         aiGeneratedDescription: aiDescription || baseNominee.aiGeneratedDescription,
         aiMatchConfidence: 100,
-        alternativeTitles: (tmdbData as any).alternative_titles?.titles?.map((t: any) => t.title) || 
+        alternativeTitles: tmdbData.alternative_titles?.titles?.map((t: any) => t.title) ||
           baseNominee.alternativeTitles,
-        originalLanguage: (tmdbData as any).original_language || baseNominee.originalLanguage,
-        originalTitle: (tmdbData as any).original_title || baseNominee.originalTitle,
+        originalLanguage: tmdbData.original_language || baseNominee.originalLanguage,
+        originalTitle: tmdbData.original_title || baseNominee.originalTitle,
         dataSource: {
-          tmdb: { 
-            lastUpdated: new Date().toISOString(), 
-            version: "4.0" 
+          tmdb: {
+            lastUpdated: new Date().toISOString(),
+            version: "4.0",
+            imageUrls: {
+              poster: tmdbData.poster_path,
+              backdrop: tmdbData.backdrop_path,
+              logos: tmdbData.production_companies?.map((c: any) => c.logo_path) || []
+            }
           },
           imdb: null,
           wikidata: null
         },
         lastUpdated: new Date()
       };
+
+      // Add trailer URL if available
+      const trailer = tmdbData.videos?.results?.find(
+        (video: any) => video.site === "YouTube" &&
+        (video.type === "Trailer" || video.type === "Teaser")
+      );
+      if (trailer) {
+        enhancedNominee.trailerUrl = `https://www.youtube.com/embed/${trailer.key}`;
+      }
 
       console.log(`✓ Successfully processed ${nomination.nominee} with TMDB ID: ${tmdbData.id}`);
       return enhancedNominee;
@@ -894,8 +931,7 @@ Explanation: The selected movie should be the Oscar-nominated work that was rele
         nominee: "Nǎi Nai & Wài Pó",
         isWinner: false,
         eligibilityYear: year - 1
-      },
-      // Film Editing (5 nominees)
+      },      // Film Editing (5 nominees)
       {
         ceremonyYear: year,
         category: "Film Editing",
@@ -944,7 +980,7 @@ Explanation: The selected movie should be the Oscar-nominated work that was rele
         category: "International Feature Film",
         nominee: "Perfect Days (Japan)",
         isWinner: false,
-        eligibilityYear: year -1
+        eligibilityYear: year - 1
       },
       {
         ceremonyYear: year,
