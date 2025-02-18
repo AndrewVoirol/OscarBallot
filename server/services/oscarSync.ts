@@ -1,17 +1,27 @@
-import { type Nominee, type InsertNominee } from "@shared/schema";
+import { type Nominee, type InsertNominee, syncStatus } from "@shared/schema";
 import axios from "axios";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { type TMDBSearchResult, type OscarNomination } from "@shared/schema";
+import { db, eq } from "../db";
+
+// Simple in-memory cache
+const tmdbCache = new Map<string, {
+  data: TMDBSearchResult | null;
+  timestamp: number;
+}>();
+
+const CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours
 
 export class OscarSyncService {
   private readonly tmdbToken: string;
   private readonly tmdbBaseUrl = "https://api.themoviedb.org/4";
   private readonly genAI: GoogleGenerativeAI;
-  private readonly BATCH_SIZE = 3;
-  private readonly RATE_LIMIT_DELAY = 1000; // 1 second between requests
+  private readonly BATCH_SIZE = 5;
+  private readonly RATE_LIMIT_DELAY = 500; // Reduced to 500ms
   private readonly RETRY_ATTEMPTS = 3;
   private readonly RETRY_DELAY = 1000;
   private readonly headers: Record<string, string>;
+  private currentSyncId: number | null = null;
 
   constructor() {
     if (!process.env.TMDB_ACCESS_TOKEN) {
@@ -28,13 +38,59 @@ export class OscarSyncService {
     };
   }
 
-  private async searchTMDBWithConfig(config: {
+  private async initializeSync(totalItems: number) {
+    const [status] = await db.insert(syncStatus).values({
+      lastSyncStarted: new Date(),
+      syncType: 'full',
+      totalItems,
+      processedItems: 0,
+      failedItems: 0,
+      status: 'in_progress',
+      metadata: {
+        currentBatch: 0,
+        totalBatches: Math.ceil(totalItems / this.BATCH_SIZE)
+      }
+    }).returning();
+
+    this.currentSyncId = status.id;
+    return status;
+  }
+
+  private async updateSyncProgress(processedItems: number, failedItems: number, currentBatch: number) {
+    if (!this.currentSyncId) return;
+
+    await db.update(syncStatus)
+      .set({
+        processedItems,
+        failedItems,
+        metadata: {
+          currentBatch,
+          totalBatches: Math.ceil(processedItems / this.BATCH_SIZE)
+        },
+        lastSyncCompleted: processedItems === failedItems ? new Date() : undefined,
+        status: processedItems === failedItems ? 'completed' : 'in_progress'
+      })
+      .where(eq(syncStatus.id, this.currentSyncId));
+  }
+
+  private getCacheKey(query: string, year?: number): string {
+    return `${query}:${year || ''}`;
+  }
+
+  private async searchTMDBWithCache(config: {
     query: string,
     year?: number,
     searchType: 'movie' | 'person' | 'multi',
     language?: string,
     region?: string
   }): Promise<TMDBSearchResult[]> {
+    const cacheKey = this.getCacheKey(config.query, config.year);
+    const cached = tmdbCache.get(cacheKey);
+
+    if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+      return cached.data ? [cached.data] : [];
+    }
+
     try {
       const response = await axios.get(`${this.tmdbBaseUrl}/search/${config.searchType}`, {
         headers: this.headers,
@@ -49,6 +105,14 @@ export class OscarSyncService {
       });
 
       await this.handleRateLimit();
+
+      if (response.data.results[0]) {
+        tmdbCache.set(cacheKey, {
+          data: response.data.results[0],
+          timestamp: Date.now()
+        });
+      }
+
       return response.data.results;
     } catch (error) {
       if (axios.isAxiosError(error)) {
@@ -56,12 +120,10 @@ export class OscarSyncService {
           console.log('Rate limit hit, waiting before retry...');
           const retryAfter = parseInt(error.response.headers['retry-after'] || '1');
           await new Promise(resolve => setTimeout(resolve, (retryAfter + 1) * 1000));
-          return this.searchTMDBWithConfig(config);
-        }
-        if (error.response?.status !== 404) {
-          console.error(`TMDB API error for ${config.query}:`, error.message);
+          return this.searchTMDBWithCache(config);
         }
       }
+      console.error(`TMDB API error for ${config.query}:`, error);
       return [];
     }
   }
@@ -92,7 +154,7 @@ export class OscarSyncService {
     for (let attempt = 0; attempt < this.RETRY_ATTEMPTS; attempt++) {
       for (const strategy of searchStrategies) {
         for (const language of searchLanguages) {
-          const results = await this.searchTMDBWithConfig({
+          const results = await this.searchTMDBWithCache({
             ...strategy,
             searchType,
             language
@@ -892,7 +954,7 @@ Explanation: The selected movie should be the Oscar-nominated work that was rele
       },
       {
         ceremonyYear: year,
-        category: "Makeup and Hairstyling",
+        category: "Makeup andHairstyling",
         nominee: "Oppenheimer",
         isWinner: false,
         eligibilityYear: year - 1
@@ -1248,10 +1310,10 @@ Explanation: The selected movie should be the Oscar-nominated work that was rele
     console.log(`Retrieved ${nominations.length} historical nominations`);
 
     // Process in smaller batches with improved rate limiting
-    const BATCH_SIZE = 3;
+    const BATCH_SIZE = 5;
     let successCount = 0;
     let failureCount = 0;
-
+    await this.initializeSync(nominations.length);
     for (let i = 0; i < nominations.length; i += BATCH_SIZE) {
       const batch = nominations.slice(i, i + BATCH_SIZE);
 
@@ -1288,7 +1350,7 @@ Explanation: The selected movie should be the Oscar-nominated work that was rele
       // Count successes and failures
       successCount += results.filter(r => r.status === 'fulfilled' && r.value).length;
       failureCount += results.filter(r => r.status === 'rejected' || (r.status === 'fulfilled' && !r.value)).length;
-
+      await this.updateSyncProgress(successCount + failureCount, failureCount, Math.ceil((i + batch.length) / BATCH_SIZE));
       console.log(`Processed ${i + batch.length}/${nominations.length} nominations`);
       console.log(`Success: ${successCount}, Failed: ${failureCount}`);
     }

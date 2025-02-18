@@ -4,6 +4,8 @@ import { db } from "./db";
 import { eq, and } from "drizzle-orm";
 import createMemoryStore from "memorystore";
 import type { DatabaseError } from "pg";
+import { type SyncStatus, syncStatus } from "@shared/schema";
+import { sql } from 'drizzle-orm';
 
 const MemoryStore = createMemoryStore(session);
 
@@ -18,6 +20,7 @@ export interface IStorage {
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   sessionStore: session.Store;
+  getSyncStatus(): Promise<SyncStatus[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -159,6 +162,18 @@ export class DatabaseStorage implements IStorage {
       return user;
     } catch (error) {
       this.handleDatabaseError(error, 'createUser');
+    }
+  }
+
+  async getSyncStatus(): Promise<SyncStatus[]> {
+    try {
+      return await db
+        .select()
+        .from(syncStatus)
+        .orderBy(sql`${syncStatus.lastSyncStarted} DESC`)
+        .limit(1);
+    } catch (error) {
+      this.handleDatabaseError(error, 'getSyncStatus');
     }
   }
 }
