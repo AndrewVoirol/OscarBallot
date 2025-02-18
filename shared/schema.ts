@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, jsonb, boolean, timestamp, foreignKey } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, jsonb, boolean, timestamp, foreignKey, unique } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -133,6 +133,15 @@ export const nominees = pgTable("nominees", {
     wikidata: null
   }),
   lastUpdated: timestamp("last_updated").notNull().defaultNow(),
+}, (table) => {
+  return {
+    // Add a unique constraint on name, category, and ceremony year
+    nameYearCategoryUnique: unique().on(
+      table.name,
+      table.category,
+      table.ceremonyYear
+    )
+  };
 });
 
 export const ballots = pgTable("ballots", {
