@@ -63,22 +63,17 @@ app.use((req, res, next) => {
   next();
 });
 
+// Global error handler
+app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
+  const status = (err as any).status || (err as any).statusCode || 500;
+  const message = err.message || "Internal Server Error";
+  console.error("Error:", err);
+  res.status(status).json({ message });
+});
+
 (async () => {
   try {
-    // Seed the database on startup
-    console.log("Seeding database...");
-    await seed();
-    console.log("Database seeding completed");
-
     const server = registerRoutes(app);
-
-    app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
-      const status = (err as any).status || (err as any).statusCode || 500;
-      const message = err.message || "Internal Server Error";
-      console.error("Error:", err);
-
-      res.status(status).json({ message });
-    });
 
     if (app.get("env") === "development") {
       await setupVite(app, server);
@@ -88,8 +83,20 @@ app.use((req, res, next) => {
 
     const PORT = process.env.PORT ? parseInt(process.env.PORT) : 5000;
 
+    // Start the server first
     server.listen(PORT, "0.0.0.0", () => {
       log(`Server running on port ${PORT}`);
+
+      // Start database seeding after server is running
+      setTimeout(async () => {
+        try {
+          console.log("Starting database seeding in background...");
+          await seed();
+          console.log("Database seeding completed");
+        } catch (error) {
+          console.error("Error in background seeding:", error);
+        }
+      }, 1000);
     }).on('error', (err: any) => {
       if (err.code === 'EADDRINUSE') {
         const newPort = PORT + 1;

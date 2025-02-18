@@ -179,11 +179,17 @@ Explanation: The selected movie should be the Oscar-nominated work that was rele
       category.includes("Short Film");
   }
 
-  private extractMovieTitle(nominee: string, category: string): string {
+  private extractMovieTitle(nominee: string | undefined, category: string): string {
+    if (!nominee) {
+      console.log("Warning: Received undefined nominee");
+      return "";
+    }
+
     // Handle different nominee formats based on category
     if (category.includes("Actor") || category.includes("Actress") ||
       category.includes("Directing")) {
-      return nominee.split(" (")[1]?.replace(")", "") || nominee;
+      const match = nominee.match(/\((.*?)\)$/);
+      return match ? match[1] : nominee;
     }
     // Handle song nominations
     if (category.includes("Music (Original Song)")) {
@@ -959,12 +965,13 @@ Explanation: The selected movie should be the Oscar-nominated work that was rele
       {
         ceremonyYear: year,
         category: "Music (Original Song)",
-        nomminee: "It Never Went Away (American Symphony)",
+        nominee: "It Never Went Away (American Symphony)",
         isWinner: false,
         eligibilityYear: year - 1
       },
       {
-        ceremonyYear: year,        category: "Music (Original Song)",
+        ceremonyYear: year,
+        category: "Music (Original Song)",
         nominee: "Wahzhazhe (A Song for My People) (Killers of the Flower Moon)",
         isWinner: false,
         eligibilityYear: year - 1

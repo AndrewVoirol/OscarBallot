@@ -3,71 +3,133 @@ import { nominees } from "@shared/schema";
 import { OscarSyncService } from "./services/oscarSync";
 import { sql } from "drizzle-orm";
 
+// Function to get the last processed nominee
+async function getLastProcessedNominee() {
+  try {
+    const [lastNominee] = await db
+      .select()
+      .from(nominees)
+      .orderBy(sql`${nominees.ceremonyYear} DESC, ${nominees.id} DESC`)
+      .limit(1);
+    return lastNominee;
+  } catch (error) {
+    console.error("Error getting last processed nominee:", error);
+    return null;
+  }
+}
+
+async function insertNominee(nominee: any, db: any) {
+  try {
+    const [inserted] = await db
+      .insert(nominees)
+      .values(nominee)
+      .onConflictDoUpdate({
+        target: [nominees.name, nominees.category, nominees.ceremonyYear],
+        set: nominee
+      })
+      .returning();
+    return inserted;
+  } catch (error) {
+    console.error(`Error inserting nominee ${nominee.name}:`, error);
+    throw error;
+  }
+}
+
 // Function to run the heavy sync processes after server start
 async function runBackgroundSync() {
   try {
     const oscarService = new OscarSyncService();
 
-    // Check existing nominees to avoid duplicates
+    // Get current progress
     const existingNominees = await db.select().from(nominees);
     const existingNames = new Set(existingNominees.map(n => n.name));
 
-    // Sync current year (2024) nominees first
-    console.log("\nBackground sync: Starting 2024 Oscar nominees sync...");
+    // Get nominations starting from 2024
+    console.log("\nBackground sync: Starting Oscar nominees sync...");
     const nominations = await oscarService.getNominationsForYear(2024);
-    const currentYearNominees = nominations.filter(nom => !existingNames.has(nom.nominee)); // Skip already processed
+    const remainingNominees = nominations.filter(nom => !existingNames.has(nom.nominee));
 
-    console.log(`Processing ${currentYearNominees.length} remaining nominees...`);
+    console.log(`Processing ${remainingNominees.length} remaining nominees...`);
 
-    // Process in smaller batches
-    for (let i = 0; i < currentYearNominees.length; i += 3) {
-      const batch = currentYearNominees.slice(i, i + 3);
-      await Promise.allSettled(
-        batch.map(async nominee => {
-          try {
-            const syncedNominee = await oscarService.syncNominee(nominee);
-            if (syncedNominee) {
-              await db.insert(nominees).values(syncedNominee);
-              return true;
-            }
-          } catch (error) {
-            console.error(`Failed to sync nominee ${nominee.nominee}:`, error);
+    let processedCount = existingNominees.length;
+    let failedCount = 0;
+    const batchSize = 2; // Reduced batch size to be more conservative
+    const totalBatches = Math.ceil(remainingNominees.length / batchSize);
+
+    for (let i = 0; i < remainingNominees.length; i += batchSize) {
+      const currentBatch = Math.floor(i / batchSize) + 1;
+      console.log(`\nProcessing batch ${currentBatch}/${totalBatches}...`);
+
+      const batch = remainingNominees.slice(i, i + batchSize);
+
+      // Process each nominee with individual error handling
+      for (const nominee of batch) {
+        try {
+          console.log(`Processing: ${nominee.nominee}`);
+          const syncedNominee = await oscarService.syncNominee(nominee);
+
+          if (syncedNominee) {
+            await insertNominee(syncedNominee, db);
+            processedCount++;
+            console.log(`✓ Successfully processed: ${nominee.nominee}`);
+          } else {
+            console.log(`⚠ No data found for: ${nominee.nominee}`);
+            failedCount++;
           }
-          return false;
-        })
-      );
 
-      // Add delay between batches
-      if (i + 3 < currentYearNominees.length) {
-        await new Promise(resolve => setTimeout(resolve, 3000));
+          // Add a delay between each nominee
+          await new Promise(resolve => setTimeout(resolve, 5000));
+        } catch (error) {
+          console.error(`Failed to process: ${nominee.nominee}`, error);
+          failedCount++;
+          // Continue with next nominee despite error
+          continue;
+        }
+      }
+
+      const progress = Math.round((processedCount / (remainingNominees.length + existingNominees.length)) * 100);
+      console.log(`Progress: ${progress}% (${processedCount}/${remainingNominees.length + existingNominees.length} nominees processed)`);
+      console.log(`Failed: ${failedCount} nominees`);
+
+      // Longer delay between batches
+      if (i + batchSize < remainingNominees.length) {
+        console.log("Waiting to avoid rate limits...");
+        await new Promise(resolve => setTimeout(resolve, 10000));
       }
     }
 
-    // Start historical data sync after current year is done
-    console.log("\nBackground sync: Starting historical data sync...");
-    await oscarService.syncHistoricalData(2020, 2023);
+    console.log("\nSync completed!");
+    console.log(`Total processed: ${processedCount}`);
+    console.log(`Total failed: ${failedCount}`);
+
+    return {
+      processed: processedCount,
+      failed: failedCount,
+      total: remainingNominees.length + existingNominees.length
+    };
   } catch (error) {
     console.error("Error in background sync:", error);
+    throw error;
   }
 }
 
-// Main seed function - now just sets up basic data
+// Main seed function - now just sets up basic data and triggers sync
 export async function seed() {
   try {
-    console.log("Starting minimal database seeding...");
+    console.log("Starting database seeding...");
 
-    // Clear existing nominees
-    await db.execute(sql`TRUNCATE TABLE ${nominees}`);
-    console.log("Cleared existing nominees");
+    // Get the last processed nominee to track progress
+    const lastProcessed = await getLastProcessedNominee();
+    if (lastProcessed) {
+      console.log(`Resuming from last processed nominee: ${lastProcessed.name}`);
+    }
 
-    // Start background sync process
-    setTimeout(() => {
-      runBackgroundSync().catch(error => {
-        console.error("Background sync failed:", error);
-      });
-    }, 5000); // Wait 5 seconds after server start
-
-    return { status: "Background sync started" };
+    // Start background sync process immediately
+    const result = await runBackgroundSync();
+    return { 
+      status: "Sync process completed",
+      ...result
+    };
   } catch (error) {
     console.error("Error seeding database:", error);
     throw error;

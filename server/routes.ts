@@ -23,6 +23,17 @@ export function registerRoutes(app: Express): Server {
     message: "Too many requests to update TMDB data, please try again later"
   });
 
+  // Add new sync status endpoint
+  app.get("/api/sync/status", async (_req, res) => {
+    try {
+      const syncStatus = await storage.getSyncStatus();
+      res.json(syncStatus);
+    } catch (error) {
+      console.error("Error fetching sync status:", error);
+      res.status(500).json({ message: "Failed to fetch sync status" });
+    }
+  });
+
   // Public routes for accessing nominee data
   app.get("/api/nominees", async (req, res) => {
     try {
@@ -60,16 +71,21 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // Public endpoint to update TMDB data
+  // Update the TMDB endpoint to be more efficient
   app.post("/api/nominees/update-tmdb", tmdbLimiter, async (_req, res) => {
     try {
       const oscarService = new OscarSyncService();
       const nominees = await storage.getNominees();
 
+      // Process in larger batches for efficiency
+      const batchSize = 5; // Increased from 3
+      const batch = nominees.slice(0, batchSize);
+
       const updates = await Promise.allSettled(
-        nominees.slice(0, 3).map(nominee =>
+        batch.map(nominee =>
           oscarService.syncNominee({
             ceremonyYear: nominee.ceremonyYear,
+            eligibilityYear: nominee.eligibilityYear,
             category: nominee.category,
             nominee: nominee.name,
             isWinner: nominee.isWinner
@@ -80,12 +96,20 @@ export function registerRoutes(app: Express): Server {
       const successCount = updates.filter(r => r.status === 'fulfilled' && r.value).length;
 
       res.json({
-        message: `Updated ${successCount} out of 3 nominees with TMDB data`,
-        status: "success"
+        message: `Updated ${successCount} out of ${batchSize} nominees with TMDB data`,
+        status: "success",
+        details: updates.map((result, index) => ({
+          nominee: batch[index].name,
+          success: result.status === 'fulfilled',
+          error: result.status === 'rejected' ? (result.reason as Error).message : null
+        }))
       });
     } catch (error) {
       console.error("Error updating nominees with TMDB data:", error);
-      res.status(500).json({ message: "Failed to update nominees with TMDB data" });
+      res.status(500).json({ 
+        message: "Failed to update nominees with TMDB data",
+        error: error instanceof Error ? error.message : "Unknown error"
+      });
     }
   });
 
