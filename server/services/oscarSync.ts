@@ -172,9 +172,77 @@ export class OscarSyncService {
 
   private async searchTMDB(title: string, year: string, category: string): Promise<TMDBSearchResult | null> {
     const movieTitle = this.extractMovieTitle(title, category);
-    console.log(`Starting TMDB search for: ${movieTitle} (${year})`);
+    const personName = this.extractPersonName(title, category);
+    console.log(`Starting TMDB search for: ${personName || movieTitle} (${year})`);
 
     const searchType = this.getCategorySearchType(category);
+    if (searchType === 'person' && personName) {
+      try {
+        // Search for the person first
+        const personResponse = await axios.get(`${this.tmdbBaseUrl}/search/person`, {
+          headers: this.headers,
+          params: {
+            query: personName,
+            include_adult: false,
+            language: 'en-US'
+          }
+        });
+
+        if (personResponse.data.results?.[0]) {
+          const personId = personResponse.data.results[0].id;
+
+          // Get detailed person info
+          const detailsResponse = await axios.get(
+            `${this.tmdbBaseUrl}/person/${personId}`,
+            {
+              headers: this.headers,
+              params: {
+                append_to_response: 'movie_credits,images'
+              }
+            }
+          );
+
+          // Find the movie they were nominated for
+          const movieTitle = this.extractMovieTitle(title, category);
+          const relevantMovie = detailsResponse.data.movie_credits.cast.find(
+            (m: any) => m.title.toLowerCase().includes(movieTitle.toLowerCase())
+          ) || detailsResponse.data.movie_credits.crew.find(
+            (m: any) => m.title.toLowerCase().includes(movieTitle.toLowerCase())
+          );
+
+          if (relevantMovie) {
+            // Get full movie details
+            const movieResponse = await axios.get(
+              `${this.tmdbBaseUrl}/movie/${relevantMovie.id}`,
+              {
+                headers: this.headers,
+                params: {
+                  append_to_response: 'credits,images,videos'
+                }
+              }
+            );
+
+            const enhancedResult = {
+              ...movieResponse.data,
+              poster_path: this.formatImageUrl(movieResponse.data.poster_path),
+              backdrop_path: this.formatImageUrl(movieResponse.data.backdrop_path),
+              person_data: {
+                ...detailsResponse.data,
+                profile_path: this.formatImageUrl(detailsResponse.data.profile_path)
+              }
+            };
+
+            return enhancedResult;
+          }
+        }
+        return null;
+      } catch (error) {
+        console.error(`Error searching person: ${personName}`, error);
+        return null;
+      }
+    }
+
+    // For movies and other categories, use existing search logic
     const searchLanguages = this.isInternationalCategory(category) ?
       ['en-US', 'original'] : ['en-US'];
 
@@ -194,7 +262,7 @@ export class OscarSyncService {
           for (const language of searchLanguages) {
             const results = await this.searchTMDBWithCache({
               ...strategy,
-              searchType,
+              searchType: 'movie',
               language
             });
 
@@ -206,14 +274,12 @@ export class OscarSyncService {
               }
             }
 
-            // Add small delay between searches
             await this.handleRateLimit();
           }
         }
       } catch (error) {
         console.error(`Error in search attempt ${attempt + 1} for "${movieTitle}":`, error);
         if (attempt < this.RETRY_ATTEMPTS - 1) {
-          console.log(`Retrying search for "${movieTitle}" after delay...`);
           await new Promise(resolve => setTimeout(resolve, this.RETRY_DELAY * (attempt + 1)));
         }
       }
@@ -223,7 +289,14 @@ export class OscarSyncService {
     return null;
   }
 
-  private async findBestMatchWithAI(
+  private extractPersonName(nominee: string, category: string): string | null {
+    if (category.includes("Actor") || category.includes("Actress") || category.includes("Directing")) {
+      return nominee.split(" (")[0].trim();
+    }
+    return null;
+  }
+
+  private findBestMatchWithAI(
     oscarTitle: string,
     tmdbResults: TMDBSearchResult[],
     ceremonyYear: string,
@@ -259,16 +332,17 @@ If no good match exists within the eligibility window, return "null".
 
 Explanation: The selected movie should be the Oscar-nominated work that was released in the eligibility window and matches the specific Oscar category.`;
 
-    try {
-      const result = await model.generateContent(prompt);
-      const text = result.response.text().trim();
-      if (text === "null") return null;
-      const index = parseInt(text);
-      return isNaN(index) || index >= tmdbResults.length ? null : tmdbResults[index];
-    } catch (error) {
-      console.error("AI matching error:", error);
-      return null;
-    }
+    return model.generateContent(prompt)
+      .then(result => {
+        const text = result.response.text().trim();
+        if (text === "null") return null;
+        const index = parseInt(text);
+        return isNaN(index) || index >= tmdbResults.length ? null : tmdbResults[index];
+      })
+      .catch(error => {
+        console.error("AI matching error:", error);
+        return null;
+      });
   }
 
   private getCategorySearchType(category: string): 'movie' | 'person' | 'multi' {
@@ -842,7 +916,7 @@ Explanation: The selected movie should be the Oscar-nominated work that was rele
       },
       {
         ceremonyYear: year,
-        category: "Directing",
+category: "Directing",
         nominee: "Christopher Nolan (Oppenheimer)",
         isWinner: false,
         eligibilityYear: year - 1
@@ -1451,6 +1525,13 @@ Explanation: The selected movie should be the Oscar-nominated work that was rele
         nominee: "Oppenheimer",
         isWinner: false,
         eligibilityYear: 2023
+      },
+      {
+        ceremonyYear: 2024,
+        category: "Actress in a Supporting Role",
+        nominee: "Emily Blunt",
+        isWinner: false,
+        eligibilityYear: 2023
       }
     ];
   }
@@ -1461,32 +1542,38 @@ Explanation: The selected movie should be the Oscar-nominated work that was rele
     total: number;
   }> {
     try {
-      console.log("\nStarting test sync with Oppenheimer...");
+      // Test specifically with Oppenheimer in different categories
       const testNominations = await this.getTestNominations();
 
+      console.log("\nStarting test sync with Oppenheimer nominations...");
       let processedCount = 0;
       let failedCount = 0;
 
       for (const nominee of testNominations) {
         try {
-          console.log(`Processing: ${nominee.nominee} (${nominee.category})`);
+          console.log(`\nProcessing ${nominee.nominee} for ${nominee.category}`);
           const syncedNominee = await this.syncNominee(nominee);
 
           if (syncedNominee) {
+            console.log('TMDB Data found:', {
+              title: nominee.nominee,
+              category: nominee.category,
+              tmdbId: syncedNominee.tmdbId,
+              posterUrl: syncedNominee.poster,
+              backdropUrl: syncedNominee.backdropPath,
+              hasDescription: !!syncedNominee.description,
+              aiDescription: !!syncedNominee.aiGeneratedDescription
+            });
+
             await insertNominee(syncedNominee, db);
             processedCount++;
-            console.log(`✓ Successfully processed: ${nominee.nominee} - ${nominee.category}`);
-            console.log('Retrieved data:', {
-              tmdbId: syncedNominee.tmdbId,
-              poster: syncedNominee.poster,
-              backdrop: syncedNominee.backdropPath,
-              description: syncedNominee.description?.slice(0, 100) + '...',
-            });
+            console.log(`✓ Successfully processed and stored: ${nominee.nominee} - ${nominee.category}`);
           } else {
-            console.log(`⚠ No data found for: ${nominee.nominee}`);
+            console.log(`✗ No TMDB data found for: ${nominee.nominee}`);
             failedCount++;
           }
 
+          // Add a delay between nominees
           await new Promise(resolve => setTimeout(resolve, 2000));
         } catch (error) {
           console.error(`Failed to process: ${nominee.nominee}`, error);
@@ -1495,8 +1582,7 @@ Explanation: The selected movie should be the Oscar-nominated work that was rele
       }
 
       console.log("\nTest sync completed!");
-      console.log(`Total processed: ${processedCount}`);
-      console.log(`Total failed: ${failedCount}`);
+      console.log(`Processed: ${processedCount}, Failed: ${failedCount}, Total: ${testNominations.length}`);
 
       return {
         processed: processedCount,
@@ -1508,4 +1594,5 @@ Explanation: The selected movie should be the Oscar-nominated work that was rele
       throw error;
     }
   }
+
 }
