@@ -90,8 +90,8 @@ app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
       // Start database seeding after server is running
       setTimeout(async () => {
         try {
-          console.log("Starting database seeding in background...");
-          await seed();
+          console.log("Starting database seeding with cleanup...");
+          await seed(true);
           console.log("Database seeding completed");
         } catch (error) {
           console.error("Error in background seeding:", error);
