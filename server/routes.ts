@@ -229,66 +229,101 @@ export function registerRoutes(app: Express): Server {
   });
 
 
-  // Simplified test endpoint for Oscar sync
+  // Test route for Oppenheimer sync
   app.get("/api/test/sync-oppenheimer", async (_req, res) => {
     try {
       console.log("Starting Oppenheimer sync test...");
 
       // Clear existing test data
       await db.delete(nominees)
-        .where(eq(nominees.name, 'Oppenheimer'))
+        .where(sql`${nominees.name} LIKE '%Oppenheimer%'`)
         .execute();
 
       console.log("Cleared existing Oppenheimer entries");
 
       const oscarService = new OscarSyncService();
 
-      // Test with just one nomination
-      const testNomination = {
-        ceremonyYear: 2024,
-        category: "Best Picture",
-        nominee: "Oppenheimer",
-        isWinner: false,
-        eligibilityYear: 2023
-      };
+      // Test with three different nomination types
+      const testNominations = [
+        {
+          ceremonyYear: 2024,
+          category: "Best Picture",
+          nominee: "Oppenheimer",
+          isWinner: false,
+          eligibilityYear: 2023
+        },
+        {
+          ceremonyYear: 2024,
+          category: "Directing",
+          nominee: "Christopher Nolan (Oppenheimer)",
+          isWinner: false,
+          eligibilityYear: 2023
+        },
+        {
+          ceremonyYear: 2024,
+          category: "Actor in a Leading Role",
+          nominee: "Cillian Murphy (Oppenheimer)",
+          isWinner: false,
+          eligibilityYear: 2023
+        }
+      ];
 
-      console.log("Syncing Oppenheimer data from TMDB...");
-      const syncedNominee = await oscarService.syncNominee(testNomination);
+      console.log("\nProcessing Oppenheimer nominations...");
+      const results = [];
 
-      if (syncedNominee) {
-        console.log("Successfully got TMDB data, inserting into database...");
-        await db.insert(nominees).values(syncedNominee).execute();
+      for (let i = 0; i < testNominations.length; i++) {
+        const nomination = testNominations[i];
+        console.log(`\n[${i + 1}/${testNominations.length}] Processing: ${nomination.nominee} (${nomination.category})`);
 
-        // Fetch the inserted data to verify
-        const savedNominee = await db
-          .select()
-          .from(nominees)
-          .where(eq(nominees.name, 'Oppenheimer'))
-          .execute();
+        const syncedNominee = await oscarService.syncNominee(nomination);
 
-        res.json({
-          success: true,
-          message: "Test sync completed successfully",
-          nominee: {
-            name: savedNominee[0].name,
-            category: savedNominee[0].category,
-            tmdbId: savedNominee[0].tmdbId,
-            poster: savedNominee[0].poster,
-            backdrop: savedNominee[0].backdropPath,
-            description: savedNominee[0].description?.substring(0, 100) + '...',
-            hasImages: !!savedNominee[0].poster && !!savedNominee[0].backdropPath
+        if (syncedNominee) {
+          console.log("Successfully got TMDB data, inserting into database...");
+          try {
+            const [inserted] = await db
+              .insert(nominees)
+              .values(syncedNominee)
+              .returning();
+
+            if (inserted) {
+              const nomineeResult = {
+                name: inserted.name,
+                category: inserted.category,
+                tmdbId: inserted.tmdbId,
+                poster: inserted.poster,
+                backdrop: inserted.backdropPath,
+                description: inserted.description?.substring(0, 100) + '...',
+                hasImages: !!inserted.poster && !!inserted.backdropPath,
+                personImage: inserted.extendedCredits?.cast?.[0]?.profileImage || null
+              };
+
+              results.push(nomineeResult);
+              console.log(`Added to results: ${nomineeResult.name} (${nomineeResult.category})`);
+            }
+          } catch (dbError) {
+            console.error("Database insertion error:", dbError);
           }
-        });
-      } else {
-        res.json({
-          success: false,
-          message: "Failed to sync Oppenheimer data from TMDB",
-          nominee: null
-        });
+        }
+
+        // Add a delay between nominations
+        if (i < testNominations.length - 1) {
+          console.log("Waiting 2 seconds before next nomination...");
+          await new Promise(resolve => setTimeout(resolve, 2000));
+        }
       }
+
+      console.log(`\nProcessed ${results.length} nominations successfully`);
+      console.log("Final results array:", JSON.stringify(results, null, 2));
+
+      // Return array of nominees
+      return res.json({
+        success: true,
+        message: "Test sync completed successfully",
+        nominees: results
+      });
     } catch (error) {
       console.error("Error in Oscar test sync:", error);
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
         error: "Failed to run test sync",
         message: error instanceof Error ? error.message : "Unknown error"
