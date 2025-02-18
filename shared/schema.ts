@@ -2,7 +2,7 @@ import { pgTable, text, serial, integer, jsonb, boolean, timestamp, foreignKey, 
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-// TMDB related types
+// Update the TMDBSearchResult interface to include all needed fields
 export interface TMDBSearchResult {
   id: number;
   title: string;
@@ -11,6 +11,41 @@ export interface TMDBSearchResult {
   poster_path: string | null;
   backdrop_path: string | null;
   vote_average: number;
+  runtime?: number;
+  original_language?: string;
+  original_title?: string;
+  genres?: Array<{ id: number; name: string }>;
+  production_companies?: Array<{
+    id: number;
+    name: string;
+    logo_path: string | null;
+    origin_country: string;
+  }>;
+  credits?: {
+    cast: Array<{
+      id: number;
+      name: string;
+      character: string;
+      profile_path: string | null;
+    }>;
+    crew: Array<{
+      id: number;
+      name: string;
+      job: string;
+      department: string;
+      profile_path: string | null;
+    }>;
+  };
+  videos?: {
+    results: Array<{
+      key: string;
+      site: string;
+      type: string;
+    }>;
+  };
+  alternative_titles?: {
+    titles: Array<{ title: string }>;
+  };
 }
 
 // Enhanced Oscar nomination interface

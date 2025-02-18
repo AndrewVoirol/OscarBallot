@@ -235,8 +235,8 @@ class TMDBClient {
 
         // Sort by score and filter those above threshold
         const bestMatches = scoredResults
-          .filter((result) => result.score > 0.6)
-          .sort((a, b) => b.score - a.score);
+          .filter((result: { score: number }) => result.score > 0.6)
+          .sort((a: { score: number }, b: { score: number }) => b.score - a.score);
 
         if (bestMatches.length > 0) {
           const bestMatch = bestMatches[0].movie;
