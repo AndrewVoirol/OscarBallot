@@ -4,9 +4,11 @@ import { storage } from "./storage";
 import { insertBallotSchema, type User } from "@shared/schema";
 import { setupAuth, requireAuth } from "./auth";
 import rateLimit from 'express-rate-limit';
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { OscarSyncService } from "./services/oscarSync";
 import { seed } from "./seed";
+import { db } from './db';
+import { nominees } from '@shared/schema';
 
 // Update Express Request type to match our User type
 declare module "express" {
@@ -222,6 +224,74 @@ export function registerRoutes(app: Express): Server {
       res.status(500).json({
         error: "Failed to test Oscar sync",
         message: error.message
+      });
+    }
+  });
+
+
+  // Simplified test endpoint for Oscar sync
+  app.get("/api/test/sync-oppenheimer", async (_req, res) => {
+    try {
+      console.log("Starting Oppenheimer sync test...");
+
+      // Clear existing test data
+      await db.delete(nominees)
+        .where(eq(nominees.name, 'Oppenheimer'))
+        .execute();
+
+      console.log("Cleared existing Oppenheimer entries");
+
+      const oscarService = new OscarSyncService();
+
+      // Test with just one nomination
+      const testNomination = {
+        ceremonyYear: 2024,
+        category: "Best Picture",
+        nominee: "Oppenheimer",
+        isWinner: false,
+        eligibilityYear: 2023
+      };
+
+      console.log("Syncing Oppenheimer data from TMDB...");
+      const syncedNominee = await oscarService.syncNominee(testNomination);
+
+      if (syncedNominee) {
+        console.log("Successfully got TMDB data, inserting into database...");
+        await db.insert(nominees).values(syncedNominee).execute();
+
+        // Fetch the inserted data to verify
+        const savedNominee = await db
+          .select()
+          .from(nominees)
+          .where(eq(nominees.name, 'Oppenheimer'))
+          .execute();
+
+        res.json({
+          success: true,
+          message: "Test sync completed successfully",
+          nominee: {
+            name: savedNominee[0].name,
+            category: savedNominee[0].category,
+            tmdbId: savedNominee[0].tmdbId,
+            poster: savedNominee[0].poster,
+            backdrop: savedNominee[0].backdropPath,
+            description: savedNominee[0].description?.substring(0, 100) + '...',
+            hasImages: !!savedNominee[0].poster && !!savedNominee[0].backdropPath
+          }
+        });
+      } else {
+        res.json({
+          success: false,
+          message: "Failed to sync Oppenheimer data from TMDB",
+          nominee: null
+        });
+      }
+    } catch (error) {
+      console.error("Error in Oscar test sync:", error);
+      res.status(500).json({
+        success: false,
+        error: "Failed to run test sync",
+        message: error instanceof Error ? error.message : "Unknown error"
       });
     }
   });
