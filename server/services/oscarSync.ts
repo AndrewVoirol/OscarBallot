@@ -41,7 +41,11 @@ export class OscarSyncService {
 
   private formatImageUrl(path: string | null, size: string = 'original'): string {
     if (!path) return '';
-    return `${this.tmdbImageBaseUrl}/${size}${path}`;
+    // Check if the path is already a full URL
+    if (path.startsWith('http')) return path;
+    // Ensure path starts with '/' if it doesn't already
+    const cleanPath = path.startsWith('/') ? path : `/${path}`;
+    return `${this.tmdbImageBaseUrl}/${size}${cleanPath}`;
   }
 
   private async initializeSync(totalItems: number) {
@@ -923,7 +927,7 @@ Explanation: The selected movie should be the Oscar-nominated work that was rele
         category: "Documentary Short Film",
         nominee: "The Last Repair Shop",
         isWinner: false,
-        eligibilityYear: year - 1
+        eligibilityYear: year -1
       },
       {
         ceremonyYear: year,
