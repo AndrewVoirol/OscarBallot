@@ -15,11 +15,11 @@ const CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours
 
 export class OscarSyncService {
   private readonly tmdbToken: string;
-  private readonly tmdbBaseUrl = "https://api.themoviedb.org/4";
+  private readonly tmdbBaseUrl = "https://api.themoviedb.org/3"; // Changed to v3
   private readonly tmdbImageBaseUrl = "https://image.tmdb.org/t/p";
   private readonly genAI: GoogleGenerativeAI;
-  private readonly BATCH_SIZE = 10; // Increased for efficiency
-  private readonly RATE_LIMIT_DELAY = 250; // Reduced to optimize speed
+  private readonly BATCH_SIZE = 10;
+  private readonly RATE_LIMIT_DELAY = 250;
   private readonly RETRY_ATTEMPTS = 3;
   private readonly RETRY_DELAY = 1000;
   private readonly headers: Record<string, string>;
@@ -42,11 +42,94 @@ export class OscarSyncService {
 
   private formatImageUrl(path: string | null, size: string = 'original'): string {
     if (!path) return '';
-    // Check if the path is already a full URL
     if (path.startsWith('http')) return path;
-    // Ensure path starts with '/' if it doesn't already
     const cleanPath = path.startsWith('/') ? path : `/${path}`;
     return `${this.tmdbImageBaseUrl}/${size}${cleanPath}`;
+  }
+
+  private async searchTMDBWithCache(config: {
+    query: string,
+    year?: number,
+    searchType: 'movie' | 'person' | 'multi',
+    language?: string,
+    region?: string
+  }): Promise<TMDBSearchResult[]> {
+    const cacheKey = this.getCacheKey(config.query, config.year);
+    const cached = tmdbCache.get(cacheKey);
+
+    if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+      console.log(`Cache hit for: ${config.query}`);
+      return cached.data ? [cached.data] : [];
+    }
+
+    try {
+      console.log(`Fetching TMDB data for: ${config.query}`);
+      const response = await axios.get(`${this.tmdbBaseUrl}/search/${config.searchType}`, {
+        headers: this.headers,
+        params: {
+          query: config.query,
+          year: config.year,
+          include_adult: false,
+          language: config.language || 'en-US',
+          region: config.region || 'US',
+          page: 1
+        }
+      });
+
+      if (response.data.results?.[0]) {
+        const movieId = response.data.results[0].id;
+        console.log(`Found movie ID: ${movieId} for ${config.query}`);
+
+        // Get additional details using the movie ID
+        const detailsResponse = await axios.get(
+          `${this.tmdbBaseUrl}/movie/${movieId}`,
+          {
+            headers: this.headers,
+            params: {
+              append_to_response: 'credits,images,alternative_titles,videos',
+              include_image_language: 'en,null'
+            }
+          }
+        );
+
+        const enhancedResult = {
+          ...response.data.results[0],
+          ...detailsResponse.data,
+          poster_path: this.formatImageUrl(detailsResponse.data.poster_path),
+          backdrop_path: this.formatImageUrl(detailsResponse.data.backdrop_path),
+          images: {
+            ...detailsResponse.data.images,
+            posters: detailsResponse.data.images?.posters?.map((p: any) => ({
+              ...p,
+              file_path: this.formatImageUrl(p.file_path)
+            }))
+          }
+        };
+
+        tmdbCache.set(cacheKey, {
+          data: enhancedResult,
+          timestamp: Date.now()
+        });
+
+        return [enhancedResult];
+      }
+
+      return [];
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        console.error(`TMDB API error for ${config.query}:`, error.response?.data || error.message);
+        if (error.response?.status === 429) {
+          console.log('Rate limit hit, waiting before retry...');
+          await new Promise(resolve => setTimeout(resolve, this.RATE_LIMIT_DELAY * 4));
+          return this.searchTMDBWithCache(config);
+        }
+      }
+      throw error;
+    }
+  }
+
+  private getCacheKey(query: string, year?: number): string {
+    return `${query}:${year || ''}`;
   }
 
   private async initializeSync(totalItems: number) {
@@ -83,96 +166,9 @@ export class OscarSyncService {
       })
       .where(eq(syncStatus.id, this.currentSyncId));
   }
-
-  private getCacheKey(query: string, year?: number): string {
-    return `${query}:${year || ''}`;
-  }
-
-  private async searchTMDBWithCache(config: {
-    query: string,
-    year?: number,
-    searchType: 'movie' | 'person' | 'multi',
-    language?: string,
-    region?: string
-  }): Promise<TMDBSearchResult[]> {
-    const cacheKey = this.getCacheKey(config.query, config.year);
-    const cached = tmdbCache.get(cacheKey);
-
-    if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
-      console.log(`Cache hit for: ${config.query}`);
-      return cached.data ? [cached.data] : [];
-    }
-
-    try {
-      console.log(`Fetching TMDB data for: ${config.query}`);
-      const response = await axios.get(`${this.tmdbBaseUrl}/search/${config.searchType}`, {
-        headers: this.headers,
-        params: {
-          query: config.query,
-          year: config.year,
-          include_adult: false,
-          language: config.language || 'en-US',
-          region: config.region || 'US',
-          page: 1,
-          append_to_response: 'images,credits,alternative_titles'
-        }
-      });
-
-      if (response.data.results?.[0]) {
-        // Get additional details for the first result
-        const movieId = response.data.results[0].id;
-        const detailsResponse = await axios.get(
-          `${this.tmdbBaseUrl}/movie/${movieId}`,
-          {
-            headers: this.headers,
-            params: {
-              append_to_response: 'credits,images,alternative_titles,videos',
-              include_image_language: 'en,null'
-            }
-          }
-        );
-
-        const enhancedResult = {
-          ...response.data.results[0],
-          ...detailsResponse.data,
-          poster_path: this.formatImageUrl(detailsResponse.data.poster_path),
-          backdrop_path: this.formatImageUrl(detailsResponse.data.backdrop_path),
-          images: {
-            ...detailsResponse.data.images,
-            posters: detailsResponse.data.images?.posters?.map((p: any) => ({
-              ...p,
-              file_path: this.formatImageUrl(p.file_path)
-            }))
-          },
-          credits: detailsResponse.data.credits,
-          videos: detailsResponse.data.videos
-        };
-
-        tmdbCache.set(cacheKey, {
-          data: enhancedResult,
-          timestamp: Date.now()
-        });
-
-        return [enhancedResult];
-      }
-
-      return [];
-    } catch (error) {
-      if (axios.isAxiosError(error)) {
-        if (error.response?.status === 429) {
-          console.log('Rate limit hit, waiting before retry...');
-          await new Promise(resolve => setTimeout(resolve, this.RATE_LIMIT_DELAY * 4));
-          return this.searchTMDBWithCache(config);
-        }
-      }
-      console.error(`TMDB API error for ${config.query}:`, error);
-      return [];
-    }
-  }
-
-  private async handleRateLimit() {
+  private handleRateLimit = async () => {
     await new Promise(resolve => setTimeout(resolve, this.RATE_LIMIT_DELAY * 2));
-  }
+  };
 
   private async searchTMDB(title: string, year: string, category: string): Promise<TMDBSearchResult | null> {
     const movieTitle = this.extractMovieTitle(title, category);
@@ -926,7 +922,7 @@ Explanation: The selected movie should be the Oscar-nominated work that was rele
       {
         ceremonyYear: year,
         category: "Documentary Short Film",
-        nominee: "The Last Repair Shop",
+        nominee: "TheLast Repair Shop",
         isWinner: false,
         eligibilityYear: year - 1
       },
@@ -1459,7 +1455,6 @@ Explanation: The selected movie should be the Oscar-nominated work that was rele
     ];
   }
 
-  // Add new test sync method
   async runTestSync(): Promise<{
     processed: number;
     failed: number;
@@ -1481,8 +1476,6 @@ Explanation: The selected movie should be the Oscar-nominated work that was rele
             await insertNominee(syncedNominee, db);
             processedCount++;
             console.log(`✓ Successfully processed: ${nominee.nominee} - ${nominee.category}`);
-
-            // Log the retrieved data
             console.log('Retrieved data:', {
               tmdbId: syncedNominee.tmdbId,
               poster: syncedNominee.poster,
@@ -1494,7 +1487,6 @@ Explanation: The selected movie should be the Oscar-nominated work that was rele
             failedCount++;
           }
 
-          // Add a delay between nominees
           await new Promise(resolve => setTimeout(resolve, 2000));
         } catch (error) {
           console.error(`Failed to process: ${nominee.nominee}`, error);
