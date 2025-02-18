@@ -41,7 +41,7 @@ export class DatabaseStorage implements IStorage {
     throw new Error(`Database operation failed: ${operation}`);
   }
 
-  async getNominees(year: number = 2025): Promise<Nominee[]> {
+  async getNominees(year: number = 2024): Promise<Nominee[]> {
     try {
       return await db
         .select()
@@ -52,7 +52,7 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  async getNomineesByCategory(category: string, year: number = 2025): Promise<Nominee[]> {
+  async getNomineesByCategory(category: string, year: number = 2024): Promise<Nominee[]> {
     try {
       return await db
         .select()

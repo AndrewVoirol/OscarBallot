@@ -37,7 +37,7 @@ export function registerRoutes(app: Express): Server {
   // Public routes for accessing nominee data
   app.get("/api/nominees", async (req, res) => {
     try {
-      const year = parseInt(req.query.year as string) || 2025;
+      const year = parseInt(req.query.year as string) || 2024;
       const nominees = await storage.getNominees(year);
       res.json(nominees);
     } catch (error) {
@@ -48,7 +48,7 @@ export function registerRoutes(app: Express): Server {
 
   app.get("/api/nominees/category/:category", async (req, res) => {
     try {
-      const year = parseInt(req.query.year as string) || 2025;
+      const year = parseInt(req.query.year as string) || 2024;
       const nominees = await storage.getNomineesByCategory(req.params.category, year);
       res.json(nominees);
     } catch (error) {
@@ -106,7 +106,7 @@ export function registerRoutes(app: Express): Server {
       });
     } catch (error) {
       console.error("Error updating nominees with TMDB data:", error);
-      res.status(500).json({ 
+      res.status(500).json({
         message: "Failed to update nominees with TMDB data",
         error: error instanceof Error ? error.message : "Unknown error"
       });
