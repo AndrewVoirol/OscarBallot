@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const TMDB_BASE_URL = "https://api.themoviedb.org/4";
+const TMDB_BASE_URL = "https://api.themoviedb.org/3"; 
 const TMDB_IMAGE_BASE_URL = "https://image.tmdb.org/t/p";
 const TMDB_ACCESS_TOKEN = import.meta.env.VITE_TMDB_ACCESS_TOKEN;
 
@@ -54,29 +54,48 @@ interface TMDBSearchResult {
 }
 
 export async function searchMovie(query: string): Promise<TMDBSearchResult> {
-  const response = await axios.post(`${TMDB_BASE_URL}/search/movie`, {
-    query,
-    include_adult: false,
-    language: "en-US",
-    page: 1
-  }, { headers });
-  return response.data;
+  try {
+    const response = await axios.get(`${TMDB_BASE_URL}/search/movie`, {
+      headers,
+      params: {
+        query,
+        include_adult: false,
+        language: "en-US",
+        page: 1
+      }
+    });
+    console.log('TMDB Search Response:', response.data);
+    return response.data;
+  } catch (error) {
+    console.error('TMDB Search Error:', error);
+    throw error;
+  }
 }
 
 export async function getMovieDetails(movieId: number): Promise<TMDBMovie> {
-  const response = await axios.get(`${TMDB_BASE_URL}/movie/${movieId}`, {
-    headers,
-    params: {
-      append_to_response: "credits,videos",
-      language: "en-US",
-    },
-  });
-  return response.data;
+  try {
+    const response = await axios.get(`${TMDB_BASE_URL}/movie/${movieId}`, {
+      headers,
+      params: {
+        append_to_response: "credits,videos",
+        language: "en-US",
+      },
+    });
+    console.log('TMDB Movie Details Response:', response.data);
+    return response.data;
+  } catch (error) {
+    console.error('TMDB Movie Details Error:', error);
+    throw error;
+  }
 }
 
 export function getTMDBImageUrl(path: string | null, size: "original" | "w500" = "w500"): string {
   if (!path) return '';
-  return `${TMDB_IMAGE_BASE_URL}/${size}${path}`;
+  // Handle both absolute URLs and relative paths
+  if (path.startsWith('http')) return path;
+  // Ensure path starts with forward slash
+  const cleanPath = path.startsWith('/') ? path : `/${path}`;
+  return `${TMDB_IMAGE_BASE_URL}/${size}${cleanPath}`;
 }
 
 export function formatTMDBPosterUrl(path: string | null): string {
