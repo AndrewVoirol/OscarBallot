@@ -8,10 +8,10 @@ import { eq } from "drizzle-orm";
 import { OscarSyncService } from "./services/oscarSync";
 import { seed } from "./seed";
 
-// Extend Express Request type to include our User type
+// Update Express Request type to match our User type
 declare module "express" {
   interface Request {
-    user?: User;
+    user?: Omit<User, 'password'>;
   }
 }
 
@@ -222,6 +222,25 @@ export function registerRoutes(app: Express): Server {
       res.status(500).json({
         error: "Failed to test Oscar sync",
         message: error.message
+      });
+    }
+  });
+
+  // Add this new test endpoint after the existing test endpoints
+  app.post("/api/test/oscar-sync-test", async (_req, res) => {
+    try {
+      const oscarService = new OscarSyncService();
+      const result = await oscarService.runTestSync();
+
+      res.json({
+        message: "Test sync completed",
+        ...result
+      });
+    } catch (error) {
+      console.error("Error in Oscar test sync:", error);
+      res.status(500).json({
+        error: "Failed to run test sync",
+        message: error instanceof Error ? error.message : "Unknown error"
       });
     }
   });

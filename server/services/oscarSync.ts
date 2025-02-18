@@ -3,6 +3,7 @@ import axios from "axios";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { type TMDBSearchResult, type OscarNomination } from "@shared/schema";
 import { db, eq } from "../db";
+import {insertNominee} from '../db/nominee';
 
 // Simple in-memory cache
 const tmdbCache = new Map<string, {
@@ -927,7 +928,7 @@ Explanation: The selected movie should be the Oscar-nominated work that was rele
         category: "Documentary Short Film",
         nominee: "The Last Repair Shop",
         isWinner: false,
-        eligibilityYear: year -1
+        eligibilityYear: year - 1
       },
       {
         ceremonyYear: year,
@@ -1430,5 +1431,89 @@ Explanation: The selected movie should be the Oscar-nominated work that was rele
       succeeded: successCount,
       failed: failureCount
     };
+  }
+  async getTestNominations(): Promise<OscarNomination[]> {
+    // Test with Oppenheimer in 3 different categories
+    return [
+      {
+        ceremonyYear: 2024,
+        category: "Best Picture",
+        nominee: "Oppenheimer",
+        isWinner: false,
+        eligibilityYear: 2023
+      },
+      {
+        ceremonyYear: 2024,
+        category: "Directing",
+        nominee: "Christopher Nolan (Oppenheimer)",
+        isWinner: false,
+        eligibilityYear: 2023
+      },
+      {
+        ceremonyYear: 2024,
+        category: "Film Editing",
+        nominee: "Oppenheimer",
+        isWinner: false,
+        eligibilityYear: 2023
+      }
+    ];
+  }
+
+  // Add new test sync method
+  async runTestSync(): Promise<{
+    processed: number;
+    failed: number;
+    total: number;
+  }> {
+    try {
+      console.log("\nStarting test sync with Oppenheimer...");
+      const testNominations = await this.getTestNominations();
+
+      let processedCount = 0;
+      let failedCount = 0;
+
+      for (const nominee of testNominations) {
+        try {
+          console.log(`Processing: ${nominee.nominee} (${nominee.category})`);
+          const syncedNominee = await this.syncNominee(nominee);
+
+          if (syncedNominee) {
+            await insertNominee(syncedNominee, db);
+            processedCount++;
+            console.log(`✓ Successfully processed: ${nominee.nominee} - ${nominee.category}`);
+
+            // Log the retrieved data
+            console.log('Retrieved data:', {
+              tmdbId: syncedNominee.tmdbId,
+              poster: syncedNominee.poster,
+              backdrop: syncedNominee.backdropPath,
+              description: syncedNominee.description?.slice(0, 100) + '...',
+            });
+          } else {
+            console.log(`⚠ No data found for: ${nominee.nominee}`);
+            failedCount++;
+          }
+
+          // Add a delay between nominees
+          await new Promise(resolve => setTimeout(resolve, 2000));
+        } catch (error) {
+          console.error(`Failed to process: ${nominee.nominee}`, error);
+          failedCount++;
+        }
+      }
+
+      console.log("\nTest sync completed!");
+      console.log(`Total processed: ${processedCount}`);
+      console.log(`Total failed: ${failedCount}`);
+
+      return {
+        processed: processedCount,
+        failed: failedCount,
+        total: testNominations.length
+      };
+    } catch (error) {
+      console.error("Error in test sync:", error);
+      throw error;
+    }
   }
 }
